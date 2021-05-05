@@ -1,0 +1,44 @@
+{
+  "name": "seen-contracts",
+  "version": "0.1.0",
+  "description": "Seen Haus V2 contract set",
+  "author": "Cliff Hall",
+  "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/seen-haus/seen-contracts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/seen-haus/seen-contracts/issues"
+  },
+  "homepage": "https://github.com/seen-haus/seen-contracts",
+  "keywords": [
+    "blockchain",
+    "ethereum",
+    "nft",
+    "erc721",
+    "solidity"
+  ],
+  "scripts": {
+    "build": "npx hardhat compile",
+    "test": "npx hardhat test",
+    "deploy:local": "npx hardhat run --network hardhat scripts/deploy-contracts.js",
+    "deploy:rinkeby": "npx hardhat run --network rinkeby scripts/deploy-contracts.js >> deploy.contracts.rinkeby.txt",
+    "deploy:mainnet": "npx hardhat run --network mainnet scripts/deploy-contracts.js >> deploy.contracts.mainnet.txt"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.0.0"
+  },
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-etherscan": "^2.1.2",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "chai": "^4.2.0",
+    "eip55": "^2.1.0",
+    "ethereum-waffle": "^3.2.0",
+    "ethers": "^5.1.4",
+    "hardhat": "^2.2.1",
+    "hardhat-gas-reporter": "^1.0.4",
+    "solidity-coverage": "^0.7.16"
+  }
+}
