@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Burnable.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "./IMarketHandler.sol";
 
-contract AuctionHouse is ERC1155Holder {
+// TODO: implement IMarketHandler
+contract HandleEnglishAuction is IMarketHandler, Ownable, ERC1155Holder {
 
     struct Auction {
-        // Lets pack these two variables together
         address payable buyer;
         uint96 bid;
         address token;
@@ -20,7 +21,6 @@ contract AuctionHouse is ERC1155Holder {
     }
 
     address payable public haus;
-    address public gov;
     uint256 public fee;
     uint256 public minSeen;
 
@@ -32,14 +32,8 @@ contract AuctionHouse is ERC1155Holder {
     
     constructor(address payable _haus, uint256 _fee, uint256 _min) {
         haus = _haus;
-        gov = msg.sender;
         fee = _fee;
         minSeen = _min;
-    }
-
-    modifier onlyGov {
-        require(msg.sender == gov, "!gov");
-        _;
     }
 
     /// @notice deploy new english auction
@@ -132,7 +126,7 @@ contract AuctionHouse is ERC1155Holder {
         auctions[_id].closed = true;
     }
 
-    function cancel(uint256 _id) external onlyGov {
+    function cancel(uint256 _id) external onlyOwner {
         Auction memory auction = auctions[_id];
 
         require(_id < count, "bid:no auction");
@@ -156,19 +150,15 @@ contract AuctionHouse is ERC1155Holder {
         auctions[_id].closed = true;
     }
 
-    function updateHaus(address payable _haus) external onlyGov {
+    function updateHaus(address payable _haus) external onlyOwner {
         haus = _haus;
     }
-
-    function updateGov(address _gov) external onlyGov {
-        gov = _gov;
-    }
-
-    function updateFee(uint256 _fee) external onlyGov {
+    
+    function updateFee(uint256 _fee) external onlyOwner {
         fee = _fee;
     }
 
-    function updateMinSeen(uint256 _amount) external onlyGov {
+    function updateMinSeen(uint256 _amount) external onlyOwner {
         minSeen = _amount;
     }
 

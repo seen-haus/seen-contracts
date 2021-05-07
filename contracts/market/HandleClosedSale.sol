@@ -13,7 +13,9 @@ interface IERC20 {
     function balanceOf(address _who) external returns (uint256);
 }
 
-contract HoodieSale {
+// TODO: implement IMarketHandler and handle all closed sales rather than tweaking and redeploying each time
+// NOTE: A closed sale is available only to SEEN token holders unless opened to all by the owners
+contract HandleClosedSale {
 
     IERC20   public seen;
     IERC1155 public hoodie;
@@ -25,6 +27,7 @@ contract HoodieSale {
     uint256  public start = 1604368800;
     event Buy(address buyer);
 
+    // NOTE: starts allowing only holders of a certain amount of Seen ERC20 to buy
     constructor(address payable _multisig, address _hoodie, address _seen) public {
         onlySeen = true;
         multisig = _multisig;
