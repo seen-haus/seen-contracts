@@ -2,9 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "./GovernableERC20.sol";
+import "../governance/GovernableERC20.sol";
 
 interface IWETH {
     function deposit() external payable;
@@ -20,28 +18,16 @@ interface Sushiswap {
     ) external returns (uint256[] memory amounts);
 }
 
-contract SeenHaus is GovERC20, Ownable, Pausable {
+contract SeenHaus is GovERC20 {
+    address public constant weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant sushiswap = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
+    IERC20 public constant seen = IERC20(0xCa3FE04C7Ee111F0bbb02C328c699226aCf9Fd33);
 
-    // Collaborators
-    address public weth;
-    address public sushiswap;
-    IERC20 public seen;
-
-    // accounts balances are locked for 3 days after entering 
+    // accounts balances are locked for 3 days after entering
     mapping(address => uint256) locked;
 
-    // Start contract paused until collaborators can be set
     constructor() {
-        _pause();
-    }
-
-    // Set collaborators
-    function setCollaborators(address _weth, address _sushiswap, address _seen) external onlyOwner {
-        weth = _weth;
-        sushiswap = _sushiswap;
-        seen = IERC20(_seen);
         IERC20(weth).approve(sushiswap, type(uint256).max);
-        _unpause();
     }
 
     function _beforeTokenTransfer(address from) internal view override {
@@ -49,7 +35,7 @@ contract SeenHaus is GovERC20, Ownable, Pausable {
     }
 
     // Enter the haus. Pay some SEENs. Earn some shares.
-    function enter(uint256 _amount) external whenNotPaused {
+    function enter(uint256 _amount) public {
         uint256 totalSeen = seen.balanceOf(address(this));
         uint256 totalShares = totalSupply;
 
@@ -58,22 +44,21 @@ contract SeenHaus is GovERC20, Ownable, Pausable {
         if (totalShares == 0 || totalSeen == 0) {
             _mint(msg.sender, _amount);
         } else {
-            uint256 what = _amount * totalShares / totalSeen;
+        uint256 what = _amount * totalShares / totalSeen;
             _mint(msg.sender, what);
         }
         seen.transferFrom(msg.sender, address(this), _amount);
     }
 
     // Leave the haus. Claim back your SEENs.
-    function leave(uint256 _share) external whenNotPaused {
+    function leave(uint256 _share) public {
         uint256 totalShares = totalSupply;
         uint256 what = _share * seen.balanceOf(address(this)) / totalShares;
         _burn(msg.sender, _share);
         seen.transfer(msg.sender, what);
     }
 
-    function swap() public whenNotPaused {
-
+    function swap() public {
         IWETH(weth).deposit{value: address(this).balance}();
         uint256 amountIn = IERC20(weth).balanceOf(address(this));
 

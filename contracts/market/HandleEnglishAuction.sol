@@ -2,12 +2,11 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "./IMarketHandler.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
+import "./MarketHandlerBase.sol";
 
-// TODO: implement IMarketHandler
-contract HandleEnglishAuction is IMarketHandler, Ownable, ERC1155Holder {
+contract HandleEnglishAuction is MarketHandlerBase, Address, AccessControl, ERC1155Holder {
 
     struct Auction {
         address payable buyer;
@@ -20,26 +19,18 @@ contract HandleEnglishAuction is IMarketHandler, Ownable, ERC1155Holder {
         bool closed;
     }
 
-    address payable public haus;
-    uint256 public fee;
-    uint256 public minSeen;
-
     uint256 public count;
     mapping(uint256 => Auction) public auctions;
 
     event Bid(uint256 auction, address who, uint96 amount);
     event Won(uint256 auction, address who, uint96 amount);
     
-    constructor(address payable _haus, uint256 _fee, uint256 _min) {
-        haus = _haus;
-        fee = _fee;
-        minSeen = _min;
-    }
+    constructor(address payable _haus, uint256 _fee) MarketHandlerBase(_haus, _fee) {}
 
     /// @notice deploy new english auction
-    function newAuction(address payable _seller, address _token, uint256 _id, uint256 _start, uint256 _end, uint96 _startPrice) external {
-        require(IERC20(haus).balanceOf(_seller) >= minSeen || IERC20(haus).balanceOf(msg.sender) >= minSeen, "newAuction:not enough seen");
-
+    function newAuction(address payable _seller, address _token, uint256 _id, uint256 _start, uint256 _end, uint96 _startPrice)
+    external
+    {
         auctions[count] = Auction(payable(address(0)), _startPrice, _token, _seller, _id, _start, _end, false);
         count++;
 
@@ -58,7 +49,7 @@ contract HandleEnglishAuction is IMarketHandler, Ownable, ERC1155Holder {
     function bid(uint256 _id) external payable {
         Auction memory auction = auctions[_id];
 
-        require(msg.sender == tx.origin, "bid:no contracts");
+        require(!isContract(msg.sender), "bid:no contracts");
         require(_id < count, "bid:no auction");
         require(block.timestamp >= auction.start, "bid:auction not started");
         require(block.timestamp < auction.end, "bid:auction ended");
@@ -129,9 +120,9 @@ contract HandleEnglishAuction is IMarketHandler, Ownable, ERC1155Holder {
     function cancel(uint256 _id) external onlyOwner {
         Auction memory auction = auctions[_id];
 
-        require(_id < count, "bid:no auction");
-        require(!auction.closed, "close:close() already called");
-        require(block.timestamp < auction.end, "bid:auction ended");
+        require(_id < count, "auction doesn't exist");
+        require(!auction.closed, "auction already closed");
+        require(block.timestamp < auction.end, "auction isn't over");
 
         // Give back the last bidders money
         if (auction.buyer != address(0)) {
@@ -156,10 +147,6 @@ contract HandleEnglishAuction is IMarketHandler, Ownable, ERC1155Holder {
     
     function updateFee(uint256 _fee) external onlyOwner {
         fee = _fee;
-    }
-
-    function updateMinSeen(uint256 _amount) external onlyOwner {
-        minSeen = _amount;
     }
 
 }
