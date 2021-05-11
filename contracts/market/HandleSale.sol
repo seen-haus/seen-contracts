@@ -9,7 +9,7 @@ interface IERC20 {
     function balanceOf(address _who) external returns (uint256);
 }
 
-// TODO: implement IMarketHandler and handle all sales rather than tweaking and redeploying each time
+// TODO: extend MarketHandlerBase
 contract HandleSale {
 
     IERC1155 public nft;

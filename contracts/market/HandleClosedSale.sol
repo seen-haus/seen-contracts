@@ -1,7 +1,3 @@
-/**
- *Submitted for verification at Etherscan.io on 2020-11-02
-*/
-
 pragma solidity ^0.6.7;
 
 interface IERC1155 {
@@ -13,7 +9,7 @@ interface IERC20 {
     function balanceOf(address _who) external returns (uint256);
 }
 
-// TODO: implement IMarketHandler and handle all closed sales rather than tweaking and redeploying each time
+// TODO: extend MarketHandlerBase
 // NOTE: A closed sale is available only to SEEN token holders unless opened to all by the owners
 contract HandleClosedSale {
 
