@@ -31,19 +31,19 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
     onlyRole(SELLER) {
 
         // Make sure this contract is approved to transfer the token
-        require(IERC1155(_token).isApprovedForAll(_seller, address(this)), "Not approved to transfer seller's tokens" );
+        require(IERC1155(_token).isApprovedForAll(_seller, address(this)), "Not approved to transfer seller's tokens");
 
         // Create the auction and bump the auction count
         auctions[count] = Auction(
-                address payable(0),
-                _seller,
-                _token,
-                _id,
-                _start,
-                _end,
-                _reserve,
-                _startPrice,
-                false
+            address payable(0),
+            _seller,
+            _token,
+            _id,
+            _start,
+            _end,
+            _reserve,
+            _startPrice,
+            false
         );
         count++;
 

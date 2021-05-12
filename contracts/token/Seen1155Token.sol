@@ -7,22 +7,27 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 contract Seen1155Token is AccessControl, ERC1155 {
 
     // Roles
+    bytes32 public constant ADMIN = keccak256("ADMIN");
     bytes32 public constant MINTER = keccak256("MINTER");
 
-    // id => creator
+    // token id => creator
     mapping (uint256 => address) public creators;
 
     /**
-     * Constructor
+     * @notice Constructor
      * Grant MINTER role to deployer
      */
     constructor(string memory _baseURI) ERC1155(_baseURI) public {
+        _setupRole(ADMIN, _msgSender());
         _setupRole(MINTER, _msgSender());
+        _setRoleAdmin(MINTER, ADMIN);
     }
 
     /**
-     * Mint a given supply of a token and send it to a whitelisted
-     * market handler contract (auction, sale, etc.)
+     * @notice Mint a given supply of a token and send it to the creator
+     * market handler contract (auction, sale, etc.).
+     *
+     * Entire supply must be minted at once. More cannot be minted later.
      */
     function mint(uint256 _id, uint256 _supply, address _creator)
     external
@@ -32,4 +37,5 @@ contract Seen1155Token is AccessControl, ERC1155 {
         creators[_id] = _creator;
         _mint(_creator, _id, _supply, new bytes(0x0));
     }
+
 }
