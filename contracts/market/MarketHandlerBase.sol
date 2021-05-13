@@ -42,10 +42,22 @@ abstract contract MarketHandlerBase is AccessControl, SeenTypes  {
         multisig = _multisig;
     }
 
-    function disburseFunds(address payable _seller, uint256 _amount)
+    /**
+     * @notice Disburse funds for a secondary market sale or auction
+     *
+     * @param _creator - the creator of the NFT
+     * @param _amount - the final sale amount
+     */
+    function disburseFunds(Market _market, address payable _seller, uint256 _amount)
     internal virtual
     {
-        uint256 fee = (_amount / 100) * feePercentage;
+        uint256 net = _amount;
+        if (_market == Market.secondary) {
+            // TODO check if token contract supports ERC2981 interface
+            // TODO if so, get royalty info, and set net to amount less royalty
+        }
+
+        uint256 fee = (net / 100) * feePercentage;
         uint256 split = fee / 2;
         uint256 payout = _amount - fee;
 
@@ -57,4 +69,5 @@ abstract contract MarketHandlerBase is AccessControl, SeenTypes  {
         emit FeeDisbursed(multisig, split);
         emit PayoutDisbursed(_seller, split);
     }
+
 }

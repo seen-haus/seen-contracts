@@ -3,11 +3,15 @@ pragma solidity ^0.8.0;
 
 contract SeenTypes {
 
-    struct Auction {
-        address payable buyer;
+    struct Consignment {
+        Market market;
         address payable seller;
         address token;
         uint256 tokenId;
+    }
+
+    struct Auction {
+        address payable buyer;
         uint256 start;
         uint256 end;
         uint256 reserve;
@@ -16,10 +20,14 @@ contract SeenTypes {
     }
 
     struct Sale {
-        address token;
-        uint256 id;
         uint256 price;
+        uint256 lotSize;
         uint256 start;
+    }
+
+    enum Market {
+        Primary,
+        Secondary
     }
 
 }
