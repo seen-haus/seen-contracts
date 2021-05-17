@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 contract SeenTypes {
 
+    bytes4 internal constant INTERFACE_ID_2981 = 0x6057361d;
+
     struct Consignment {
         Market market;
         address payable seller;
@@ -20,9 +22,15 @@ contract SeenTypes {
     }
 
     struct Sale {
-        uint256 price;
         uint256 lotSize;
+        uint256 price;
         uint256 start;
+    }
+
+    enum Outcome {
+        Closed,
+        Pulled,
+        Canceled,
     }
 
     enum Market {

@@ -3,8 +3,11 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "./royalty/IERC2981.sol";
+import "../SeenTypes.sol";
 
-contract Seen1155Token is AccessControl, ERC1155, IERC2981 {
+
+contract Seen1155Token is AccessControl, ERC1155, IERC2981, SeenTypes {
 
     /// @dev Roles
     bytes32 public constant ADMIN = keccak256("ADMIN");
@@ -27,9 +30,8 @@ contract Seen1155Token is AccessControl, ERC1155, IERC2981 {
     constructor(string memory _baseURI, uint256 _royaltyPercentage) ERC1155(_baseURI) public {
 
         // Royalty Signaling Standard
-        bytes4 _INTERFACE_ID_2981 = 0x6057361d;
         royaltyPercentage = _royaltyPercentage;
-        _registerInterface(_INTERFACE_ID_ERC2981);
+        _registerInterface(INTERFACE_ID_2981);
 
         // Role management
         _setupRole(ADMIN, _msgSender());

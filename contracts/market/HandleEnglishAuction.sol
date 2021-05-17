@@ -10,9 +10,9 @@ import "./MarketHandlerBase.sol";
 contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
 
     // Events
-    event NewAuction(Consignment consignment, uint256 reserve);
-    event Bid(Consignment consignment, address bidder, uint256 amount);
-    event Won(Consignment consignment, address winner, uint256 amount);
+    event Bid(Consignment indexed consignment, uint256 amount);
+    event AuctionCreated(Consignment indexed consignment, Auction indexed auction);
+    event AuctionEnded(Consignment indexed consignment, Auction indexed auction, Outcome indexed outcome);
 
     /// @notice map a consignment to an auction
     mapping(Consignment => Auction) public auctions;
@@ -53,11 +53,11 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
         require(auction.start == 0, "Auction exists");
 
         // Make sure this contract is approved to transfer the token
-        require(IERC1155(_token).isApprovedForAll(_seller, address(this)), "Not approved to transfer seller's tokens");
+        require(IERC1155(_consignment.token).isApprovedForAll(_consignment.seller, address(this)), "Not approved to transfer seller's tokens");
 
         // Create the auction
         auction = Auction(
-            address payable(0),
+            _consignment,
             _start,
             _end,
             _reserve,
@@ -75,7 +75,7 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
         );
 
         // Tell the world about it
-        emit NewAuction(_consignment, _reserve);
+        emit AuctionCreated(_consignment, auction);
     }
 
     /**
@@ -105,7 +105,7 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
         auction.buyer = _msgSender();
 
         // Announce the bid
-        emit Bid(_consignment, _msgSender(), msg.value);
+        emit Bid(_consignment, auction, msg.value);
     }
 
     /**
@@ -125,8 +125,8 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
         // Close the auction
         auction.closed = true;
 
-        // Distribute the funds between staking, multisig, and seller
-        disburseFunds(_consignment.market, _consignment.seller, auction.bid);
+        // Distribute the funds (handles royalties, staking, multisig, and seller)
+        disburseFunds(_consignment, auction.bid);
 
         // Transfer the ERC-1155 to winner
         IERC1155(_consignment.token).safeTransferFrom(
@@ -137,8 +137,8 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
             new bytes(0x0)
         );
 
-        // Announce the winner
-        emit Won(_consignment, auction.buyer, auction.bid);
+        // Tell the world
+        emit AuctionEnded(_consignment, auction, Outcome.Closed);
 
     }    
     
@@ -165,10 +165,13 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
             new bytes(0x0)
         );
 
+        // Tell the world
+        emit AuctionEnded(_consignment, auction, Outcome.Pulled);
+
     }
 
     /**
-     * @notice Close out an auction that hasn't ended yet.
+     * @notice Cancel an auction that hasn't ended yet.
      *
      * @param _consignment - the unique consignment being auctioned
      */
@@ -186,13 +189,16 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
         }
 
         // Transfer the token back to the seller
-        IERC1155(auction.token).safeTransferFrom(
+        IERC1155(_consignment.token).safeTransferFrom(
             address(this),
             _consignment.seller,
             _consignment.tokenId,
             1,
             new bytes(0x0)
         );
+
+        // Tell the world
+        emit AuctionEnded(_consignment, auction, Outcome.Canceled);
 
     }
 
