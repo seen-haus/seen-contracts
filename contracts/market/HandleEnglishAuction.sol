@@ -6,16 +6,21 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./MarketHandlerBase.sol";
+import "../SeenTypes.sol";
 
 contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
 
     // Events
-    event Bid(Consignment indexed consignment, uint256 amount);
-    event AuctionCreated(Consignment indexed consignment, Auction indexed auction);
-    event AuctionEnded(Consignment indexed consignment, Auction indexed auction, Outcome indexed outcome);
+    event AuctionPending(Consignment indexed consignment, Auction indexed auction);
+    event AuctionStarted(Consignment indexed consignment, Auction indexed auction);
+    event AuctionEnded(Consignment indexed consignment, Auction indexed auction);
+    event BidAccepted(Consignment indexed consignment, Auction indexed auction);
 
     /// @notice map a consignment to an auction
     mapping(Consignment => Auction) public auctions;
+
+    /// @notice the minimum percentage a bid must be above the previous bid to prevail
+    uint8 public outBidPercentage; // 0 - 100
 
     /**
      * @notice Constructor
@@ -23,10 +28,23 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
      * @param _haus - the SeenHaus (xSEEN) contract
      * @param _multisig = the organization's multisig wallet
      * @param _feePercentage the percentage (0-100) of each auction's funds to distribute to staking and multisig
+     * @param _outBidPercentage the percentage (0-100) a bid must be above the previous bid to prevail
      */
-    constructor(address payable _haus, address payable _multisig, uint256 _feePercentage)
-        MarketHandlerBase(_haus, _multisig, _feePercentage)
-    {}
+    constructor(
+        address payable _haus,
+        address payable _multisig,
+        uint8 _feePercentage,
+        uint8 _outBidPercentage
+    ) MarketHandlerBase(_haus, _multisig, _feePercentage, _minBidIncrement)
+    {
+        outBidPercentage = _outBidPercentage;
+    }
+
+    function setOutBidPercentage(uint8 _outBidPercentage)
+    external
+    onlyRole(ADMIN) {
+        outBidPercentage = _outBidPercentage;
+    }
 
     /**
      * @notice Create a new english auction
@@ -34,22 +52,24 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
      * For an auction of one ERC-1155 token
      *
      * @param _consignment - the unique consignment being auctioned
-     * @param _start - the start time of the auction
-     * @param _end - the end time of the auction
+     * @param _start - the scheduled start time of the auction
+     * @param _duration - the scheduled duration of the auction
      * @param _reserve - the reserve price of the auction
-     * @param _startPrice - the start price of the auction
+     * @param _style - the style of the auction (live or trigger)
      */
     function createAuction (
-        Consignment _consignment,
+        Consignment memory _consignment,
         uint256 _start,
-        uint256 _end,
+        uint256 _duration,
         uint256 _reserve,
-        uint256 _startPrice
+        Style _style
     )
     external
     onlyRole(SELLER) {
 
+        // Be sure the auction doesn't already exist and doesn't start in the past
         Auction storage auction = auctions[_consignment];
+        require (_start >= block.timestamp, "Time runs backward?");
         require(auction.start == 0, "Auction exists");
 
         // Make sure this contract is approved to transfer the token
@@ -59,13 +79,14 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
         auction = Auction(
             _consignment,
             _start,
-            _end,
+            _duration,
             _reserve,
-            _startPrice,
-            false
+            _style,
+            State.Pending,
+            Outcome.Pending
         );
 
-        // Transfer the token to this auction contract
+        // Transfer the ERC-1155 to this auction contract
         IERC1155(_consignment.token).safeTransferFrom(
             _consignment.seller,
             address(this),
@@ -74,8 +95,8 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
             new bytes(0x0)
         );
 
-        // Tell the world about it
-        emit AuctionCreated(_consignment, auction);
+        // Notify listeners of state change
+        emit AuctionPending(_consignment, auction);
     }
 
     /**
@@ -85,27 +106,63 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
      *
      * @param _consignment - the unique consignment being auctioned
      */
-    function bid (Consignment _consignment) external payable {
+    function bid (Consignment memory _consignment) external payable {
 
+        // Make sure the auction exists
         Auction storage auction = auctions[_consignment];
         require(auction.start != 0, "Auction does not exist");
-        require(!auction.closed, "Auction already closed");
-        require(!Address.isContract(_msgSender()), "Contracts may not bid");
-        require(block.timestamp >= auction.start, "Auction hasn't started");
-        require(block.timestamp < auction.end, "Auction has ended");
-        require(msg.value >= ((auction.bid * 105) / 100), "Bid too small");
 
-        // Give back the previous bidder's money
-        if (auction.buyer != address(0)) {
+        // Determine time after which no more bids will be accepted
+        uint256 endTime = auction.start + auction.duration;
+
+        // Determine time after which a bid could possibly extend the run time
+        uint256 extendTime = (endTime - 15 minutes);
+
+        // Make sure we can accept the caller's bid
+        require(block.timestamp >= auction.start, "Auction hasn't started");
+        require(block.timestamp <= endTime, "Auction timer has elapsed");
+        require(msg.value >= auction.reserve, "Bid below reserve price");
+        require(!Address.isContract(_msgSender()), "Contracts may not bid");
+
+        // If a standing bid exists:
+        // - Be sure new bid outbids previous
+        // - Give back the previous bidder's money
+        if (auction.bid > 0) {
+            require(msg.value >= (auction.bid * (100 + outBidPercentage)) / 100, "Bid too small");
             auction.buyer.transfer(auction.bid);
         }
 
-        // Record the bid
-        auction.bid = msg.amount;
+        // Record the new bid
+        auction.bid = msg.value;
         auction.buyer = _msgSender();
 
+        // If this was the first successful bid...
+        if (auction.state == State.Pending) {
+
+            // First bid updates auction state to Running
+            auction.state = State.Running;
+
+            // For auctions where clock is triggered by first bid, update start time
+            if (auction.style == Style.Trigger) {
+                auction.start = block.timestamp;
+            }
+
+            // Notify listeners of state change
+            emit AuctionStarted(_consignment, auction);
+
+        // Otherwise,, if auction is already underway
+        } else if (auction.state == State.Running) {
+
+            // For bids placed within the extension window, extend the run time by 15 minutes
+            if (block.timestamp <= endTime && block.timestamp >= extendTime) {
+                auction.duration += 15 minutes;
+                emit AuctionExtended(_consignment, auction);
+            }
+
+        }
+
         // Announce the bid
-        emit Bid(_consignment, auction, msg.value);
+        emit BidAccepted(_consignment, auction);
     }
 
     /**
@@ -113,17 +170,23 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
      *
      * @param _consignment - the unique consignment being auctioned
      */
-    function close(Consignment _consignment) external {
+    function close(Consignment memory _consignment) external {
 
+        // Make sure the auction exists
         Auction storage auction = auctions[_consignment];
         require(auction.start != 0, "Auction does not exist");
-        require(!auction.closed, "Auction already closed");
+
+        // Make sure timer has elapsed
+        uint256 endTime = auction.start + auction.duration;
+        require(block.timestamp > endTime, "Auction end time not yet reached");
+
+        // Make sure it can be closed normally
+        require(auction.state == State.Running, "Auction has not yet started");
         require(auction.buyer != address(0), "No bids have been placed");
-        require(block.timestamp >= auction.end, "End time not reached");
-        require(auction.bid >= auction.reserve, "Reserve not met");
 
         // Close the auction
-        auction.closed = true;
+        auction.state = State.Ended;
+        auction.outcome = Outcome.Closed;
 
         // Distribute the funds (handles royalties, staking, multisig, and seller)
         disburseFunds(_consignment, auction.bid);
@@ -137,7 +200,7 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
             new bytes(0x0)
         );
 
-        // Tell the world
+        // Notify listeners about state change
         emit AuctionEnded(_consignment, auction, Outcome.Closed);
 
     }    
@@ -147,16 +210,25 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
      *
      * @param _consignment - the unique consignment being auctioned
      */
-    function pull(Consignment _consignment) external {
+    function pull(Consignment memory _consignment) external {
 
+        // Make sure the auction exists
         Auction storage auction = auctions[_consignment];
         require(auction.start != 0, "Auction does not exist");
-        require(!auction.closed, "Auction already closed");
-        require(auction.buyer == address(0), "Bids have been placed");
-        require(block.timestamp >= auction.end, "End time not reached");
 
-        // Close the auction and transfer the token back to the seller
-        auction.closed = true;
+        // Determine auction end time
+        uint256 endTime = auction.start + auction.duration;
+        require(block.timestamp > endTime, "Auction end time not yet reached");
+
+        // Make sure we can pull the auction
+        require(auction.outcome == Outcome.Pending, "Auction has already been settled");
+        require(auction.bid == 0, "Bids have been placed");
+
+        // Pull the auction
+        auction.state = State.Ended;
+        auction.outcome = Outcome.Pulled;
+
+        // Transfer the ERC-1155 back to the seller
         IERC1155(_consignment.token).safeTransferFrom(
             address(this),
             _consignment.seller,
@@ -165,8 +237,8 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
             new bytes(0x0)
         );
 
-        // Tell the world
-        emit AuctionEnded(_consignment, auction, Outcome.Pulled);
+        // Notify listeners about state change
+        emit AuctionEnded(_consignment, auction);
 
     }
 
@@ -175,20 +247,29 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
      *
      * @param _consignment - the unique consignment being auctioned
      */
-    function cancel(Consignment _consignment) external onlyOwner {
+    function cancel(Consignment memory _consignment) external onlyOwner {
 
+        // Make sure auction exists
         Auction storage auction = auctions[_consignment];
         require(auction.start != 0, "Auction does not exist");
-        require(!auction.closed, "Auction already closed");
-        require(block.timestamp < auction.end, "End time has passed");
 
-        // Close the auction and give back the previous bidder's money
-        auction.closed = true;
-        if (auction.buyer != address(0)) {
+        // Make sure timer hasn't elapsed
+        uint256 endTime = auction.start + auction.duration;
+        require(block.timestamp < endTime, "Auction timer has elapsed");
+
+        // Make sure auction hasn't been settled
+        require(auction.state != State.Ended, "Auction has already ended");
+
+        // Cancel the auction
+        auction.state = State.Ended;
+        auction.outcome = Outcome.Canceled;
+
+        // Give back the previous bidder's money
+        if (auction.bid > 0) {
             auction.buyer.transfer(auction.bid);
         }
 
-        // Transfer the token back to the seller
+        // Transfer the ERC-1155 back to the seller
         IERC1155(_consignment.token).safeTransferFrom(
             address(this),
             _consignment.seller,
@@ -197,8 +278,8 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
             new bytes(0x0)
         );
 
-        // Tell the world
-        emit AuctionEnded(_consignment, auction, Outcome.Canceled);
+        // Notify listeners about state change
+        emit AuctionEnded(_consignment, auction);
 
     }
 

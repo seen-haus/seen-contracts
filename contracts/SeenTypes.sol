@@ -5,6 +5,29 @@ contract SeenTypes {
 
     bytes4 internal constant INTERFACE_ID_2981 = 0x6057361d;
 
+    enum Market {
+        Primary,
+        Secondary
+    }
+
+    enum Style {
+        Live,       // countdown starts at start time
+        Trigger     // countdown triggered by first bid
+    }
+
+    enum Outcome {
+        Pending,
+        Closed,
+        Pulled,
+        Canceled
+    }
+
+    enum State {
+        Pending,
+        Live,
+        Ended
+    }
+
     struct Consignment {
         Market market;
         address payable seller;
@@ -15,27 +38,18 @@ contract SeenTypes {
     struct Auction {
         address payable buyer;
         uint256 start;
-        uint256 end;
+        uint256 duration;
         uint256 reserve;
         uint256 bid;
-        bool closed;
+        Style style;
+        State state;
+        Outcome outcome;
     }
 
     struct Sale {
         uint256 lotSize;
         uint256 price;
         uint256 start;
-    }
-
-    enum Outcome {
-        Closed,
-        Pulled,
-        Canceled,
-    }
-
-    enum Market {
-        Primary,
-        Secondary
     }
 
 }

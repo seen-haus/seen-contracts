@@ -12,44 +12,49 @@ contract MarketHandlerBase is AccessControl, SeenTypes  {
 
     address payable public haus;
     address payable public multisig;
-    uint256 public feePercentage;
-    uint256 public maxRoyaltyPercentage;
+    uint8 public feePercentage;         // 0 - 100
+    uint8 public maxRoyaltyPercentage;  // 0 - 100
 
     event RoyaltyDisbursed(Consignment indexed consignment, address indexed recipient, uint256 amount);
     event FeeDisbursed(Consignment indexed consignment, address indexed recipient, uint256 amount);
     event PayoutDisbursed(Consignment indexed consignment, address indexed recipient, uint256 amount);
 
-    constructor(address payable _haus, address payable _multisig, uint256 _feePercentage, uint256 _maxRoyaltyPercentage) {
+    constructor(
+        address payable _haus,
+        address payable _multisig,
+        uint8 _feePercentage,
+        uint8 _maxRoyaltyPercentage
+    ) {
         haus = _haus;
         multisig = _multisig;
-        feePercentage = _feePercentage; // 0 - 100
-        maxRoyaltyPercentage = _maxRoyaltyPercentage; // 0 - 100
+        feePercentage = _feePercentage;
+        maxRoyaltyPercentage = _maxRoyaltyPercentage;
         _setupRole(ADMIN, _msgSender());
         _setupRole(MINTER, _msgSender());
     }
 
-    function updateFeePercentage(uint256 _feePercentage)
+    function setHaus(uint8 _haus)
+    external
+    onlyRole(ADMIN) {
+        haus = _haus;
+    }
+
+    function setMultisig(address payable _multisig)
+    external
+    onlyRole(ADMIN) {
+        multisig = _multisig;
+    }
+
+    function setFeePercentage(uint8 _feePercentage)
     external
     onlyRole(ADMIN) {
         feePercentage = _feePercentage;
     }
 
-    function updateMaxRoyaltyPercentage(uint256 _maxRoyaltyPercentage)
+    function setMaxRoyaltyPercentage(uint8 _maxRoyaltyPercentage)
     external
     onlyRole(ADMIN) {
         maxRoyaltyPercentage = _maxRoyaltyPercentage;
-    }
-
-    function updateHaus(uint256 _haus)
-    external
-    onlyRole(ADMIN) {
-        haus = _haus;
-    }
-
-    function updateMultisig(address payable _multisig)
-    external
-    onlyRole(ADMIN) {
-        multisig = _multisig;
     }
 
     /**
@@ -58,7 +63,7 @@ contract MarketHandlerBase is AccessControl, SeenTypes  {
      * @param _consignment - the consigned item
      * @param _saleAmount - the final sale amount
      */
-    function deductRoyalties(Consignment _consignment, uint256 _saleAmount)
+    function deductRoyalties(Consignment memory _consignment, uint256 _saleAmount)
     internal
     returns (uint256 net){
 
@@ -79,10 +84,14 @@ contract MarketHandlerBase is AccessControl, SeenTypes  {
                     // Determine the max royalty we will pay
                     uint256 maxRoyalty = (_saleAmount / 100) * maxRoyaltyPercentage;
 
-                    // If we got a royalty amount, lets pay it, up to our platform policy maximum
+                    // If we a royalty is expected...
                     if (expected > 0) {
+
+                        // Lets pay, but only up to our platform policy maximum
                         royaltyAmount = (expected <= maxRoyalty) ? expected : maxRoyalty;
                         recipient.transfer(royaltyAmount);
+
+                        // Notify listeners of payment
                         emit RoyaltyDisbursed(_consignment, recipient, royaltyAmount);
                     }
 
@@ -106,7 +115,7 @@ contract MarketHandlerBase is AccessControl, SeenTypes  {
      * @param _consignment - the consigned item
      * @param _netAmount - the net amount after royalties
      */
-    function deductFee(Consignment _consignment, uint256 _netAmount)
+    function deductFee(Consignment memory _consignment, uint256 _netAmount)
     internal
     returns (uint256 payout){
 
@@ -117,11 +126,12 @@ contract MarketHandlerBase is AccessControl, SeenTypes  {
         haus.transfer(split);
         multisig.transfer(split);
 
-        emit FeeDisbursed(_consignment, haus, split);
-        emit FeeDisbursed(_consignment, multisig, split);
-
         // Return the seller payout amount after fee deduction
         payout = _netAmount - feeAmount;
+
+        // Notify listeners of payment
+        emit FeeDisbursed(_consignment, haus, split);
+        emit FeeDisbursed(_consignment, multisig, split);
 
     }
 
@@ -131,7 +141,7 @@ contract MarketHandlerBase is AccessControl, SeenTypes  {
      * @param _consignment - the consigned item
      * @param _saleAmount - the final sale amount
      */
-    function disburseFunds(Consignment _consignment, uint256 _saleAmount)
+    function disburseFunds(Consignment memory _consignment, uint256 _saleAmount)
     internal virtual
     {
         // Pay royalties if needed
@@ -141,7 +151,9 @@ contract MarketHandlerBase is AccessControl, SeenTypes  {
         uint256 payout = deductFee(_consignment, net);
 
         // Pay seller
-        consignment.seller.transfer(payout);
+        _consignment.seller.transfer(payout);
+
+        // Notify listeners of payment
         emit PayoutDisbursed(_consignment, _consignment.seller, payout);
     }
 
