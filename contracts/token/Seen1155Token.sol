@@ -44,7 +44,7 @@ contract Seen1155Token is AccessClient, MarketClient, ERC1155, IERC2981 {
     external
     returns (address receiver, uint256 royaltyAmount, bytes memory royaltyPaymentData) {
         receiver = creators[_tokenId];
-        royaltyAmount = (_value / 100) * marketController.royaltyPercentage;
+        royaltyAmount = (_value / 100) * marketController.royaltyPercentage();
         royaltyPaymentData = _data;
     }
 

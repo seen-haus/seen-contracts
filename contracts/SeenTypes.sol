@@ -15,9 +15,15 @@ contract SeenTypes {
         Secondary
     }
 
-    enum Style {
-        Live,       // countdown starts at start time
-        Trigger     // countdown triggered by first bid
+    enum Clock {
+        Live,
+        Trigger
+    }
+
+    enum Audience {
+        Open,
+        Staker,
+        VipStaker
     }
 
     enum Outcome {
@@ -46,7 +52,7 @@ contract SeenTypes {
         uint256 duration;
         uint256 reserve;
         uint256 bid;
-        Style style;
+        Clock clock;
         State state;
         Outcome outcome;
     }

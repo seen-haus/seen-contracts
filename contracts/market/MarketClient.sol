@@ -3,8 +3,10 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "../access/AccessClient.sol";
+import "./MarketController.sol";
 
 abstract contract MarketClient is AccessClient, ERC1155Holder {
 
@@ -12,9 +14,14 @@ abstract contract MarketClient is AccessClient, ERC1155Holder {
     event RoyaltyDisbursed(Consignment indexed consignment, address indexed recipient, uint256 amount);
     event FeeDisbursed(Consignment indexed consignment, address indexed recipient, uint256 amount);
     event PayoutDisbursed(Consignment indexed consignment, address indexed recipient, uint256 amount);
+    event AudienceChanged(Consignment indexed consignment, Audience indexed audience);
+    event MarketControllerAddressChanged(address indexed marketController);
 
     /// @notice the Seen.Haus MarketController
-    address public marketController;
+    MarketController public marketController;
+
+    /// @notice map a consignment to an audience
+    mapping(Consignment => Audience) public audiences;
 
     /**
      * @notice Constructor
@@ -22,18 +29,93 @@ abstract contract MarketClient is AccessClient, ERC1155Holder {
      * @param _marketController - the Seen.Haus MarketController
      */
     constructor(address _marketController) {
-        marketController = _marketController;
+        marketController = MarketController(_marketController);
     }
 
     /**
-     * @notice Deduct and pay royalties on sold secondary market consignments
+     * @notice Sets the audience for a consignment at sale or auction.
+     *
+     * Emits an AudienceChanged event.
+     *
+     * @param _consignment - the unique consignment being sold
+     * @param _audience - the new audience for the consignment
+     */
+    function setMarketController(address _marketController)
+    external onlyRole(ADMIN)
+    {
+        marketController = MarketController(_marketController);
+        emit MarketControllerAddressChanged(marketController);
+    }
+
+    /**
+     * @notice Sets the audience for a consignment at sale or auction.
+     *
+     * Emits an AudienceChanged event.
+     *
+     * @param _consignment - the unique consignment being sold
+     * @param _audience - the new audience for the consignment
+     */
+    function setAudience(Consignment memory _consignment, Audience _audience)
+    internal
+    {
+
+        // Set the new audience
+        audiences[_consignment] = _audience;
+
+        // Notify listeners of state change
+        emit AudienceChanged(_consignment, _audience);
+
+    }
+
+    /**
+     * @notice Check if the caller is a Staker.
+     *
+     * @returns boolean - true if caller's xSEEN ERC-20 balance is non-zero.
+     */
+    function isStaker()
+    internal
+    returns (bool status)
+    {
+        status = IERC20(marketController.staking()).balanceOf(_msgSender()) > 0;
+    }
+
+    /**
+     * @notice Check if the caller is a VIP Staker.
+     *
+     * See {MarketController:vipStakerAmount}
+     *
+     * @returns boolean - true if caller's xSEEN ERC-20 balance is at least equal to the VIP Staker Amount.
+     */
+    function isVipStaker()
+    internal
+    returns (bool status)
+    {
+        status = IERC20(marketController.staking()).balanceOf(_msgSender()) >= marketController.vipStakerAmount();
+    }
+
+    /**
+     * @notice Deduct and pay royalties on sold secondary market consignments.
+     *
+     * Does nothing is this is a primary market sale.
+     *
+     * If the consigned item's contract supports NFT Royalty Standard EIP-2981,
+     * it is queried for the expected royalty amount and recipient.
+     *
+     * Deducts royalty and pays to recipient:
+     * - entire expected amount, if below or equal to the marketplace's maximum royalty percentage
+     * - the marketplace's maximum royalty percentage {see: MarketController.maxRoyaltyPercentage}
+     *
+     * Emits a RoyaltyDisbursed event with the amount actually paid.
      *
      * @param _consignment - the consigned item
-     * @param _saleAmount - the final sale amount
+     * @param _grossSale - the gross sale amount
+     *
+     * @return net - the net amount of the sale after the royalty has been paid
      */
-    function deductRoyalties(Consignment memory _consignment, uint256 _saleAmount)
+    function deductRoyalties(Consignment memory _consignment, uint256 _grossSale)
     internal
-    returns (uint256 net){
+    returns (uint256 net)
+    {
 
         uint256 royaltyAmount = 0;
 
@@ -47,10 +129,10 @@ abstract contract MarketClient is AccessClient, ERC1155Holder {
                 if (supports == true) {
 
                     // Get the royalty recipient and expected payment
-                    (address payable recipient, uint256 expected,) = royaltyInfo(Consignment.tokenId, _saleAmount, 0x0);
+                    (address payable recipient, uint256 expected,) = royaltyInfo(Consignment.tokenId, _grossSale, 0x0);
 
                     // Determine the max royalty we will pay
-                    uint256 maxRoyalty = (_saleAmount / 100) * marketController.maxRoyaltyPercentage;
+                    uint256 maxRoyalty = (_grossSale / 100) * marketController.maxRoyaltyPercentage();
 
                     // If a royalty is expected...
                     if (expected > 0) {
@@ -74,25 +156,35 @@ abstract contract MarketClient is AccessClient, ERC1155Holder {
         }
 
         // Return the net amount after royalty deduction
-        net = _saleAmount - royaltyAmount;
+        net = _grossSale - royaltyAmount;
     }
 
     /**
-     * @notice Deduct and pay fee on a sold consignment
+     * @notice Deduct and pay fee on a sold consignment.
+     *
+     * Deducts marketplace fee and pays:
+     * - Half to the staking contract
+     * - Half to the multisig contract
+     *
+     * Emits a FeeDisbursed event for staking payment.
+     * Emits a FeeDisbursed event for multisig payment.
      *
      * @param _consignment - the consigned item
      * @param _netAmount - the net amount after royalties
+     *
+     * @return payout - the payout amount for the seller
      */
     function deductFee(Consignment memory _consignment, uint256 _netAmount)
     internal
-    returns (uint256 payout){
+    returns (uint256 payout)
+    {
 
         // With the net after royalties, calculate and split
         // the auction fee between SEEN staking and multisig,
-        uint256 feeAmount = (_netAmount / 100) * marketController.feePercentage;
+        uint256 feeAmount = (_netAmount / 100) * marketController.feePercentage();
         uint256 split = feeAmount / 2;
-        address payable staking = marketController.staking;
-        address payable multisig = marketController.multisig;
+        address payable staking = marketController.staking();
+        address payable multisig = marketController.multisig();
         staking.transfer(split);
         multisig.transfer(split);
 
@@ -105,10 +197,17 @@ abstract contract MarketClient is AccessClient, ERC1155Holder {
     }
 
     /**
-     * @notice Disburse funds for a sale or auction, primary or secondary
+     * @notice Disburse funds for a sale or auction, primary or secondary.
+     *
+     * Disburses funds in this order
+     * - Pays any necessary royalties first. See {deductRoyalties}
+     * - Deducts and distributes marketplace fee. See {deductFee}
+     * - Pays the remaining amount to the seller.
+     *
+     * Emits a PayoutDisbursed event on success.
      *
      * @param _consignment - the consigned item
-     * @param _saleAmount - the final sale amount
+     * @param _saleAmount - the gross sale amount
      */
     function disburseFunds(Consignment memory _consignment, uint256 _saleAmount)
     internal virtual
@@ -116,7 +215,7 @@ abstract contract MarketClient is AccessClient, ERC1155Holder {
         // Pay royalties if needed
         uint256 net = deductRoyalties(_consignment, _saleAmount);
 
-        // Pay auction fee
+        // Pay marketplace fee
         uint256 payout = deductFee(_consignment, net);
 
         // Pay seller
