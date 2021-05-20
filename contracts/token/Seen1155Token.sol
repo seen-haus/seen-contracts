@@ -2,42 +2,29 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "./royalty/IERC2981.sol";
 import "../SeenTypes.sol";
+import "../access/AccessClient.sol";
+import "../market/MarketClient.sol";
+import "./royalty/IERC2981.sol";
 
-
-contract Seen1155Token is AccessControl, ERC1155, IERC2981, SeenTypes {
-
-    /// @dev Roles
-    bytes32 public constant ADMIN = keccak256("ADMIN");
-    bytes32 public constant MINTER = keccak256("MINTER");
+contract Seen1155Token is AccessClient, MarketClient, ERC1155, IERC2981 {
 
     /// @dev token id => creator
     mapping (uint256 => address) public creators;
 
-    /// @dev The percentage of a secondary sale that should go to the token's creator
-    uint256 public royaltyPercentage;
-
     /**
      * @notice Constructor
      *
-     * Configure roles and support for ERC-2981.
-     *
+     * @param _accessController - the Seen.Haus AccessController
+     * @param _marketController - the Seen.Haus MarketController
      * @param _baseURI - base URI for all tokens, with {id} embedded for token id replacement
-     * @param _royaltyPercentage - The percentage of each secondary market sale that should go to token creators
      */
-    constructor(string memory _baseURI, uint256 _royaltyPercentage) ERC1155(_baseURI) public {
-
-        // Royalty Signaling Standard
-        royaltyPercentage = _royaltyPercentage;
+    constructor(address _accessController, address _marketController, string memory _baseURI)
+    AccessClient(_accessController)
+    MarketClient(_marketController)
+    ERC1155(_baseURI)
+    {
         _registerInterface(INTERFACE_ID_2981);
-
-        // Role management
-        _setupRole(ADMIN, _msgSender());
-        _setupRole(MINTER, _msgSender());
-        _setRoleAdmin(ADMIN, ADMIN);  // ADMIN roles managed by ADMIN
-        _setRoleAdmin(MINTER, ADMIN); // MINTER roles managed by ADMIN
     }
 
     /**
@@ -57,7 +44,7 @@ contract Seen1155Token is AccessControl, ERC1155, IERC2981, SeenTypes {
     external
     returns (address receiver, uint256 royaltyAmount, bytes memory royaltyPaymentData) {
         receiver = creators[_tokenId];
-        royaltyAmount = (_value / 100) * royaltyPercentage;
+        royaltyAmount = (_value / 100) * marketController.royaltyPercentage;
         royaltyPaymentData = _data;
     }
 
@@ -75,9 +62,15 @@ contract Seen1155Token is AccessControl, ERC1155, IERC2981, SeenTypes {
     function mint(uint256 _tokenId, uint256 _supply, address _creator)
     external
     onlyRole(MINTER) {
+
+        // Make sure we can mint this token
         require(creators[_tokenId] == address(0x0), "Token already exists");
         require(_supply > 0, "Token supply cannot be zero");
+
+        // Record the creator of the token
         creators[_tokenId] = _creator;
+
+        // Mint the token, sending it to the creator
         _mint(_creator, _tokenId, _supply, new bytes(0x0));
     }
 

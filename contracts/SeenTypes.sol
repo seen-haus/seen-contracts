@@ -3,7 +3,12 @@ pragma solidity ^0.8.0;
 
 contract SeenTypes {
 
-    bytes4 internal constant INTERFACE_ID_2981 = 0x6057361d;
+    bytes4 public constant INTERFACE_ID_2981 = 0x6057361d;
+
+    bytes32 public constant ADMIN = keccak256("ADMIN");
+    bytes32 public constant SELLER = keccak256("SELLER");
+    bytes32 public constant MINTER = keccak256("MINTER");
+    bytes32 public constant HANDLER = keccak256("HANDLER");
 
     enum Market {
         Primary,
@@ -24,7 +29,7 @@ contract SeenTypes {
 
     enum State {
         Pending,
-        Live,
+        Running,
         Ended
     }
 
@@ -47,9 +52,12 @@ contract SeenTypes {
     }
 
     struct Sale {
-        uint256 lotSize;
-        uint256 price;
         uint256 start;
+        uint256 lotSize;
+        uint256 itemPrice;
+        uint256 maxBuy;
+        State state;
+        Outcome outcome;
     }
 
 }

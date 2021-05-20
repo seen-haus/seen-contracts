@@ -3,58 +3,26 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import "../SeenTypes.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "../access/AccessClient.sol";
 
-contract MarketHandlerBase is AccessControl, SeenTypes  {
+abstract contract MarketClient is AccessClient, ERC1155Holder {
 
-    bytes32 public constant ADMIN = keccak256("ADMIN");
-    bytes32 public constant SELLER = keccak256("SELLER");
-
-    address payable public haus;
-    address payable public multisig;
-    uint8 public feePercentage;         // 0 - 100
-    uint8 public maxRoyaltyPercentage;  // 0 - 100
-
+    // Events
     event RoyaltyDisbursed(Consignment indexed consignment, address indexed recipient, uint256 amount);
     event FeeDisbursed(Consignment indexed consignment, address indexed recipient, uint256 amount);
     event PayoutDisbursed(Consignment indexed consignment, address indexed recipient, uint256 amount);
 
-    constructor(
-        address payable _haus,
-        address payable _multisig,
-        uint8 _feePercentage,
-        uint8 _maxRoyaltyPercentage
-    ) {
-        haus = _haus;
-        multisig = _multisig;
-        feePercentage = _feePercentage;
-        maxRoyaltyPercentage = _maxRoyaltyPercentage;
-        _setupRole(ADMIN, _msgSender());
-        _setupRole(MINTER, _msgSender());
-    }
+    /// @notice the Seen.Haus MarketController
+    address public marketController;
 
-    function setHaus(uint8 _haus)
-    external
-    onlyRole(ADMIN) {
-        haus = _haus;
-    }
-
-    function setMultisig(address payable _multisig)
-    external
-    onlyRole(ADMIN) {
-        multisig = _multisig;
-    }
-
-    function setFeePercentage(uint8 _feePercentage)
-    external
-    onlyRole(ADMIN) {
-        feePercentage = _feePercentage;
-    }
-
-    function setMaxRoyaltyPercentage(uint8 _maxRoyaltyPercentage)
-    external
-    onlyRole(ADMIN) {
-        maxRoyaltyPercentage = _maxRoyaltyPercentage;
+    /**
+     * @notice Constructor
+     *
+     * @param _marketController - the Seen.Haus MarketController
+     */
+    constructor(address _marketController) {
+        marketController = _marketController;
     }
 
     /**
@@ -82,9 +50,9 @@ contract MarketHandlerBase is AccessControl, SeenTypes  {
                     (address payable recipient, uint256 expected,) = royaltyInfo(Consignment.tokenId, _saleAmount, 0x0);
 
                     // Determine the max royalty we will pay
-                    uint256 maxRoyalty = (_saleAmount / 100) * maxRoyaltyPercentage;
+                    uint256 maxRoyalty = (_saleAmount / 100) * marketController.maxRoyaltyPercentage;
 
-                    // If we a royalty is expected...
+                    // If a royalty is expected...
                     if (expected > 0) {
 
                         // Lets pay, but only up to our platform policy maximum
@@ -121,18 +89,19 @@ contract MarketHandlerBase is AccessControl, SeenTypes  {
 
         // With the net after royalties, calculate and split
         // the auction fee between SEEN staking and multisig,
-        uint256 feeAmount = (_netAmount / 100) * feePercentage;
+        uint256 feeAmount = (_netAmount / 100) * marketController.feePercentage;
         uint256 split = feeAmount / 2;
-        haus.transfer(split);
+        address payable staking = marketController.staking;
+        address payable multisig = marketController.multisig;
+        staking.transfer(split);
         multisig.transfer(split);
 
         // Return the seller payout amount after fee deduction
         payout = _netAmount - feeAmount;
 
         // Notify listeners of payment
-        emit FeeDisbursed(_consignment, haus, split);
+        emit FeeDisbursed(_consignment, staking, split);
         emit FeeDisbursed(_consignment, multisig, split);
-
     }
 
     /**

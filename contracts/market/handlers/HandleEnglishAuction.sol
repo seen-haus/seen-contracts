@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "./MarketHandlerBase.sol";
-import "../SeenTypes.sol";
+import "./MarketClient.sol";
 
-contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
+contract HandleEnglishAuction is MarketClient {
 
     // Events
     event AuctionPending(Consignment indexed consignment, Auction indexed auction);
@@ -19,32 +16,16 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
     /// @notice map a consignment to an auction
     mapping(Consignment => Auction) public auctions;
 
-    /// @notice the minimum percentage a bid must be above the previous bid to prevail
-    uint8 public outBidPercentage; // 0 - 100
-
     /**
      * @notice Constructor
      *
-     * @param _haus - the SeenHaus (xSEEN) contract
-     * @param _multisig = the organization's multisig wallet
-     * @param _feePercentage the percentage (0-100) of each auction's funds to distribute to staking and multisig
-     * @param _outBidPercentage the percentage (0-100) a bid must be above the previous bid to prevail
+     * @param _accessController - the Seen.Haus AccessController
+     * @param _marketController - the Seen.Haus MarketController
      */
-    constructor(
-        address payable _haus,
-        address payable _multisig,
-        uint8 _feePercentage,
-        uint8 _outBidPercentage
-    ) MarketHandlerBase(_haus, _multisig, _feePercentage, _minBidIncrement)
-    {
-        outBidPercentage = _outBidPercentage;
-    }
-
-    function setOutBidPercentage(uint8 _outBidPercentage)
-    external
-    onlyRole(ADMIN) {
-        outBidPercentage = _outBidPercentage;
-    }
+    constructor(address _accessController, address _marketController)
+    AccessClient(_accessController)
+    MarketClient(_marketController)
+    {}
 
     /**
      * @notice Create a new english auction
@@ -69,15 +50,15 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
 
         // Be sure the auction doesn't already exist and doesn't start in the past
         Auction storage auction = auctions[_consignment];
-        require (_start >= block.timestamp, "Time runs backward?");
         require(auction.start == 0, "Auction exists");
+        require (_start >= block.timestamp, "Time runs backward?");
 
         // Make sure this contract is approved to transfer the token
         require(IERC1155(_consignment.token).isApprovedForAll(_consignment.seller, address(this)), "Not approved to transfer seller's tokens");
 
         // Create the auction
         auction = Auction(
-            _consignment,
+            address(0),
             _start,
             _duration,
             _reserve,
@@ -86,7 +67,7 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
             Outcome.Pending
         );
 
-        // Transfer the ERC-1155 to this auction contract
+        // Transfer a balance of one of the ERC-1155 to this auction contract
         IERC1155(_consignment.token).safeTransferFrom(
             _consignment.seller,
             address(this),
@@ -106,7 +87,7 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
      *
      * @param _consignment - the unique consignment being auctioned
      */
-    function bid (Consignment memory _consignment) external payable {
+    function bid(Consignment memory _consignment) external payable {
 
         // Make sure the auction exists
         Auction storage auction = auctions[_consignment];
@@ -128,7 +109,7 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
         // - Be sure new bid outbids previous
         // - Give back the previous bidder's money
         if (auction.bid > 0) {
-            require(msg.value >= (auction.bid * (100 + outBidPercentage)) / 100, "Bid too small");
+            require(msg.value >= (auction.bid * (100 + marketController.outBidPercentage)) / 100, "Bid too small");
             auction.buyer.transfer(auction.bid);
         }
 
@@ -150,7 +131,7 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
             // Notify listeners of state change
             emit AuctionStarted(_consignment, auction);
 
-        // Otherwise,, if auction is already underway
+        // Otherwise, if auction is already underway
         } else if (auction.state == State.Running) {
 
             // For bids placed within the extension window, extend the run time by 15 minutes
@@ -168,9 +149,11 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
     /**
      * @notice Close out a successfully completed auction
      *
+     * Reverts if caller doesn't have ADMIN role
+     *
      * @param _consignment - the unique consignment being auctioned
      */
-    function close(Consignment memory _consignment) external {
+    function close(Consignment memory _consignment) external onlyRole(ADMIN) {
 
         // Make sure the auction exists
         Auction storage auction = auctions[_consignment];
@@ -201,16 +184,18 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
         );
 
         // Notify listeners about state change
-        emit AuctionEnded(_consignment, auction, Outcome.Closed);
+        emit AuctionEnded(_consignment, auction);
 
     }    
     
     /**
      * @notice Close out an auction when it ends with no bids
      *
+     * Reverts if caller doesn't have ADMIN role
+     *
      * @param _consignment - the unique consignment being auctioned
      */
-    function pull(Consignment memory _consignment) external {
+    function pull(Consignment memory _consignment) external onlyRole(ADMIN) {
 
         // Make sure the auction exists
         Auction storage auction = auctions[_consignment];
@@ -245,9 +230,11 @@ contract HandleEnglishAuction is MarketHandlerBase, ERC1155Holder {
     /**
      * @notice Cancel an auction that hasn't ended yet.
      *
+     * Reverts if caller doesn't have ADMIN role
+     *
      * @param _consignment - the unique consignment being auctioned
      */
-    function cancel(Consignment memory _consignment) external onlyOwner {
+    function cancel(Consignment memory _consignment) external onlyRole(ADMIN) {
 
         // Make sure auction exists
         Auction storage auction = auctions[_consignment];

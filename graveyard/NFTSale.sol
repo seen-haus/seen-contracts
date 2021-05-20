@@ -9,8 +9,7 @@ interface IERC20 {
     function balanceOf(address _who) external returns (uint256);
 }
 
-// TODO: extend MarketHandlerBase
-contract HandleSale {
+contract NFTSale {
 
     IERC1155 public nft;
     uint256  public price = 0.1 ether;
