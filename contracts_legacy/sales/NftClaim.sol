@@ -126,6 +126,11 @@ contract Ownable is Context {
     }
 }
 
+
+// TODO: Looks like this is a giveaway or claim-based airdrop contract,
+//       but it could be there was an offline or some other type of sale
+//       by which the owner addresses were determined beforehand.
+//       - CLH
 contract NftClaim is Ownable {
     using Math for uint256;
 

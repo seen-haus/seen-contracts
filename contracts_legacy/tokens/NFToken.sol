@@ -870,7 +870,7 @@ contract ERC1155Base is Ownable, ERC1155Metadata_URI, HasContractURI, ERC1155 {
     }
 }
 
-contract SeenNFToken is Ownable, ERC1155Base {
+contract NFToken is Ownable, ERC1155Base {
     string public name;
     string public symbol;
 
