@@ -8,7 +8,8 @@ contract SeenTypes {
     bytes32 public constant ADMIN = keccak256("ADMIN");
     bytes32 public constant SELLER = keccak256("SELLER");
     bytes32 public constant MINTER = keccak256("MINTER");
-    bytes32 public constant HANDLER = keccak256("HANDLER");
+    bytes32 public constant ESCROW_AGENT = keccak256("ESCROW_AGENT");
+    bytes32 public constant MARKET_HANDLER = keccak256("MARKET_HANDLER");
 
     enum Market {
         Primary,

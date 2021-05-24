@@ -3,25 +3,24 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import "../../access/AccessClient.sol";
 
 /**
- * This ticket contract represents the right to claim a certain
- * number of a physical item, bought in a sale or auction.
+ * This ticket contract represents the right to claim a specified
+ * quantity of a physical consignment, bought in a sale or auction.
+ *
+ * Example: 1/1 painting. Clearly indivisible, qty = 1
+ * Example: 20/500 tee-shirts. Also indivisible, qty = 20 of 500 made
  *
  * Since this is an ERC721 implementation, the holder must
- * claim, sell, or transfer all of the balance of the
- * ticketed items at once.
+ * claim, sell, or transfer the entire lot of the ticketed
+ * items at once.
  *
  * N.B.: This contract disincentivizes whale behavior, e.g., a person
  * scooping up a bunch of the available items in a multi-edition
  * sale must flip or claim them all at once, not individually.
  */
-contract Seen721Ticket is AccessControl, ERC721 {
-
-    // Roles
-    bytes32 public constant ADMIN = keccak256("ADMIN");
-    bytes32 public constant MINTER = keccak256("MINTER");
+contract TransferableLot is AccessClient, ERC721 {
 
     // Ticket structure
     struct Ticket {
@@ -42,12 +41,13 @@ contract Seen721Ticket is AccessControl, ERC721 {
      * Constructor
      * Grant MINTER role to deployer
      */
-    constructor(string memory _baseURI, address _token) ERC1155(_baseURI) public {
+    constructor(string memory _name, string memory _symbol)
+    AccessClient(_accessController)
+    MarketClient(_marketController)
+    ERC721(_name, _symbol) public {
         token = IERC1155(token);
-        _setupRole(ADMIN, _msgSender());
-        _setupRole(MINTER, _msgSender());
-        _setRoleAdmin(MINTER, ADMIN);
     }
+
 
     /**
      * Mint a ticket and send it to the buyer
@@ -71,6 +71,6 @@ contract Seen721Ticket is AccessControl, ERC721 {
         require(_exists(_ticketId), "Invalid ticket id");
         require(ownerOf(_ticketId) == _msgSender(), "Caller not ticket holder");
         _burn(_msgSender(), _ticketId);
-   }
+    }
 
 }

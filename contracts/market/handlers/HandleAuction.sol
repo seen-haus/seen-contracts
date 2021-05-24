@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "../MarketClient.sol";
 
-contract HandleEnglishAuction is MarketClient {
+contract HandleAuction is MarketClient {
 
     // Events
     event AuctionPending(Consignment indexed consignment, Auction indexed auction);
@@ -28,7 +28,7 @@ contract HandleEnglishAuction is MarketClient {
     {}
 
     /**
-     * @notice Create a new English auction.
+     * @notice Create a new auction. (English style)
      *
      * For a single edition of one ERC-1155 token.
      * Depending on
