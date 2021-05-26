@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
@@ -29,7 +30,7 @@ abstract contract AccessClient is SeenTypes  {
      * See: {AccessController.hasRole}
      */
     modifier onlyRole(bytes32 role) {
-        require(accessController.hasRole(role, _msgSender(), "Access denied, caller doesn't have role"));
+        require(accessController.hasRole(role, msg.sender), "Access denied, caller doesn't have role");
         _;
     }
 
@@ -58,7 +59,7 @@ abstract contract AccessClient is SeenTypes  {
     external
     onlyRole(ADMIN) {
         accessController = IAccessControl(_accessController);
-        emit AccessControllerAddressChanged(accessController);
+        emit AccessControllerAddressChanged(_accessController);
     }
 
 }

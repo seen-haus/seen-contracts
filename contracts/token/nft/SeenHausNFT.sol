@@ -2,11 +2,12 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
 import "../../market/MarketClient.sol";
 import "../royalty/IERC2981.sol";
 import "./ISeenHausNFT.sol";
 
-contract SeenHausNFT is ISeenHausNFT, ERC1155, IERC2981, MarketClient {
+contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
 
     /// @dev token id => creator
     mapping (uint256 => address) public creators;
@@ -36,9 +37,11 @@ contract SeenHausNFT is ISeenHausNFT, ERC1155, IERC2981, MarketClient {
      * Check if a given token id corresponds to a tangible lot.
      *
      * @param _tokenId - the id of the token to check
-     * @return isTangible
+     * @return tangible - true if token id corresponds to a tangible lot.
      */
-    function isTangible(uint256 _tokenId) public returns (bool tangible) {
+    function isTangible(uint256 _tokenId)
+    public override
+    returns (bool tangible) {
         tangible = (tangibles[_tokenId] == true);
     }
 
@@ -56,12 +59,12 @@ contract SeenHausNFT is ISeenHausNFT, ERC1155, IERC2981, MarketClient {
      * @return _royaltyPaymentData - the _data argument passed through without modification
      */
     function royaltyInfo(uint256 _tokenId, uint256 _value, bytes calldata _data)
-    external
-    returns (address receiver, uint256 royaltyAmount, bytes memory royaltyPaymentData)
+    external override
+    returns (address _receiver, uint256 _royaltyAmount, bytes memory _royaltyPaymentData)
     {
-        receiver = creators[_tokenId];
-        royaltyAmount = (_value / 100) * marketController.royaltyPercentage();
-        royaltyPaymentData = _data;
+        _receiver = creators[_tokenId];
+        _royaltyAmount = (_value / 100) * marketController.royaltyPercentage();
+        _royaltyPaymentData = _data;
     }
 
     /**
@@ -73,7 +76,7 @@ contract SeenHausNFT is ISeenHausNFT, ERC1155, IERC2981, MarketClient {
      * @param _creator - the creator of the NFT (where the royalties will go)
      * @param _tangible - whether the NFT should be flagged as tangible or not
      */
-    function mint(uint256 _supply, address _creator, bool tangible)
+    function mint(uint256 _supply, address _creator, bool _tangible)
     internal
     {
 
@@ -84,10 +87,10 @@ contract SeenHausNFT is ISeenHausNFT, ERC1155, IERC2981, MarketClient {
         creators[tokenId] = _creator;
 
         // Optionally flag it as tangible
-        if (tangible) tangibles[tokenId] = true;
+        if (_tangible) tangibles[tokenId] = true;
 
         // Mint the token, sending it to the caller
-        _mint(_msgSender(), tokenId, _supply, new bytes(0x0));
+        _mint(msg.sender, tokenId, _supply, new bytes(0x0));
 
     }
 
@@ -132,4 +135,9 @@ contract SeenHausNFT is ISeenHausNFT, ERC1155, IERC2981, MarketClient {
         mint(_supply, _creator, false);
 
     }
+
+    function supportsInterface(bytes4 interfaceId) public view override(IERC2981,ERC1155,ERC165Storage,ERC1155Receiver) returns (bool) {
+        return interfaceId == type(IERC165).interfaceId;
+    }
+
 }
