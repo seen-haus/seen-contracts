@@ -19,25 +19,28 @@ contract HandleAuction is MarketClient {
     /**
      * @notice Constructor
      *
+     * This contract is granted the MARKET_HANDLER role with the AccessController
+     *
      * @param _accessController - the Seen.Haus AccessController
      * @param _marketController - the Seen.Haus MarketController
      */
     constructor(address _accessController, address _marketController)
     AccessClient(_accessController)
     MarketClient(_marketController)
-    {}
+    {
+        grantRole(MARKET_HANDLER, address(this));
+    }
 
     /**
      * @notice Create a new auction. (English style)
      *
      * For a single edition of one ERC-1155 token.
-     * Depending on
      *
      * @param _consignment - the unique consignment being auctioned
      * @param _start - the scheduled start time of the auction
      * @param _duration - the scheduled duration of the auction
      * @param _reserve - the reserve price of the auction
-     * @param _clock - the clock type of the auction (live or trigger)
+     * @param _clock - the type of clock used for the auction (live or trigger)
      */
     function createAuction (
         Consignment memory _consignment,
@@ -227,18 +230,37 @@ contract HandleAuction is MarketClient {
         auction.state = State.Ended;
         auction.outcome = Outcome.Closed;
 
-        // Distribute the funds (handles royalties, staking, multisig, and seller)
+        // Distribute the funds (pay royalties, staking, multisig, and seller)
         disburseFunds(_consignment, auction.bid);
 
-        // Transfer the ERC-1155 to winner
-        IERC1155(_consignment.token).safeTransferFrom(
-            address(this),
-            auction.buyer,
-            _consignment.tokenId,
-            1,
-            new bytes(0x0)
-        );
+        // Determine if consignment is tangible
+        if (address(marketController.nft()) == _consignment.token &&
+            marketController.nft().isTangible(_consignment.token)) {
 
+            // Transfer the ERC-1155 to escrow contract
+            IERC1155(_consignment.token).safeTransferFrom(
+                address(this),
+                address(marketController.escrowTicket()),
+                _consignment.tokenId,
+                1,
+                new bytes(0x0)
+            );
+
+            // For tangibles, issue an escrow ticket to the buyer
+            marketController.escrowTicket().issueTicket(_consignment.tokenId, 1, auction.buyer);
+
+        } else {
+
+            // Transfer the ERC-1155 to winner
+            IERC1155(_consignment.token).safeTransferFrom(
+                address(this),
+                auction.buyer,
+                _consignment.tokenId,
+                1,
+                new bytes(0x0)
+            );
+
+        }
         // Notify listeners about state change
         emit AuctionEnded(_consignment, auction);
 
@@ -260,7 +282,7 @@ contract HandleAuction is MarketClient {
      *
      * @param _consignment - the unique consignment being auctioned
      */
-    // TODO: is there really a need to have pull and cancel? Cancel would do the same if it ignored end time.
+    // TODO: is there really a need to have pull AND cancel? Cancel would do the same if it ignored end time.
     function pull(Consignment memory _consignment) external onlyRole(ADMIN) {
 
         // Make sure the auction exists

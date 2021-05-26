@@ -4,14 +4,18 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "../../market/MarketClient.sol";
 import "../royalty/IERC2981.sol";
+import "./ISeenHausNFT.sol";
 
-contract Seen1155Token is MarketClient, ERC1155, IERC2981 {
+contract SeenHausNFT is ISeenHausNFT, ERC1155, IERC2981, MarketClient {
 
     /// @dev token id => creator
     mapping (uint256 => address) public creators;
 
     /// @dev token id => true - only included if token id
-    mapping (uint256 => boolean) public tangibles;
+    mapping (uint256 => bool) public tangibles;
+
+    // Next token number
+    uint256 public nextToken;
 
     /**
      * @notice Constructor
@@ -29,6 +33,16 @@ contract Seen1155Token is MarketClient, ERC1155, IERC2981 {
     }
 
     /**
+     * Check if a given token id corresponds to a tangible lot.
+     *
+     * @param _tokenId - the id of the token to check
+     * @return isTangible
+     */
+    function isTangible(uint256 _tokenId) public returns (bool tangible) {
+        tangible = (tangibles[_tokenId] == true);
+    }
+
+    /**
      * @notice Get royalty info for a token
      *
      * For a given token id and sale price, how much should be sent to whom as royalty
@@ -43,62 +57,79 @@ contract Seen1155Token is MarketClient, ERC1155, IERC2981 {
      */
     function royaltyInfo(uint256 _tokenId, uint256 _value, bytes calldata _data)
     external
-    returns (address receiver, uint256 royaltyAmount, bytes memory royaltyPaymentData) {
+    returns (address receiver, uint256 royaltyAmount, bytes memory royaltyPaymentData)
+    {
         receiver = creators[_tokenId];
         royaltyAmount = (_value / 100) * marketController.royaltyPercentage();
         royaltyPaymentData = _data;
     }
 
     /**
-     * @notice Mint a given supply of a token and send it to the creator.
+     * @notice Mint a given supply of a token, optionally flagging as tangible.
      *
-     * Entire supply must be minted at once.
-     * More cannot be minted later for the same token id.
-     * Can only be called by an address with the MINTER role.
+     * Token supply is sent to the caller.
      *
-     * @param _tokenId - the NFT token to mint
      * @param _supply - the supply of the token
      * @param _creator - the creator of the NFT (where the royalties will go)
+     * @param _tangible - whether the NFT should be flagged as tangible or not
      */
-    function mintTangible(uint256 _tokenId, uint256 _supply, address _creator)
-    external
-    onlyRole(ESCROW_AGENT) {
+    function mint(uint256 _supply, address _creator, bool tangible)
+    internal
+    {
 
-        // Make sure we can mint this token
-        require(creators[_tokenId] == address(0x0), "Token already exists");
-        require(_supply > 0, "Token supply cannot be zero");
+        // Get the next token id
+        uint256 tokenId = nextToken++;
 
         // Record the creator of the token
-        creators[_tokenId] = _creator;
+        creators[tokenId] = _creator;
 
-        // Mint the token, sending it to the creator
-        _mint(_creator, _tokenId, _supply, new bytes(0x0));
+        // Optionally flag it as tangible
+        if (tangible) tangibles[tokenId] = true;
+
+        // Mint the token, sending it to the caller
+        _mint(_msgSender(), tokenId, _supply, new bytes(0x0));
 
     }
 
     /**
-     * @notice Mint a given supply of a token and send it to the creator.
+     * @notice Mint a given supply of a token, marking it as tangible.
+     *
+     * Entire supply must be minted at once.
+     * More cannot be minted later for the same token id.
+     * Can only be called by an address with the ESCROW_AGENT role.
+     * Token supply is sent to the caller.
+     *
+     * @param _supply - the supply of the token
+     * @param _creator - the creator of the NFT (where the royalties will go)
+     */
+    function mintTangible(uint256 _supply, address _creator)
+    external
+    onlyRole(ESCROW_AGENT)
+    {
+
+        // Mint the token, flagging it as tangible, sending to caller
+        mint(_supply, _creator, true);
+
+    }
+
+    /**
+     * @notice Mint a given supply of a token.
      *
      * Entire supply must be minted at once.
      * More cannot be minted later for the same token id.
      * Can only be called by an address with the MINTER role.
+     * Token supply is sent to the caller's address.
      *
-     * @param _tokenId - the NFT token to mint
      * @param _supply - the supply of the token
      * @param _creator - the creator of the NFT (where the royalties will go)
      */
-    function mintDigital(uint256 _tokenId, uint256 _supply, address _creator)
-    public
-    onlyRole(MINTER) {
-        // Make sure we can mint this token
-        require(creators[_tokenId] == address(0x0), "Token already exists");
-        require(_supply > 0, "Token supply cannot be zero");
+    function mintDigital(uint256 _supply, address _creator)
+    external
+    onlyRole(MINTER)
+    {
 
-        // Record the creator of the token
-        creators[_tokenId] = _creator;
+        // Mint the token, sending to caller
+        mint(_supply, _creator, false);
 
-        // Mint the token, sending it to the creator
-        _mint(_creator, _tokenId, _supply, new bytes(0x0));
     }
-
 }

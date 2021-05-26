@@ -6,10 +6,17 @@ import "../SeenTypes.sol";
 
 abstract contract AccessClient is SeenTypes  {
 
+    // Events
     event AccessControllerAddressChanged(address indexed accessController);
 
+    /// @notice the Seen.Haus AccessController
     IAccessControl public accessController;
 
+    /**
+     * @notice Constructor
+     *
+     * @param _accessController - the Seen.Haus AccessController
+     */
     constructor(address _accessController) {
         accessController = IAccessControl(_accessController);
     }
@@ -24,6 +31,20 @@ abstract contract AccessClient is SeenTypes  {
     modifier onlyRole(bytes32 role) {
         require(accessController.hasRole(role, _msgSender(), "Access denied, caller doesn't have role"));
         _;
+    }
+
+    /**
+     * @dev Grants `role` to `account`.
+     *
+     * If `account` had not been already granted `role`, emits a {RoleGranted}
+     * event.
+     *
+     * Requirements:
+     *
+     * - the caller must have ``role``'s admin role.
+     */
+    function grantRole(bytes32 role, address account) internal {
+        accessController.grantRole(role, account);
     }
 
     /**

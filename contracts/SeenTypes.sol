@@ -6,10 +6,10 @@ contract SeenTypes {
     bytes4 public constant INTERFACE_ID_2981 = 0x6057361d;
 
     bytes32 public constant ADMIN = keccak256("ADMIN");
-    bytes32 public constant SELLER = keccak256("SELLER");
-    bytes32 public constant MINTER = keccak256("MINTER");
-    bytes32 public constant ESCROW_AGENT = keccak256("ESCROW_AGENT");
-    bytes32 public constant MARKET_HANDLER = keccak256("MARKET_HANDLER");
+    bytes32 public constant SELLER = keccak256("SELLER");                 // Whitelisted sellers amd Seen.Haus reps
+    bytes32 public constant MINTER = keccak256("MINTER");                 // Whitelisted artists and Seen.Haus reps
+    bytes32 public constant ESCROW_AGENT = keccak256("ESCROW_AGENT");     // Seen.Haus Tangible Item Escrow Agent
+    bytes32 public constant MARKET_HANDLER = keccak256("MARKET_HANDLER"); // Market Handler contracts
 
     enum Market {
         Primary,
@@ -65,6 +65,11 @@ contract SeenTypes {
         uint256 maxBuy;
         State state;
         Outcome outcome;
+    }
+
+    struct EscrowTicket {
+        uint256 tokenId;
+        uint256 amount;
     }
 
 }

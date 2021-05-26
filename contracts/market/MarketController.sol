@@ -2,19 +2,30 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "../access/AccessClient.sol";
+import "../token/nft/ISeenHausNFT.sol";
+import "../token/escrow/IEscrowTicket.sol";
 
 contract MarketController is AccessClient {
 
     // Events
+    event NFTAddressChanged(address indexed nft);
+    event EscrowTicketAddressChanged(address indexed escrowTicket);
     event StakingAddressChanged(address indexed staking);
     event MultisigAddressChanged(address indexed multisig);
+    event TangibleItemsAddressChanged(address indexed tangibleItems);
+    event TangibleLotsAddressChanged(address indexed tangibleLots);
     event VipStakerAmountChanged(uint256 indexed vipStakerAmount);
     event FeePercentageChanged(uint8 indexed feePercentage);
     event RoyaltyPercentageChanged(uint8 indexed royaltyPercentage);
     event MaxRoyaltyPercentageChanged(uint8 indexed maxRoyaltyPercentage);
     event OutBidPercentageChanged(uint8 indexed outBidPercentage);
+
+    /// @notice the address of the Seen.Haus NFT contract
+    ISeenHausNFT public nft;
+
+    /// @notice address of the Seen.Haus escrow ticket contract
+    IEscrowTicket public escrowTicket;
 
     /// @notice the address of the xSEEN ERC-20 Seen.Haus staking contract
     address payable public staking;
@@ -40,6 +51,8 @@ contract MarketController is AccessClient {
     /**
      * @notice Constructor
      *
+     * @param _nft - Seen.Haus NFT contract
+     * @param _escrowTicket - Seen.Haus escrow ticket contract
      * @param _staking - Seen.Haus staking contract
      * @param _multisig - Seen.Haus multi-sig wallet
      * @param _vipStakerAmount - the minimum amount of xSEEN ERC-20 a caller must hold to participate in VIP events
@@ -49,6 +62,8 @@ contract MarketController is AccessClient {
      * @param _outBidPercentage - minimum percentage a Seen.Haus auction bid must be above the previous bid to prevail
      */
     constructor(
+        address _nft,
+        address _escrowTicket,
         address payable _staking,
         address payable _multisig,
         uint256 _vipStakerAmount,
@@ -57,6 +72,8 @@ contract MarketController is AccessClient {
         uint8 _maxRoyaltyPercentage,
         uint8 _outBidPercentage
     ) {
+        nft = ISeenHausNFT(_nft);
+        escrowTicket = IEscrowTicket(_escrowTicket);
         staking = _staking;
         multisig = _multisig;
         vipStakerAmount = _vipStakerAmount;
@@ -64,6 +81,34 @@ contract MarketController is AccessClient {
         royaltyPercentage = _royaltyPercentage;
         maxRoyaltyPercentage = _maxRoyaltyPercentage;
         outBidPercentage = _outBidPercentage;
+    }
+
+    /**
+     * @notice Sets the address of the xSEEN ERC-20 staking contract.
+     *
+     * Emits a NFTAddressChanged event.
+     *
+     * @param _NFT - the address of the nft contract
+     */
+    function setNFT(address _nft)
+    external
+    onlyRole(ADMIN) {
+        nft = _nft;
+        emit NFTAddressChanged(nft);
+    }
+
+    /**
+     * @notice Sets the address of the Seen.Haus escrow ticket contract.
+     *
+     * Emits a EscrowTicketAddressChanged event.
+     *
+     * @param _escrowTicket - the address of the escrow ticket contract
+     */
+    function setEscrowTicket(address _escrowTicket)
+    external
+    onlyRole(ADMIN) {
+        escrowTicket = _escrowTicket;
+        emit EscrowTicketAddressChanged(escrowTicket);
     }
 
     /**

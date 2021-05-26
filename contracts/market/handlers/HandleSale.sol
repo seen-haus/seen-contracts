@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "../../token/nft/ISeenHausNFT.sol";
+import "../../token/escrow/IEscrowTicket.sol";
 import "../MarketClient.sol";
 
 contract HandleSale is MarketClient {
@@ -19,13 +21,17 @@ contract HandleSale is MarketClient {
     /**
      * @notice Constructor
      *
+     * This contract is granted the MARKET_HANDLER role with the AccessController
+     *
      * @param _accessController - the Seen.Haus AccessController
      * @param _marketController - the Seen.Haus MarketController
      */
     constructor(address _accessController, address _marketController)
     AccessClient(_accessController)
     MarketClient(_marketController)
-    {}
+    {
+        grantRole(MARKET_HANDLER, address(this));
+    }
 
     /**
      * @notice Create a new sale.
@@ -163,14 +169,34 @@ contract HandleSale is MarketClient {
             emit SaleStarted(_consignment, sale);
         }
 
-        // Transfer the purchase to the buyer
-        IERC1155(_consignment.token).safeTransferFrom(
-            address(this),
-            _msgSender(),
-            _consignment,tokenId,
-            _amount,
-            new bytes(0x0)
-        );
+        // Determine if consignment is tangible
+        if (address(marketController.nft()) == _consignment.token &&
+            marketController.nft().isTangible(_consignment.token)) {
+
+            // Transfer the ERC-1155 to escrow contract
+            IERC1155(_consignment.token).safeTransferFrom(
+                address(this),
+                address(marketController.escrowTicket()),
+                _consignment.tokenId,
+                _amount,
+                new bytes(0x0)
+            );
+
+            // Issue an escrow ticket to the buyer
+            marketController.escrowTicket().issueTicket(_consignment.tokenId, _amount, _msgSender());
+
+        } else {
+
+            // For digital, transfer the purchase to the buyer
+            IERC1155(_consignment.token).safeTransferFrom(
+                address(this),
+                _msgSender(),
+                _consignment.tokenId,
+                _amount,
+                new bytes(0x0)
+            );
+
+        }
 
         // Announce the purchase
         emit Purchase(_consignment, sale, _msgSender(), _amount);
