@@ -4,19 +4,19 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "../../token/nft/ISeenHausNFT.sol";
-import "../../token/escrow/IEscrowTicket.sol";
+import "../../token/escrow/IEscrowHandler.sol";
 import "../MarketClient.sol";
 
 contract HandleSale is MarketClient {
 
     // Events
-    event SalePending(Consignment indexed consignment, Sale indexed sale);
-    event SaleStarted(Consignment indexed consignment, Sale indexed sale);
-    event SaleEnded(Consignment indexed consignment, Sale indexed sale);
-    event Purchase(Consignment indexed consignment, Sale indexed sale, address indexed buyer, uint256 amount);
+    event SalePending(Sale indexed sale);
+    event SaleStarted(Sale indexed sale);
+    event SaleEnded(Sale indexed sale);
+    event Purchase(Sale indexed sale, address indexed buyer, uint256 amount);
 
-    /// @notice map a consignment to a sale
-    mapping(Consignment => Sale) public sales;
+    /// @notice map a consignment id to a sale
+    mapping(uint256 => Sale) public sales;
 
     /**
      * @notice Constructor
@@ -48,54 +48,64 @@ contract HandleSale is MarketClient {
      *
      * Emits a SalePending event.
      *
-     * @param _consignment - the unique consignment being auctioned
+     * @param _seller - the current owner of the consignment
+     * @param _token - the contract address issuing the NFT behind the consignment
+     * @param _tokenId - the id of the token being consigned
      * @param _start - the scheduled start time of the sale
      * @param _lotSize - the supply of the given consigned token being sold
      * @param _itemPrice - the price of each item in the lot
      * @param _maxBuy - the maximum amount that can be bought in a single transaction
-     * @param _audience - the initial audience that can execute buy transactions. (Open, Staker, VipStaker)
+     * @param _audience - the initial audience that can participate. See {SeenTypes.Audience}
+     * @param _market - the market for the consignment. See {SeenTypes.Market}
      */
     function createSale (
-        Consignment memory _consignment,
+        address payable _seller,
+        address _token,
+        uint256 _tokenId,
         uint256 _start,
         uint256 _lotSize,
         uint256 _itemPrice,
         uint256 _maxBuy,
-        Audience _audience
+        Audience _audience,
+        Market _market
     )
     external
     onlyRole(SELLER) {
 
-        // Be sure the sale doesn't already exist and doesn't start in the past
-        Sale storage sale = sales[_consignment];
-        require(sale.start == 0, "Sale exists");
+        // Make sure start time isn't in the past
         require (_start >= block.timestamp, "Time runs backward?");
 
         // Make sure this contract is approved to transfer the token
-        require(IERC1155(_consignment.token).isApprovedForAll(_consignment.seller, address(this)), "Not approved to transfer seller's tokens");
+        require(IERC1155(_token).isApprovedForAll(_seller, address(this)), "Not approved to transfer seller's tokens");
+
+        // Ensure seller owns _lotSize tokens
+        require(IERC1155(_token).balanceOf(_seller, _tokenId) >= _lotSize, "Seller token balance less than lot size");
+
+        // Register the consignment
+        Consignment memory consignment = marketController.registerConsignment(_market, _seller, _token, _tokenId);
 
         // Set up the sale
-        setAudience(_consignment, _audience);
-        sale = Sale(
-            _start,
-            _lotSize,
-            _itemPrice,
-            _maxBuy,
-            State.Pending,
-            Outcome.Pending
-        );
+        setAudience(consignment.id, _audience);
+        Sale storage sale = sales[consignment.id];
+        sale.consignmentId = consignment.id;
+        sale.start = _start;
+        sale.lotSize = _lotSize;
+        sale.itemPrice = _itemPrice;
+        sale.maxBuy = _maxBuy;
+        sale.state = State.Pending;
+        sale.outcome = Outcome.Pending;
 
         // Transfer the sale's lot size of the ERC-1155 to this sale contract
-        IERC1155(_consignment.token).safeTransferFrom(
-            _consignment.seller,
+        IERC1155(_token).safeTransferFrom(
+            _seller,
             address(this),
-            _consignment.tokenId,
+            _tokenId,
             _lotSize,
             new bytes(0x0)
         );
 
         // Notify listeners of state change
-        emit SalePending(_consignment, sale);
+        emit SalePending(sale);
     }
 
     /**
@@ -103,20 +113,22 @@ contract HandleSale is MarketClient {
      *
      * Reverts if:
      *  - Caller does not have ADMIN role
-     *  - Sale doesn't exist or has already been settled
+     *  - Auction doesn't exist or has already been settled
      *
-     * @param _consignment - the unique consignment being sold
+     * @param _consignmentId - the id of the consignment being sold
      * @param _audience - the new audience for the sale
      */
-    function changeAudience(Consignment memory _consignment, Audience _audience) onlyRole(ADMIN) {
+    function changeAudience(uint256 _consignmentId, Audience _audience)
+    external
+    onlyRole(ADMIN) {
 
         // Make sure the sale exists and hasn't been settled
-        Sale storage sale = sales[_consignment];
+        Sale storage sale = sales[_consignmentId];
         require(sale.start != 0, "Sale does not exist");
         require(sale.state != State.Ended, "Sale has already been settled");
 
         // Set the new audience for the consignment
-        setAudience(_consignment, _audience);
+        setAudience(_consignmentId, _audience);
 
     }
 
@@ -135,63 +147,66 @@ contract HandleSale is MarketClient {
      * Emits a Purchase event.
      * May emit a SaleStarted event, on the first purchase.
      *
-     * @param _consignment - the unique consignment being sold
+     * @param _consignmentId - id of the consignment being sold
      * @param _amount - the amount of the remaining supply to buy
      */
-    function buy(Consignment memory _consignment, uint256 _amount) external payable {
+    function buy(uint256 _consignmentId, uint256 _amount) external payable {
 
         // Make sure the sale exists
-        Sale storage sale = sales[_consignment];
+        Sale storage sale = sales[_consignmentId];
         require(sale.start != 0, "Sale does not exist");
 
         // Make sure we can accept the buy order
         require(block.timestamp >= sale.start, "Sale hasn't started");
-        require(!Address.isContract(_msgSender()), "Contracts may not buy");
+        require(!Address.isContract(msg.sender), "Contracts may not buy");
         require(_amount <= sale.maxBuy, "Per transaction limit for this sale exceeded");
         require(msg.value == sale.itemPrice * _amount, "Payment does not cover order price");
 
         // Unless sale is for an open audience, check buyer's staking status
-        if (sale.audience != Audience.Open) {
-            if (sale.audience == Audience.Staker) {
+        Audience audience = audiences[_consignmentId];
+        if (audience != Audience.Open) {
+            if (audience == Audience.Staker) {
                 require(isStaker() == true, "Buyer is not a staker");
-            } else if (sale.audience == Audience.VipStaker) {
+            } else if (audience == Audience.VipStaker) {
                 require(isVipStaker() == true, "Buyer is not a VIP staker");
             }
         }
 
-        // First buy updates sale state to Running
+        // If this was the first successful purchase...
         if (sale.state == State.Pending) {
 
-            // First bid updates auction state to Running
-            auction.state = State.Running;
+            // First buy updates sale state to Running
+            sale.state = State.Running;
 
             // Notify listeners of state change
-            emit SaleStarted(_consignment, sale);
+            emit SaleStarted(sale);
         }
 
         // Determine if consignment is tangible
-        if (address(marketController.nft()) == _consignment.token &&
-            marketController.nft().isTangible(_consignment.token)) {
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
+        address nft = marketController.getNft();
+        if (nft == consignment.token && ISeenHausNFT(nft).isTangible(consignment.tokenId)) {
 
             // Transfer the ERC-1155 to escrow contract
-            IERC1155(_consignment.token).safeTransferFrom(
+            address escrowTicketer = marketController.getEscrowTicketer();
+            IERC1155(consignment.token).safeTransferFrom(
                 address(this),
-                address(marketController.escrowTicket()),
-                _consignment.tokenId,
+                escrowTicketer,
+                consignment.tokenId,
                 _amount,
                 new bytes(0x0)
             );
 
             // Issue an escrow ticket to the buyer
-            marketController.escrowTicket().issueTicket(_consignment.tokenId, _amount, _msgSender());
+            IEscrowHandler(escrowTicketer).issueTicket(consignment.tokenId, _amount, payable(msg.sender));
 
         } else {
 
             // For digital, transfer the purchase to the buyer
-            IERC1155(_consignment.token).safeTransferFrom(
+            IERC1155(consignment.token).safeTransferFrom(
                 address(this),
-                _msgSender(),
-                _consignment.tokenId,
+                msg.sender,
+                consignment.tokenId,
                 _amount,
                 new bytes(0x0)
             );
@@ -199,7 +214,7 @@ contract HandleSale is MarketClient {
         }
 
         // Announce the purchase
-        emit Purchase(_consignment, sale, _msgSender(), _amount);
+        emit Purchase(sale, msg.sender, _amount);
     }
 
     /**
@@ -214,25 +229,25 @@ contract HandleSale is MarketClient {
      *
      * Emits a SaleEnded event.
      *
-     * @param _consignment - the unique consignment being sold
+     * @param _consignmentId - id of the consignment being sold
      */
-    function close(Consignment memory _consignment) external onlyRole(ADMIN) {
+    function close(uint256 _consignmentId) external onlyRole(ADMIN) {
 
         // Make sure the sale exists and can be closed normally
-        Sale storage sale = auctions[_consignment];
+        Sale storage sale = sales[_consignmentId];
         require(sale.start != 0, "Sale does not exist");
-        require(sale.state == State.Running, "Sale has not yet started");
-        require(supply(_consignment) == 0, "Sale not over");
+        require(sale.state != State.Ended, "Sale has already been settled");
+        require(sale.state == State.Running, "Sale hasn't started");
 
         // Mark sale as settled
         sale.state = State.Ended;
         sale.outcome = Outcome.Closed;
 
         // Distribute the funds (handles royalties, staking, multisig, and seller)
-        disburseFunds(_consignment, sale.lotSize * sale.itemPrice);
+        disburseFunds(_consignmentId, sale.lotSize * sale.itemPrice);
 
         // Notify listeners about state change
-        emit SaleEnded(_consignment, sale);
+        emit SaleEnded(sale);
 
     }
 
@@ -248,12 +263,12 @@ contract HandleSale is MarketClient {
      *
      * Emits a SaleEnded event
      *
-     * @param _consignment - the unique consignment being auctioned
+     * @param _consignmentId - id of the consignment being sold
      */
-    function cancel(Consignment memory _consignment) external onlyRole(ADMIN) {
+    function cancel(uint256 _consignmentId) external onlyRole(ADMIN) {
 
         // Make sure the sale exists and can canceled
-        Sale storage sale = sales[_consignment];
+        Sale storage sale = sales[_consignmentId];
         require(sale.start != 0, "Sale does not exist");
         require(sale.state != State.Ended, "Sale has already been settled");
 
@@ -261,29 +276,32 @@ contract HandleSale is MarketClient {
         sale.state = State.Ended;
         sale.outcome = Outcome.Canceled;
 
+        // Get the consignment
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
+
         // Determine the amount sold and remaining
-        uint256 remaining = supply(_consignment);
-        uint256 sold = lotSize - remaining;
+        uint256 remaining = supply(consignment);
+        uint256 sold = sale.lotSize - remaining;
 
         // Disburse the funds for the sold items
         if (sold > 0) {
             uint256 salesTotal = sold * sale.itemPrice;
-            disburseFunds(_consignment, salesTotal);
+            disburseFunds(_consignmentId, salesTotal);
         }
 
         // Transfer the remaining ERC-1155 balance back to the seller
         if (remaining > 0) {
-            IERC1155(_consignment.token).safeTransferFrom(
+            IERC1155(consignment.token).safeTransferFrom(
                 address(this),
-                _consignment.seller,
-                _consignment.tokenId,
+                consignment.seller,
+                consignment.tokenId,
                 remaining,
                 new bytes(0x0)
             );
         }
 
         // Notify listeners about state change
-        emit SaleEnded(_consignment, sale);
+        emit SaleEnded(sale);
 
     }
 
@@ -295,5 +313,5 @@ contract HandleSale is MarketClient {
     function supply(Consignment memory _consignment) public view returns(uint256) {
         return IERC1155(_consignment.token).balanceOf(address(this), _consignment.tokenId);
     }
-    
+
 }

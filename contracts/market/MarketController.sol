@@ -4,13 +4,14 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "../access/AccessClient.sol";
 import "../token/nft/ISeenHausNFT.sol";
-import "../token/escrow/IEscrowTicket.sol";
+import "../token/escrow/IEscrowHandler.sol";
+import "./IMarketController.sol";
 
 contract MarketController is AccessClient {
 
     // Events
     event NFTAddressChanged(address indexed nft);
-    event EscrowTicketAddressChanged(address indexed escrowTicket);
+    event EscrowTicketerAddressChanged(address indexed escrowTicketer);
     event StakingAddressChanged(address indexed staking);
     event MultisigAddressChanged(address indexed multisig);
     event TangibleItemsAddressChanged(address indexed tangibleItems);
@@ -20,39 +21,47 @@ contract MarketController is AccessClient {
     event RoyaltyPercentageChanged(uint8 indexed royaltyPercentage);
     event MaxRoyaltyPercentageChanged(uint8 indexed maxRoyaltyPercentage);
     event OutBidPercentageChanged(uint8 indexed outBidPercentage);
+    event ConsignmentRegistered(SeenTypes.Consignment consignment);
 
-    /// @notice the address of the Seen.Haus NFT contract
-    ISeenHausNFT public nft;
+    /// @dev the address of the Seen.Haus NFT contract
+    address internal nft;
 
-    /// @notice address of the Seen.Haus escrow ticket contract
-    IEscrowTicket public escrowTicket;
+    /// @dev address of the Seen.Haus escrow ticketing contract
+    address public escrowTicketer;
 
-    /// @notice the address of the xSEEN ERC-20 Seen.Haus staking contract
-    address payable public staking;
+    /// @dev the address of the xSEEN ERC-20 Seen.Haus staking contract
+    address payable staking;
 
-    /// @notice the address of the Seen.Haus multi-sig wallet
-    address payable public multisig;
+    /// @dev the address of the Seen.Haus multi-sig wallet
+    address payable multisig;
 
-    /// @notice the minimum amount of xSEEN ERC-20 a caller must hold to participate in VIP events
+    /// @dev the minimum amount of xSEEN ERC-20 a caller must hold to participate in VIP events
     uint256 public vipStakerAmount;
 
-    /// @notice the percentage that will be taken as a fee from the net of a Seen.Haus sale or auction (after royalties)
+    /// @dev the percentage that will be taken as a fee from the net of a Seen.Haus sale or auction (after royalties)
     uint8 public feePercentage;         // 0 - 100
 
-    /// @notice The percentage of a Seen.Haus minted secondary sale that should go to the token's creator
+    /// @dev The percentage of a Seen.Haus minted secondary sale that should go to the token's creator
     uint8 public royaltyPercentage;     // 0 - 100
 
-    /// @notice the maximum percentage of a Seen.Haus sale or auction that will be paid as a royalty (meant for foreign consignments)
+    /// @dev the maximum percentage of a Seen.Haus sale or auction that will be paid as a royalty (meant for foreign consignments)
     uint8 public maxRoyaltyPercentage;  // 0 - 100
 
-    /// @notice the minimum percentage a Seen.Haus auction bid must be above the previous bid to prevail
+    /// @dev the minimum percentage a Seen.Haus auction bid must be above the previous bid to prevail
     uint8 public outBidPercentage;      // 0 - 100
+
+    /// @dev next consignment id
+    uint256 public nextConsignment;
+
+    /// @dev consignment id => consignment
+    mapping(uint256 => Consignment) public consignments;
 
     /**
      * @notice Constructor
      *
+     * @param _accessController - the Seen.Haus AccessController
      * @param _nft - Seen.Haus NFT contract
-     * @param _escrowTicket - Seen.Haus escrow ticket contract
+     * @param _escrowTicketer - Seen.Haus escrow ticket contract
      * @param _staking - Seen.Haus staking contract
      * @param _multisig - Seen.Haus multi-sig wallet
      * @param _vipStakerAmount - the minimum amount of xSEEN ERC-20 a caller must hold to participate in VIP events
@@ -62,8 +71,9 @@ contract MarketController is AccessClient {
      * @param _outBidPercentage - minimum percentage a Seen.Haus auction bid must be above the previous bid to prevail
      */
     constructor(
+        address _accessController,
         address _nft,
-        address _escrowTicket,
+        address _escrowTicketer,
         address payable _staking,
         address payable _multisig,
         uint256 _vipStakerAmount,
@@ -71,9 +81,11 @@ contract MarketController is AccessClient {
         uint8 _royaltyPercentage,
         uint8 _maxRoyaltyPercentage,
         uint8 _outBidPercentage
-    ) {
-        nft = ISeenHausNFT(_nft);
-        escrowTicket = IEscrowTicket(_escrowTicket);
+    )
+    AccessClient(_accessController)
+    {
+        nft = _nft;
+        escrowTicketer = _escrowTicketer;
         staking = _staking;
         multisig = _multisig;
         vipStakerAmount = _vipStakerAmount;
@@ -88,9 +100,9 @@ contract MarketController is AccessClient {
      *
      * Emits a NFTAddressChanged event.
      *
-     * @param _NFT - the address of the nft contract
+     * @param _nft - the address of the nft contract
      */
-    function setNFT(address _nft)
+    function setNft(address _nft)
     external
     onlyRole(ADMIN) {
         nft = _nft;
@@ -98,17 +110,35 @@ contract MarketController is AccessClient {
     }
 
     /**
-     * @notice Sets the address of the Seen.Haus escrow ticket contract.
-     *
-     * Emits a EscrowTicketAddressChanged event.
-     *
-     * @param _escrowTicket - the address of the escrow ticket contract
+     * @notice The nft getter
      */
-    function setEscrowTicket(address _escrowTicket)
+    function getNft()
+    external view
+    returns (address) {
+        return nft;
+    }
+
+    /**
+     * @notice Sets the address of the Seen.Haus escrow ticketer contract.
+     *
+     * Emits a EscrowTicketerAddressChanged event.
+     *
+     * @param _escrowTicketer - the address of the escrow ticketer contract
+     */
+    function setEscrowTicketer(address _escrowTicketer)
     external
     onlyRole(ADMIN) {
-        escrowTicket = _escrowTicket;
-        emit EscrowTicketAddressChanged(escrowTicket);
+        escrowTicketer = _escrowTicketer;
+        emit EscrowTicketerAddressChanged(escrowTicketer);
+    }
+
+    /**
+     * @notice The escrowTicketer getter
+     */
+    function getEscrowTicketer()
+    external view
+    returns (address) {
+        return escrowTicketer;
     }
 
     /**
@@ -126,6 +156,15 @@ contract MarketController is AccessClient {
     }
 
     /**
+     * @notice The staking getter
+     */
+    function getStaking()
+    external view
+    returns (address payable) {
+        return staking;
+    }
+
+    /**
      * @notice Sets the address of the Seen.Haus multi-sig wallet.
      *
      * Emits a MultisigAddressChanged event.
@@ -137,6 +176,15 @@ contract MarketController is AccessClient {
     onlyRole(ADMIN) {
         multisig = _multisig;
         emit MultisigAddressChanged(multisig);
+    }
+
+    /**
+     * @notice The multisig getter
+     */
+    function getMultisig()
+    external view
+    returns (address payable) {
+        return multisig;
     }
 
     /**
@@ -154,6 +202,15 @@ contract MarketController is AccessClient {
     }
 
     /**
+     * @notice The vipStakerAmount getter
+     */
+    function getVipStakerAmount()
+    external view
+    returns (uint256) {
+        return vipStakerAmount;
+    }
+
+    /**
      * @notice Sets the marketplace fee percentage.
      *
      * Emits a FeePercentageChanged event.
@@ -165,6 +222,15 @@ contract MarketController is AccessClient {
     onlyRole(ADMIN) {
         feePercentage = _feePercentage;
         emit FeePercentageChanged(feePercentage);
+    }
+
+    /**
+     * @notice The feePercentage getter
+     */
+    function getFeePercentage()
+    external view
+    returns (uint8) {
+        return feePercentage;
     }
 
     /**
@@ -182,6 +248,15 @@ contract MarketController is AccessClient {
     }
 
     /**
+     * @notice The royaltyPercentage getter
+     */
+    function getRoyaltyPercentage()
+    external view
+    returns (uint8) {
+        return royaltyPercentage;
+    }
+
+    /**
      * @notice Sets the external marketplace maximum royalty percentage.
      *
      * Emits a MaxRoyaltyPercentageChanged event.
@@ -196,6 +271,15 @@ contract MarketController is AccessClient {
     }
 
     /**
+     * @notice The maxRoyaltyPercentage getter
+     */
+    function getMaxRoyaltyPercentage()
+    external view
+    returns (uint8) {
+        return maxRoyaltyPercentage;
+    }
+
+    /**
      * @notice Sets the marketplace auction outbid percentage.
      *
      * Emits a OutBidPercentageChanged event.
@@ -207,6 +291,73 @@ contract MarketController is AccessClient {
     onlyRole(ADMIN) {
         outBidPercentage = _outBidPercentage;
         emit OutBidPercentageChanged(outBidPercentage);
+    }
+
+    /**
+     * @notice The outBidPercentage getter
+     */
+    function getOutBidPercentage()
+    external view
+    returns (uint8) {
+        return outBidPercentage;
+    }
+
+    /**
+     * @notice The nextConsignment getter
+     * @dev does not increment counter
+     */
+    function getNextConsignment()
+    external view
+    returns (uint256) {
+        return nextConsignment;
+    }
+
+    /**
+     * @notice The consignment getter
+     */
+    function getConsignment(uint256 _consignmentId)
+    external view
+    returns (Consignment memory) {
+        return consignments[_consignmentId];
+    }
+
+    /**
+     * @notice Registers a new consignment for sale or auction.
+     *
+     * Emits a ConsignmentRegistered event.
+     *
+     * @param _market - the market for the consignment. See {SeenTypes.Market}
+     * @param _seller - the current owner of the consignment
+     * @param _token - the contract address issuing the NFT behind the consignment
+     * @param _tokenId - the id of the token being consigned
+     *
+     * @return consignment - the registered consignment
+     */
+    function registerConsignment(
+        Market _market,
+        address payable _seller,
+        address _token,
+        uint256 _tokenId
+    )
+    external
+    onlyRole(MARKET_HANDLER)
+    returns (Consignment memory consignment)
+    {
+        uint256 id = nextConsignment++;
+
+        // Create and store the consignment
+        consignment = Consignment(
+            _market,
+            _seller,
+            _token,
+            _tokenId,
+            id
+        );
+        consignments[id] = consignment;
+
+        // Notify listeners of state change
+        emit ConsignmentRegistered(consignment);
+
     }
 
 }

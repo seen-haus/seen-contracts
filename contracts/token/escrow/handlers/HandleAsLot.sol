@@ -3,9 +3,9 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "../../access/AccessClient.sol";
-import "../../market/MarketClient.sol";
-import "./IEscrowTicket.sol";
+import "../../../access/AccessClient.sol";
+import "../../../market/MarketClient.sol";
+import "../IEscrowHandler.sol";
 
 /**
  * Holders of this ticket have the right to transfer or claim a
@@ -22,7 +22,7 @@ import "./IEscrowTicket.sol";
  * scooping up a bunch of the available items in a multi-edition
  * sale must flip or claim them all at once, not individually.
  */
-contract EscrowedLot is IEscrowTicket, MarketClient, ERC721 {
+contract HandleAsLot is IEscrowHandler, MarketClient, ERC721 {
 
     // Ticket ID => Ticket
     mapping (uint256 => EscrowTicket) tickets;
@@ -51,13 +51,15 @@ contract EscrowedLot is IEscrowTicket, MarketClient, ERC721 {
      * @param _tokenId - the token id on the Seen.Haus NFT contract
      * @param _amount - the amount of the given token to escrow
      */
-    function issueTicket(uint256 _tokenId, uint256 _amount, address payable _buyer) external
+    function issueTicket(uint256 _tokenId, uint256 _amount, address payable _buyer)
+    external override
     onlyRole(MARKET_HANDLER) {
 
         // Create and store escrow ticket
         uint256 ticketId = nextTicket++;
-        EscrowTicket ticket = new EscrowTicket(_tokenId, _amount);
-        tickets[ticketId] = ticket;
+        EscrowTicket storage ticket = tickets[ticketId];
+        ticket.tokenId = _tokenId;
+        ticket.amount = _amount;
 
         // Mint the ticket and send to the buyer
         _mint(_buyer, ticketId);
@@ -68,9 +70,11 @@ contract EscrowedLot is IEscrowTicket, MarketClient, ERC721 {
       *
       * @param _ticketId - the ticket representing the escrowed items
       */
-    function claim(uint256 _ticketId) external {
+    function claim(uint256 _ticketId)
+    external override
+    {
         require(_exists(_ticketId), "Invalid ticket id");
-        require(ownerOf(_ticketId) == _msgSender(), "Caller not ticket holder");
+        require(ownerOf(_ticketId) == msg.sender, "Caller not ticket holder");
 
         // Get the ticket
         EscrowTicket memory ticket = tickets[_ticketId];
@@ -79,14 +83,22 @@ contract EscrowedLot is IEscrowTicket, MarketClient, ERC721 {
         _burn(_ticketId);
 
         // Transfer the proof of ownership NFT to the caller
-        marketController.nft().safeTransferFrom(
+        IERC1155 nft = IERC1155(marketController.getNft());
+        nft.safeTransferFrom(
             address(this),
-            _msgSender(),
+            msg.sender,
             ticket.tokenId,
             ticket.amount,
             new bytes(0x0)
         );
 
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+    public pure override(ERC721,ERC1155Receiver)
+    returns (bool)
+    {
+        return interfaceId == type(IERC165).interfaceId;
     }
 
 }

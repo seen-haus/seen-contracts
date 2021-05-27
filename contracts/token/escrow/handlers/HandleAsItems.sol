@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "../../market/MarketClient.sol";
-import "./IEscrowTicket.sol";
+import "../../../market/MarketClient.sol";
+import "../IEscrowHandler.sol";
 
 /**
  * Holders of this ticket have the right to transfer or claim a
@@ -19,7 +18,7 @@ import "./IEscrowTicket.sol";
  * in a multi-edition sale with the purpose of flipping each
  * item individually to make maximum profit.
  */
-contract EscrowedItems is IEscrowTicket, MarketClient, ERC1155 {
+contract HandleAsItems is IEscrowHandler, MarketClient, ERC1155 {
 
     // Ticket ID => Ticket
     mapping (uint256 => EscrowTicket) tickets;
@@ -55,13 +54,14 @@ contract EscrowedItems is IEscrowTicket, MarketClient, ERC1155 {
      * @param _buyer - the buyer of the escrowed item(s) to whom the ticket is issued
      */
     function issueTicket(uint256 _tokenId, uint256 _amount, address payable _buyer)
-    external
+    external override
     onlyRole(MARKET_HANDLER) {
 
         // Create and store escrow ticket
         uint256 ticketId = nextTicket++;
-        EscrowTicket ticket = new EscrowTicket(_tokenId, _amount);
-        tickets[ticketId] = ticket;
+        EscrowTicket storage ticket = tickets[ticketId];
+        ticket.tokenId = _tokenId;
+        ticket.amount = _amount;
 
         // Mint escrow ticket and send to buyer
         _mint(_buyer, ticketId, _amount, new bytes(0x0));
@@ -72,24 +72,32 @@ contract EscrowedItems is IEscrowTicket, MarketClient, ERC1155 {
      *
      * @param _ticketId - the ticket representing the escrowed item(s)
      */
-    function claim(uint256 _ticketId) external {
-        uint255 amount = balanceOf(_msgSender(), _ticketId);
+    function claim(uint256 _ticketId) external override {
+        uint256 amount = balanceOf(msg.sender, _ticketId);
         require(amount > 0, "Caller has no balance for this ticket");
 
         // Get the ticket
         EscrowTicket memory ticket = tickets[_ticketId];
 
         // Burn the caller's balance
-        _burn(_msgSender(), _ticketId, amount, new bytes(0x0));
+        _burn(msg.sender, _ticketId, amount);
 
         // Transfer the ERC-1155 to escrow contract
-        marketController.nft().safeTransferFrom(
+        IERC1155 nft = IERC1155(marketController.getNft());
+        nft.safeTransferFrom(
             address(this),
-            _msgSender(),
+            msg.sender,
             ticket.tokenId,
             amount,
             new bytes(0x0)
         );
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+    public pure override(ERC1155,ERC1155Receiver)
+    returns (bool)
+    {
+        return interfaceId == type(IERC165).interfaceId;
     }
 
 }
