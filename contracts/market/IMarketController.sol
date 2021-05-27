@@ -3,21 +3,12 @@ pragma solidity ^0.8.0;
 
 import "../SeenTypes.sol";
 
+/**
+ * @title IMarketController Interface
+ * @author Cliff Hall
+ * @notice Declared as abstract contract rather than interface as it must inherit for enum types.
+ */
 abstract contract IMarketController is SeenTypes {
-
-    // Events
-    event NFTAddressChanged(address indexed nft);
-    event EscrowTicketAddressChanged(address indexed escrowTicket);
-    event StakingAddressChanged(address indexed staking);
-    event MultisigAddressChanged(address indexed multisig);
-    event TangibleItemsAddressChanged(address indexed tangibleItems);
-    event TangibleLotsAddressChanged(address indexed tangibleLots);
-    event VipStakerAmountChanged(uint256 indexed vipStakerAmount);
-    event FeePercentageChanged(uint8 indexed feePercentage);
-    event RoyaltyPercentageChanged(uint8 indexed royaltyPercentage);
-    event MaxRoyaltyPercentageChanged(uint8 indexed maxRoyaltyPercentage);
-    event OutBidPercentageChanged(uint8 indexed outBidPercentage);
-    event ConsignmentRegistered(Consignment consignment);
 
     /**
      * @notice Sets the address of the xSEEN ERC-20 staking contract.
@@ -31,21 +22,21 @@ abstract contract IMarketController is SeenTypes {
     /**
      * @notice The nft getter
      */
-    function getNft() external virtual returns (address);
+    function getNft() external view virtual returns (address);
 
     /**
      * @notice Sets the address of the Seen.Haus escrow ticket contract.
      *
-     * Emits a EscrowTicketAddressChanged event.
+     * Emits a EscrowTicketerAddressChanged event.
      *
-     * @param _escrowTicket - the address of the escrow ticket contract
+     * @param _escrowTicketer - the address of the escrow ticket contract
      */
-    function setEscrowTicket(address _escrowTicket) external virtual;
+    function setEscrowTicketer(address _escrowTicketer) external virtual;
 
     /**
-     * @notice The escrowTicket getter
+     * @notice The escrowTicketer getter
      */
-    function getEscrowTicket() external virtual returns (address);
+    function getEscrowTicketer() external view virtual returns (address);
 
     /**
      * @notice Sets the address of the xSEEN ERC-20 staking contract.
@@ -59,7 +50,7 @@ abstract contract IMarketController is SeenTypes {
     /**
      * @notice The staking getter
      */
-    function getStaking() external virtual returns (address payable);
+    function getStaking() external view virtual returns (address payable);
 
     /**
      * @notice Sets the address of the Seen.Haus multi-sig wallet.
@@ -73,7 +64,7 @@ abstract contract IMarketController is SeenTypes {
     /**
      * @notice The multisig getter
      */
-    function getMultisig() external virtual returns (address payable);
+    function getMultisig() external view virtual returns (address payable);
 
     /**
      * @notice Sets the VIP staker amount.
@@ -87,7 +78,7 @@ abstract contract IMarketController is SeenTypes {
     /**
      * @notice The vipStakerAmount getter
      */
-    function getVipStakerAmount() external virtual returns (uint256);
+    function getVipStakerAmount() external view virtual returns (uint256);
 
     /**
      * @notice Sets the marketplace fee percentage.
@@ -101,7 +92,7 @@ abstract contract IMarketController is SeenTypes {
     /**
      * @notice The feePercentage getter
      */
-    function getFeePercentage() external virtual returns (uint8);
+    function getFeePercentage() external view virtual returns (uint8);
 
     /**
      * @notice Sets the marketplace royalty percentage.
@@ -115,7 +106,7 @@ abstract contract IMarketController is SeenTypes {
     /**
      * @notice The royaltyPercentage getter
      */
-    function getRoyaltyPercentage() external virtual returns (uint8);
+    function getRoyaltyPercentage() external view virtual returns (uint8);
 
     /**
      * @notice Sets the external virtual marketplace maximum royalty percentage.
@@ -129,7 +120,7 @@ abstract contract IMarketController is SeenTypes {
     /**
      * @notice The maxRoyaltyPercentage getter
      */
-    function getMaxRoyaltyPercentage() external virtual returns (uint8);
+    function getMaxRoyaltyPercentage() external view virtual returns (uint8);
 
     /**
      * @notice Sets the marketplace auction outbid percentage.
@@ -143,17 +134,17 @@ abstract contract IMarketController is SeenTypes {
     /**
      * @notice The outBidPercentage getter
      */
-    function getOutBidPercentage() external virtual returns (uint8);
+    function getOutBidPercentage() external view virtual returns (uint8);
 
     /**
      * @notice The nextConsignment getter
      */
-    function getNextConsignment() external virtual returns (uint256);
+    function getNextConsignment() external view virtual returns (uint256);
 
     /**
      * @notice The consignment getter
      */
-    function getConsignment(uint256 _consignmentId) external virtual returns (Consignment memory);
+    function getConsignment(uint256 _consignmentId) external view virtual returns (Consignment memory);
 
     /**
      * @notice Registers a new consignment for sale or auction.
@@ -161,7 +152,6 @@ abstract contract IMarketController is SeenTypes {
      * Emits a ConsignmentRegistered event.
      *
      * @param _market - the market for the consignment. See {SeenTypes.Market}
-     * @param _audience - the initial audience that can participate. See {SeenTypes.Audience}
      * @param _seller - the current owner of the consignment
      * @param _token - the contract address issuing the NFT behind the consignment
      * @param _tokenId - the id of the token being consigned
@@ -170,10 +160,11 @@ abstract contract IMarketController is SeenTypes {
      */
     function registerConsignment(
         Market _market,
-        Audience _audience,
         address payable _seller,
         address _token,
         uint256 _tokenId
-    ) external virtual returns(Consignment memory);
+    )
+    external virtual
+    returns(Consignment memory);
 
 }

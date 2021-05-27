@@ -79,21 +79,21 @@ contract HandleSale is MarketClient {
         require(IERC1155(_token).isApprovedForAll(_seller, address(this)), "Not approved to transfer seller's tokens");
 
         // Ensure seller owns _lotSize tokens
-        require(IERC1155(_token).balanceOf(_seller) >= _lotSize, "Seller token balance less than lot size");
+        require(IERC1155(_token).balanceOf(_seller, _tokenId) >= _lotSize, "Seller token balance less than lot size");
 
         // Register the consignment
-        Consignment memory consignment = marketController.registerConsignment(_market, _audience, _seller, _token, _tokenId);
+        Consignment memory consignment = marketController.registerConsignment(_market, _seller, _token, _tokenId);
 
         // Set up the sale
         setAudience(consignment.id, _audience);
-        Sale storage sale = Sale(
-            _start,
-            _lotSize,
-            _itemPrice,
-            _maxBuy,
-            State.Pending,
-            Outcome.Pending
-        );
+        Sale storage sale = sales[consignment.id];
+        sale.consignmentId = consignment.id;
+        sale.start = _start;
+        sale.lotSize = _lotSize;
+        sale.itemPrice = _itemPrice;
+        sale.maxBuy = _maxBuy;
+        sale.state = State.Pending;
+        sale.outcome = Outcome.Pending;
 
         // Transfer the sale's lot size of the ERC-1155 to this sale contract
         IERC1155(_token).safeTransferFrom(
@@ -163,10 +163,11 @@ contract HandleSale is MarketClient {
         require(msg.value == sale.itemPrice * _amount, "Payment does not cover order price");
 
         // Unless sale is for an open audience, check buyer's staking status
-        if (sale.audience != Audience.Open) {
-            if (sale.audience == Audience.Staker) {
+        Audience audience = audiences[_consignmentId];
+        if (audience != Audience.Open) {
+            if (audience == Audience.Staker) {
                 require(isStaker() == true, "Buyer is not a staker");
-            } else if (sale.audience == Audience.VipStaker) {
+            } else if (audience == Audience.VipStaker) {
                 require(isVipStaker() == true, "Buyer is not a VIP staker");
             }
         }
@@ -182,22 +183,22 @@ contract HandleSale is MarketClient {
         }
 
         // Determine if consignment is tangible
-        Consignment memory consignment = marketController.consignments(_consignmentId);
-        ISeenHausNFT nft = marketController.nft();
-        if (address(nft) == consignment.token && nft.isTangible(consignment.token)) {
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
+        address nft = marketController.getNft();
+        if (nft == consignment.token && ISeenHausNFT(nft).isTangible(consignment.tokenId)) {
 
             // Transfer the ERC-1155 to escrow contract
-            IEscrowHandler escrowTicket = marketController.escrowTicket();
+            address escrowTicketer = marketController.getEscrowTicketer();
             IERC1155(consignment.token).safeTransferFrom(
                 address(this),
-                address(escrowTicket),
+                escrowTicketer,
                 consignment.tokenId,
                 _amount,
                 new bytes(0x0)
             );
 
             // Issue an escrow ticket to the buyer
-            escrowTicket.issueTicket(consignment.tokenId, _amount, msg.sender);
+            IEscrowHandler(escrowTicketer).issueTicket(consignment.tokenId, _amount, payable(msg.sender));
 
         } else {
 
@@ -246,7 +247,7 @@ contract HandleSale is MarketClient {
         disburseFunds(_consignmentId, sale.lotSize * sale.itemPrice);
 
         // Notify listeners about state change
-        emit SaleEnded(_consignmentId, sale);
+        emit SaleEnded(sale);
 
     }
 
@@ -276,7 +277,7 @@ contract HandleSale is MarketClient {
         sale.outcome = Outcome.Canceled;
 
         // Get the consignment
-        Consignment memory consignment = marketController.consignments(_consignmentId);
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Determine the amount sold and remaining
         uint256 remaining = supply(consignment);
@@ -300,7 +301,7 @@ contract HandleSale is MarketClient {
         }
 
         // Notify listeners about state change
-        emit SaleEnded(_consignmentId, sale);
+        emit SaleEnded(sale);
 
     }
 

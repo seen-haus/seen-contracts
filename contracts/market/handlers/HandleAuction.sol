@@ -8,11 +8,11 @@ import "../MarketClient.sol";
 contract HandleAuction is MarketClient {
 
     // Events
-    event AuctionPending(Consignment indexed consignment, Auction indexed auction);
-    event AuctionStarted(Consignment indexed consignment, Auction indexed auction);
-    event AuctionExtended(Consignment indexed consignment, Auction indexed auction);
-    event AuctionEnded(Consignment indexed consignment, Auction indexed auction);
-    event BidAccepted(Consignment indexed consignment, Auction indexed auction);
+    event AuctionPending(uint256 indexed consignmentId, Auction indexed auction);
+    event AuctionStarted(uint256 indexed consignmentId, Auction indexed auction);
+    event AuctionExtended(uint256 indexed consignmentId, Auction indexed auction);
+    event AuctionEnded(uint256 indexed consignmentId, Auction indexed auction);
+    event BidAccepted(uint256 indexed consignmentId, Auction indexed auction);
 
     /// @notice map a consignment id to an auction
     mapping(uint256 => Auction) public auctions;
@@ -71,21 +71,18 @@ contract HandleAuction is MarketClient {
         require(IERC1155(_token).balanceOf(_seller, _tokenId) >= 1, "Seller has zero balance of consigned token");
 
         // Register the consignment
-        Consignment memory consignment = marketController.registerConsignment(_market, _audience, _seller, _token, _tokenId);
+        Consignment memory consignment = marketController.registerConsignment(_market, _seller, _token, _tokenId);
 
         // Set up the auction
         setAudience(consignment.id, _audience);
-        Auction storage auction = Auction(
-            address(0), // empty initial buyer
-            consignment.id,
-            _start,
-            _duration,
-            _reserve,
-            0,
-            _clock,
-            State.Pending,
-            Outcome.Pending
-        );
+        Auction storage auction = auctions[consignment.id];
+        auction.consignmentId = consignment.id;
+        auction.start = _start;
+        auction.duration = _duration;
+        auction.reserve = _reserve;
+        auction.clock = _clock;
+        auction.state = State.Pending;
+        auction.outcome = Outcome.Pending;
 
         // Transfer a balance of one of the ERC-1155 to this auction contract
         IERC1155(_token).safeTransferFrom(
@@ -174,13 +171,13 @@ contract HandleAuction is MarketClient {
         // - Be sure new bid outbids previous
         // - Give back the previous bidder's money
         if (auction.bid > 0) {
-            require(msg.value >= (auction.bid * (100 + marketController.outBidPercentage())) / 100, "Bid too small");
+            require(msg.value >= (auction.bid * (100 + marketController.getOutBidPercentage())) / 100, "Bid too small");
             auction.buyer.transfer(auction.bid);
         }
 
         // Record the new bid
         auction.bid = msg.value;
-        auction.buyer = msg.sender;
+        auction.buyer = payable(msg.sender);
 
         // If this was the first successful bid...
         if (auction.state == State.Pending) {
@@ -247,28 +244,28 @@ contract HandleAuction is MarketClient {
         auction.state = State.Ended;
         auction.outcome = Outcome.Closed;
 
-        // Get consignment
-        Consignment memory consignment = marketController.consignments(_consignmentId);
-
         // Distribute the funds (pay royalties, staking, multisig, and seller)
-        disburseFunds(consignment, auction.bid);
+        disburseFunds(_consignmentId, auction.bid);
+
+        // Get consignment
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Determine if consignment is tangible
-        ISeenHausNFT nft = marketController.nft();
-        if (address(nft) == consignment.token && nft.isTangible(consignment.token)) {
+        address nft = marketController.getNft();
+        if (nft == consignment.token && ISeenHausNFT(nft).isTangible(consignment.tokenId)) {
 
             // Transfer the ERC-1155 to escrow contract
-            IEscrowHandler escrowTicket = marketController.escrowTicket();
+            address escrowTicketer = marketController.getEscrowTicketer();
             IERC1155(consignment.token).safeTransferFrom(
                 address(this),
-                address(escrowTicket),
+                escrowTicketer,
                 consignment.tokenId,
                 1,
                 new bytes(0x0)
             );
 
             // For tangibles, issue an escrow ticket to the buyer
-            escrowTicket.issueTicket(consignment.tokenId, 1, auction.buyer);
+            IEscrowHandler(escrowTicketer).issueTicket(consignment.tokenId, 1, auction.buyer);
 
         } else {
 
@@ -324,7 +321,7 @@ contract HandleAuction is MarketClient {
         auction.outcome = Outcome.Pulled;
 
         // Transfer the ERC-1155 back to the seller
-        Consignment memory consignment = marketController.consignments(_consignmentId);
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
         IERC1155(consignment.token).safeTransferFrom(
             address(this),
             consignment.seller,
@@ -377,7 +374,7 @@ contract HandleAuction is MarketClient {
         }
 
         // Transfer the ERC-1155 back to the seller
-        Consignment memory consignment = marketController.consignments(_consignmentId);
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
         IERC1155(consignment.token).safeTransferFrom(
             address(this),
             consignment.seller,

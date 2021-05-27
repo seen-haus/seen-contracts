@@ -21,7 +21,7 @@ import "../IEscrowHandler.sol";
 contract HandleAsItems is IEscrowHandler, MarketClient, ERC1155 {
 
     // Ticket ID => Ticket
-    mapping (uint256 => IEscrowHandler) tickets;
+    mapping (uint256 => EscrowTicket) tickets;
 
     /// @dev Next ticket number
     uint256 public nextTicket;
@@ -59,8 +59,9 @@ contract HandleAsItems is IEscrowHandler, MarketClient, ERC1155 {
 
         // Create and store escrow ticket
         uint256 ticketId = nextTicket++;
-        EscrowTicket memory ticket = new EscrowTicket(_tokenId, _amount);
-        tickets[ticketId] = ticket;
+        EscrowTicket storage ticket = tickets[ticketId];
+        ticket.tokenId = _tokenId;
+        ticket.amount = _amount;
 
         // Mint escrow ticket and send to buyer
         _mint(_buyer, ticketId, _amount, new bytes(0x0));
@@ -79,19 +80,23 @@ contract HandleAsItems is IEscrowHandler, MarketClient, ERC1155 {
         EscrowTicket memory ticket = tickets[_ticketId];
 
         // Burn the caller's balance
-        _burn(msg.sender, _ticketId, amount, new bytes(0x0));
+        _burn(msg.sender, _ticketId, amount);
 
         // Transfer the ERC-1155 to escrow contract
-        marketController.nft().safeTransferFrom(
+        IERC1155 nft = IERC1155(marketController.getNft());
+        nft.safeTransferFrom(
             address(this),
             msg.sender,
-            ticket.tokenId(),
+            ticket.tokenId,
             amount,
             new bytes(0x0)
         );
     }
 
-    function supportsInterface(bytes4 interfaceId) public view override(ERC1155,ERC1155Receiver) returns (bool) {
+    function supportsInterface(bytes4 interfaceId)
+    public pure override(ERC1155,ERC1155Receiver)
+    returns (bool)
+    {
         return interfaceId == type(IERC165).interfaceId;
     }
 

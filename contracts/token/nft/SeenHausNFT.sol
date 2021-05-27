@@ -40,7 +40,7 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      * @return tangible - true if token id corresponds to a tangible lot.
      */
     function isTangible(uint256 _tokenId)
-    public override
+    public view override
     returns (bool tangible) {
         tangible = (tangibles[_tokenId] == true);
     }
@@ -59,11 +59,11 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      * @return _royaltyPaymentData - the _data argument passed through without modification
      */
     function royaltyInfo(uint256 _tokenId, uint256 _value, bytes calldata _data)
-    external override
+    external view override
     returns (address _receiver, uint256 _royaltyAmount, bytes memory _royaltyPaymentData)
     {
         _receiver = creators[_tokenId];
-        _royaltyAmount = (_value / 100) * marketController.royaltyPercentage();
+        _royaltyAmount = (_value / 100) * marketController.getRoyaltyPercentage();
         _royaltyPaymentData = _data;
     }
 
@@ -136,7 +136,10 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
 
     }
 
-    function supportsInterface(bytes4 interfaceId) public view override(IERC2981,ERC1155,ERC165Storage,ERC1155Receiver) returns (bool) {
+    function supportsInterface(bytes4 interfaceId)
+    public pure override(IERC2981,ERC1155,ERC165Storage,ERC1155Receiver)
+    returns (bool)
+    {
         return interfaceId == type(IERC165).interfaceId;
     }
 

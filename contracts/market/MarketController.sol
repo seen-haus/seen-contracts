@@ -7,13 +7,27 @@ import "../token/nft/ISeenHausNFT.sol";
 import "../token/escrow/IEscrowHandler.sol";
 import "./IMarketController.sol";
 
-contract MarketController is AccessClient, IMarketController {
+contract MarketController is AccessClient {
+
+    // Events
+    event NFTAddressChanged(address indexed nft);
+    event EscrowTicketerAddressChanged(address indexed escrowTicketer);
+    event StakingAddressChanged(address indexed staking);
+    event MultisigAddressChanged(address indexed multisig);
+    event TangibleItemsAddressChanged(address indexed tangibleItems);
+    event TangibleLotsAddressChanged(address indexed tangibleLots);
+    event VipStakerAmountChanged(uint256 indexed vipStakerAmount);
+    event FeePercentageChanged(uint8 indexed feePercentage);
+    event RoyaltyPercentageChanged(uint8 indexed royaltyPercentage);
+    event MaxRoyaltyPercentageChanged(uint8 indexed maxRoyaltyPercentage);
+    event OutBidPercentageChanged(uint8 indexed outBidPercentage);
+    event ConsignmentRegistered(SeenTypes.Consignment consignment);
 
     /// @dev the address of the Seen.Haus NFT contract
     address internal nft;
 
-    /// @dev address of the Seen.Haus escrow ticket contract
-    address public escrowTicket;
+    /// @dev address of the Seen.Haus escrow ticketing contract
+    address public escrowTicketer;
 
     /// @dev the address of the xSEEN ERC-20 Seen.Haus staking contract
     address payable staking;
@@ -47,7 +61,7 @@ contract MarketController is AccessClient, IMarketController {
      *
      * @param _accessController - the Seen.Haus AccessController
      * @param _nft - Seen.Haus NFT contract
-     * @param _escrowTicket - Seen.Haus escrow ticket contract
+     * @param _escrowTicketer - Seen.Haus escrow ticket contract
      * @param _staking - Seen.Haus staking contract
      * @param _multisig - Seen.Haus multi-sig wallet
      * @param _vipStakerAmount - the minimum amount of xSEEN ERC-20 a caller must hold to participate in VIP events
@@ -59,7 +73,7 @@ contract MarketController is AccessClient, IMarketController {
     constructor(
         address _accessController,
         address _nft,
-        address _escrowTicket,
+        address _escrowTicketer,
         address payable _staking,
         address payable _multisig,
         uint256 _vipStakerAmount,
@@ -71,7 +85,7 @@ contract MarketController is AccessClient, IMarketController {
     AccessClient(_accessController)
     {
         nft = _nft;
-        escrowTicket = _escrowTicket;
+        escrowTicketer = _escrowTicketer;
         staking = _staking;
         multisig = _multisig;
         vipStakerAmount = _vipStakerAmount;
@@ -89,7 +103,7 @@ contract MarketController is AccessClient, IMarketController {
      * @param _nft - the address of the nft contract
      */
     function setNft(address _nft)
-    external override
+    external
     onlyRole(ADMIN) {
         nft = _nft;
         emit NFTAddressChanged(nft);
@@ -99,32 +113,32 @@ contract MarketController is AccessClient, IMarketController {
      * @notice The nft getter
      */
     function getNft()
-    external override
+    external view
     returns (address) {
         return nft;
     }
 
     /**
-     * @notice Sets the address of the Seen.Haus escrow ticket contract.
+     * @notice Sets the address of the Seen.Haus escrow ticketer contract.
      *
-     * Emits a EscrowTicketAddressChanged event.
+     * Emits a EscrowTicketerAddressChanged event.
      *
-     * @param _escrowTicket - the address of the escrow ticket contract
+     * @param _escrowTicketer - the address of the escrow ticketer contract
      */
-    function setEscrowTicket(address _escrowTicket)
-    external override
+    function setEscrowTicketer(address _escrowTicketer)
+    external
     onlyRole(ADMIN) {
-        escrowTicket = _escrowTicket;
-        emit EscrowTicketAddressChanged(escrowTicket);
+        escrowTicketer = _escrowTicketer;
+        emit EscrowTicketerAddressChanged(escrowTicketer);
     }
 
     /**
-     * @notice The escrowTicket getter
+     * @notice The escrowTicketer getter
      */
-    function getEscrowTicket()
-    external override
+    function getEscrowTicketer()
+    external view
     returns (address) {
-        return escrowTicket;
+        return escrowTicketer;
     }
 
     /**
@@ -135,7 +149,7 @@ contract MarketController is AccessClient, IMarketController {
      * @param _staking - the address of the staking contract
      */
     function setStaking(address payable _staking)
-    external override
+    external
     onlyRole(ADMIN) {
         staking = _staking;
         emit StakingAddressChanged(staking);
@@ -145,7 +159,7 @@ contract MarketController is AccessClient, IMarketController {
      * @notice The staking getter
      */
     function getStaking()
-    external override
+    external view
     returns (address payable) {
         return staking;
     }
@@ -158,7 +172,7 @@ contract MarketController is AccessClient, IMarketController {
      * @param _multisig - the address of the multi-sig wallet
      */
     function setMultisig(address payable _multisig)
-    external override
+    external
     onlyRole(ADMIN) {
         multisig = _multisig;
         emit MultisigAddressChanged(multisig);
@@ -168,7 +182,7 @@ contract MarketController is AccessClient, IMarketController {
      * @notice The multisig getter
      */
     function getMultisig()
-    external override
+    external view
     returns (address payable) {
         return multisig;
     }
@@ -181,7 +195,7 @@ contract MarketController is AccessClient, IMarketController {
      * @param _vipStakerAmount - the minimum amount of xSEEN ERC-20 a caller must hold to participate in VIP events
      */
     function setVipStakerAmount(uint256 _vipStakerAmount)
-    external override
+    external
     onlyRole(ADMIN) {
         vipStakerAmount = _vipStakerAmount;
         emit VipStakerAmountChanged(vipStakerAmount);
@@ -191,7 +205,7 @@ contract MarketController is AccessClient, IMarketController {
      * @notice The vipStakerAmount getter
      */
     function getVipStakerAmount()
-    external override
+    external view
     returns (uint256) {
         return vipStakerAmount;
     }
@@ -204,7 +218,7 @@ contract MarketController is AccessClient, IMarketController {
      * @param _feePercentage - the percentage that will be taken as a fee from the net of a Seen.Haus sale or auction (after royalties)
      */
     function setFeePercentage(uint8 _feePercentage)
-    external override
+    external
     onlyRole(ADMIN) {
         feePercentage = _feePercentage;
         emit FeePercentageChanged(feePercentage);
@@ -214,7 +228,7 @@ contract MarketController is AccessClient, IMarketController {
      * @notice The feePercentage getter
      */
     function getFeePercentage()
-    external override
+    external view
     returns (uint8) {
         return feePercentage;
     }
@@ -227,7 +241,7 @@ contract MarketController is AccessClient, IMarketController {
      * @param _royaltyPercentage - the percentage of a Seen.Haus minted secondary sale that should go to the token's creator
      */
     function setRoyaltyPercentage(uint8 _royaltyPercentage)
-    external override
+    external
     onlyRole(ADMIN) {
         royaltyPercentage = _royaltyPercentage;
         emit RoyaltyPercentageChanged(royaltyPercentage);
@@ -237,7 +251,7 @@ contract MarketController is AccessClient, IMarketController {
      * @notice The royaltyPercentage getter
      */
     function getRoyaltyPercentage()
-    external override
+    external view
     returns (uint8) {
         return royaltyPercentage;
     }
@@ -250,7 +264,7 @@ contract MarketController is AccessClient, IMarketController {
      * @param _maxRoyaltyPercentage - the maximum percentage of a Seen.Haus sale or auction that will be paid as a royalty
      */
     function setMaxRoyaltyPercentage(uint8 _maxRoyaltyPercentage)
-    external override
+    external
     onlyRole(ADMIN) {
         maxRoyaltyPercentage = _maxRoyaltyPercentage;
         emit MaxRoyaltyPercentageChanged(maxRoyaltyPercentage);
@@ -260,7 +274,7 @@ contract MarketController is AccessClient, IMarketController {
      * @notice The maxRoyaltyPercentage getter
      */
     function getMaxRoyaltyPercentage()
-    external override
+    external view
     returns (uint8) {
         return maxRoyaltyPercentage;
     }
@@ -273,7 +287,7 @@ contract MarketController is AccessClient, IMarketController {
      * @param _outBidPercentage - the minimum percentage a Seen.Haus auction bid must be above the previous bid to prevail
      */
     function setOutBidPercentage(uint8 _outBidPercentage)
-    external override
+    external
     onlyRole(ADMIN) {
         outBidPercentage = _outBidPercentage;
         emit OutBidPercentageChanged(outBidPercentage);
@@ -283,16 +297,17 @@ contract MarketController is AccessClient, IMarketController {
      * @notice The outBidPercentage getter
      */
     function getOutBidPercentage()
-    external override
+    external view
     returns (uint8) {
         return outBidPercentage;
     }
 
     /**
      * @notice The nextConsignment getter
+     * @dev does not increment counter
      */
     function getNextConsignment()
-    external override
+    external view
     returns (uint256) {
         return nextConsignment;
     }
@@ -301,7 +316,7 @@ contract MarketController is AccessClient, IMarketController {
      * @notice The consignment getter
      */
     function getConsignment(uint256 _consignmentId)
-    external override
+    external view
     returns (Consignment memory) {
         return consignments[_consignmentId];
     }
@@ -312,7 +327,6 @@ contract MarketController is AccessClient, IMarketController {
      * Emits a ConsignmentRegistered event.
      *
      * @param _market - the market for the consignment. See {SeenTypes.Market}
-     * @param _audience - the initial audience that can participate. See {SeenTypes.Audience}
      * @param _seller - the current owner of the consignment
      * @param _token - the contract address issuing the NFT behind the consignment
      * @param _tokenId - the id of the token being consigned
@@ -321,12 +335,11 @@ contract MarketController is AccessClient, IMarketController {
      */
     function registerConsignment(
         Market _market,
-        Audience _audience,
         address payable _seller,
         address _token,
         uint256 _tokenId
     )
-    external override
+    external
     onlyRole(MARKET_HANDLER)
     returns (Consignment memory consignment)
     {

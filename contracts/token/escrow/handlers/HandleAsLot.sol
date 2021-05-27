@@ -57,8 +57,9 @@ contract HandleAsLot is IEscrowHandler, MarketClient, ERC721 {
 
         // Create and store escrow ticket
         uint256 ticketId = nextTicket++;
-        EscrowTicket memory ticket = new EscrowTicket(_tokenId, _amount);
-        tickets[ticketId] = ticket;
+        EscrowTicket storage ticket = tickets[ticketId];
+        ticket.tokenId = _tokenId;
+        ticket.amount = _amount;
 
         // Mint the ticket and send to the buyer
         _mint(_buyer, ticketId);
@@ -82,7 +83,8 @@ contract HandleAsLot is IEscrowHandler, MarketClient, ERC721 {
         _burn(_ticketId);
 
         // Transfer the proof of ownership NFT to the caller
-        marketController.nft().safeTransferFrom(
+        IERC1155 nft = IERC1155(marketController.getNft());
+        nft.safeTransferFrom(
             address(this),
             msg.sender,
             ticket.tokenId,
@@ -92,7 +94,10 @@ contract HandleAsLot is IEscrowHandler, MarketClient, ERC721 {
 
     }
 
-    function supportsInterface(bytes4 interfaceId) public view override(ERC721,ERC1155Receiver) returns (bool) {
+    function supportsInterface(bytes4 interfaceId)
+    public pure override(ERC721,ERC1155Receiver)
+    returns (bool)
+    {
         return interfaceId == type(IERC165).interfaceId;
     }
 

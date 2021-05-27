@@ -49,13 +49,13 @@ abstract contract MarketClient is AccessClient, ERC1155Holder {
     }
 
     /**
- * @notice Sets the audience for a consignment at sale or auction.
- *
- * Emits an AudienceChanged event.
- *
- * @param _consignmentId - the id of the consignment
- * @param _audience - the new audience for the consignment
- */
+     * @notice Sets the audience for a consignment at sale or auction.
+     *
+     * Emits an AudienceChanged event.
+     *
+     * @param _consignmentId - the id of the consignment
+     * @param _audience - the new audience for the consignment
+     */
     function setAudience(uint256 _consignmentId, Audience _audience)
     internal
     {
@@ -74,7 +74,7 @@ abstract contract MarketClient is AccessClient, ERC1155Holder {
      * @return status - true if caller's xSEEN ERC-20 balance is non-zero.
      */
     function isStaker()
-    internal
+    internal view
     returns (bool status)
     {
         status = IERC20(marketController.getStaking()).balanceOf(msg.sender) > 0;
@@ -88,7 +88,7 @@ abstract contract MarketClient is AccessClient, ERC1155Holder {
      * @return status - true if caller's xSEEN ERC-20 balance is at least equal to the VIP Staker Amount.
      */
     function isVipStaker()
-    internal
+    internal view
     returns (bool status)
     {
         status = IERC20(marketController.getStaking()).balanceOf(msg.sender) >= marketController.getVipStakerAmount();
@@ -149,8 +149,8 @@ abstract contract MarketClient is AccessClient, ERC1155Holder {
                 }
 
             // Any case where the check for interface support fails can be ignored
-            } catch Error(string memory reason) {
-            } catch (bytes memory lowLevelData) {
+            } catch Error(string memory) {
+            } catch (bytes memory) {
             }
 
         }
