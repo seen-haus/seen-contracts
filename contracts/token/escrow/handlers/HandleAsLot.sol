@@ -5,14 +5,15 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "../../../access/AccessClient.sol";
 import "../../../market/MarketClient.sol";
-import "../IEscrowHandler.sol";
+import "../IEscrowTicketer.sol";
 
 /**
+ * @title HandleAsLot
+ * @author Cliff Hall
+ * @notice An escrow ticketer contract implemented with ERC-721.
+ *
  * Holders of this ticket have the right to transfer or claim a
  * given number of a physical consignment, escrowed by Seen.Haus.
- *
- * Example: 1/1 painting. Indivisible, lot = 1
- * Example: 20/500 tee-shirts. Indivisible, lot = 20 of 500
  *
  * Since this is an ERC721 implementation, the holder must
  * claim, sell, or transfer the entire lot of the ticketed
@@ -22,7 +23,7 @@ import "../IEscrowHandler.sol";
  * scooping up a bunch of the available items in a multi-edition
  * sale must flip or claim them all at once, not individually.
  */
-contract HandleAsLot is IEscrowHandler, MarketClient, ERC721 {
+contract HandleAsLot is IEscrowTicketer, MarketClient, ERC721 {
 
     // Ticket ID => Ticket
     mapping (uint256 => EscrowTicket) tickets;
@@ -94,6 +95,13 @@ contract HandleAsLot is IEscrowHandler, MarketClient, ERC721 {
 
     }
 
+    /**
+     * @notice Implementation of the {IERC165} interface.
+     *
+     * This method is inherited from several parents and
+     * the compiler cannot decide which to use. Thus, it must
+     * be overridden here. :(
+     */
     function supportsInterface(bytes4 interfaceId)
     public pure override(ERC721,ERC1155Receiver)
     returns (bool)

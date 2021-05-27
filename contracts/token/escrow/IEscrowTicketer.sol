@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-interface IEscrowHandler {
-
+/**
+ * @title IEscrowTicketer
+ * @author Cliff Hall
+ * @notice Manages the issue and claim of escrow tickets.
+ */
+interface IEscrowTicketer {
 
     /**
      * Issue an escrow ticket to the buyer

@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "../SeenTypes.sol";
 
 /**
- * @title IMarketController Interface
+ * @title IMarketController
  * @author Cliff Hall
  * @notice Declared as abstract contract rather than interface as it must inherit for enum types.
  */

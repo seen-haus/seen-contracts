@@ -2,16 +2,17 @@
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
-///
-/// @dev Interface for the NFT Royalty Standard
-/// See https://eips.ethereum.org/EIPS/eip-2981
-///
+/**
+ * @title IERC2981 interface
+ * @notice NFT Royalty Standard.
+ * See https://eips.ethereum.org/EIPS/eip-2981
+ */
 interface IERC2981 is IERC165 {
     /// ERC165 bytes to add to interface array - set in parent contract
     /// implementing this standard
     ///
-    /// bytes4(keccak256("royaltyInfo(uint256,uint256,bytes)")) == 0x6057361d
-    /// bytes4 private constant _INTERFACE_ID_2981 = 0x6057361d;
+    /// bytes4(keccak256("royaltyInfo(uint256,uint256,bytes)")) == 0xc155531d
+    /// bytes4 private constant _INTERFACE_ID_2981 = 0xc155531d;
     /// _registerInterface(_INTERFACE_ID_2981);
 
     /// @notice Called with the sale price to determine how much royalty

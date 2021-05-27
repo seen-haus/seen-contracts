@@ -7,6 +7,19 @@ import "../../market/MarketClient.sol";
 import "../royalty/IERC2981.sol";
 import "./ISeenHausNFT.sol";
 
+/**
+ * @title SeenHausNFT
+ * @author Cliff Hall
+ * @notice This is the Seen.House ERC-1155 NFT contract.
+ *
+ * Key features:
+ * - Supports the ERC-2981 NFT Royalty Standard
+ * - Tracks the original creator of each token.
+ * - Tracks which tokens have a tangible part
+ * - Logically capped token supplies; a token's supply cannot be increased after minting.
+ * - Only ESCROW_AGENT-roled addresses can mint tangible NFTs.
+ * - Only MINTER-roled addresses can mint digital NFTs, e.g., Seen.Haus staff, whitelisted artists.
+ */
 contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
 
     /// @dev token id => creator
@@ -34,7 +47,29 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
     }
 
     /**
-     * Check if a given token id corresponds to a tangible lot.
+     * @notice The nextToken getter
+     * @dev does not increment counter
+     */
+    function getNextToken()
+    external view override
+    returns (uint256) {
+        return nextToken;
+    }
+
+    /**
+     * @notice Get the creator of a given token.
+     *
+     * @param _tokenId - the id of the token to check
+     */
+    function getCreator(uint256 _tokenId)
+    external view override
+    returns (address creator)
+    {
+        return creators[_tokenId];
+    }
+
+    /**
+     * @notice Check if a given token id corresponds to a tangible lot.
      *
      * @param _tokenId - the id of the token to check
      * @return tangible - true if token id corresponds to a tangible lot.
@@ -43,28 +78,6 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
     public view override
     returns (bool tangible) {
         tangible = (tangibles[_tokenId] == true);
-    }
-
-    /**
-     * @notice Get royalty info for a token
-     *
-     * For a given token id and sale price, how much should be sent to whom as royalty
-     *
-     * @param _tokenId - the NFT asset queried for royalty information
-     * @param _value - the sale price of the NFT asset specified by _tokenId
-     * @param _data - information used by extensions of ERC2981, pass through
-     *
-     * @return _receiver - address of who should be sent the royalty payment
-     * @return _royaltyAmount - the royalty payment amount for _value sale price
-     * @return _royaltyPaymentData - the _data argument passed through without modification
-     */
-    function royaltyInfo(uint256 _tokenId, uint256 _value, bytes calldata _data)
-    external view override
-    returns (address _receiver, uint256 _royaltyAmount, bytes memory _royaltyPaymentData)
-    {
-        _receiver = creators[_tokenId];
-        _royaltyAmount = (_value / 100) * marketController.getRoyaltyPercentage();
-        _royaltyPaymentData = _data;
     }
 
     /**
@@ -106,7 +119,7 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      * @param _creator - the creator of the NFT (where the royalties will go)
      */
     function mintTangible(uint256 _supply, address _creator)
-    external
+    external override
     onlyRole(ESCROW_AGENT)
     {
 
@@ -127,7 +140,7 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      * @param _creator - the creator of the NFT (where the royalties will go)
      */
     function mintDigital(uint256 _supply, address _creator)
-    external
+    external override
     onlyRole(MINTER)
     {
 
@@ -136,6 +149,35 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
 
     }
 
+    /**
+     * @notice Get royalty info for a token
+     *
+     * For a given token id and sale price, how much should be sent to whom as royalty
+     *
+     * @param _tokenId - the NFT asset queried for royalty information
+     * @param _value - the sale price of the NFT asset specified by _tokenId
+     * @param _data - information used by extensions of ERC2981, pass through
+     *
+     * @return _receiver - address of who should be sent the royalty payment
+     * @return _royaltyAmount - the royalty payment amount for _value sale price
+     * @return _royaltyPaymentData - the _data argument passed through without modification
+     */
+    function royaltyInfo(uint256 _tokenId, uint256 _value, bytes calldata _data)
+    external view override
+    returns (address _receiver, uint256 _royaltyAmount, bytes memory _royaltyPaymentData)
+    {
+        _receiver = creators[_tokenId];
+        _royaltyAmount = (_value / 100) * marketController.getRoyaltyPercentage();
+        _royaltyPaymentData = _data;
+    }
+
+    /**
+     * @notice Implementation of the {IERC165} interface.
+     *
+     * This method is inherited from several parents and
+     * the compiler cannot decide which to use. Thus, it must
+     * be overridden here. :(
+     */
     function supportsInterface(bytes4 interfaceId)
     public pure override(IERC2981,ERC1155,ERC165Storage,ERC1155Receiver)
     returns (bool)

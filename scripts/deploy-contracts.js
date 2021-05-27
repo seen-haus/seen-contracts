@@ -31,6 +31,8 @@ function getDependencies() {
 
 }
 
+// TODO: Rework with new contracts
+
 async function main() {
 
     // Compile everything (in case run by node)

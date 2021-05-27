@@ -4,9 +4,14 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "../access/AccessClient.sol";
 import "../token/nft/ISeenHausNFT.sol";
-import "../token/escrow/IEscrowHandler.sol";
+import "../token/escrow/IEscrowTicketer.sol";
 import "./IMarketController.sol";
 
+/**
+ * @title MarketController
+ * @author Cliff Hall
+ * @notice Provides centralized management of consignments and various market-related settings.
+ */
 contract MarketController is AccessClient {
 
     // Events

@@ -4,8 +4,19 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "../SeenTypes.sol";
 
+/**
+ * @title AccessController
+ * @author Cliff Hall
+ * @notice Implements centralized role-based access for Seen.Haus contracts.
+ */
 contract AccessController is SeenTypes, AccessControl  {
 
+    /**
+     * @notice Constructor
+     *
+     * Grants ADMIN role to deployer.
+     * Sets ADMIN as role admin for all other roles.
+     */
     constructor() {
         _setupRole(ADMIN, msg.sender);
         _setRoleAdmin(ADMIN, ADMIN);

@@ -9,7 +9,12 @@ import "../access/AccessClient.sol";
 import "./MarketController.sol";
 import "./IMarketController.sol";
 
-
+/**
+ * @title MarketClient
+ * @author Cliff Hall
+ * @notice Extended by contracts that need to communicate with the MarketController.
+ * Provides base functionality for common actions taken by market handlers.
+ */
 abstract contract MarketClient is AccessClient, ERC1155Holder {
 
     // Events

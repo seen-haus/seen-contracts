@@ -5,6 +5,12 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./AccessController.sol";
 import "../SeenTypes.sol";
 
+/**
+ * @title AccessClient
+ * @author Cliff Hall
+ * @notice Extended by Seen.Haus contracts that need centralized role-based access.
+ * See {AccessController}
+ */
 abstract contract AccessClient is SeenTypes  {
 
     // Events

@@ -3,11 +3,16 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "../../../market/MarketClient.sol";
-import "../IEscrowHandler.sol";
+import "../IEscrowTicketer.sol";
 
 /**
- * Holders of this ticket have the right to transfer or claim a
- * given number of a physical consignment, escrowed by Seen.Haus.
+ * @title HandleAsItems
+ * @author Cliff Hall
+ * @notice An escrow ticketer contract implemented with ERC-1155.
+ *
+ * Holders of this style of ticket have the right to transfer or
+ * claim a given number of a physical consignment, escrowed by
+ * Seen.Haus.
  *
  * Since this is an ERC155 implementation, the holder can
  * sell / transfer part or all of the balance of their ticketed
@@ -18,7 +23,7 @@ import "../IEscrowHandler.sol";
  * in a multi-edition sale with the purpose of flipping each
  * item individually to make maximum profit.
  */
-contract HandleAsItems is IEscrowHandler, MarketClient, ERC1155 {
+contract HandleAsItems is IEscrowTicketer, MarketClient, ERC1155 {
 
     // Ticket ID => Ticket
     mapping (uint256 => EscrowTicket) tickets;
@@ -93,6 +98,13 @@ contract HandleAsItems is IEscrowHandler, MarketClient, ERC1155 {
         );
     }
 
+    /**
+     * @notice Implementation of the {IERC165} interface.
+     *
+     * This method is inherited from several parents and
+     * the compiler cannot decide which to use. Thus, it must
+     * be overridden here. :(
+     */
     function supportsInterface(bytes4 interfaceId)
     public pure override(ERC1155,ERC1155Receiver)
     returns (bool)

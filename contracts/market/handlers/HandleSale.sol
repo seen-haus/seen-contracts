@@ -4,9 +4,14 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "../../token/nft/ISeenHausNFT.sol";
-import "../../token/escrow/IEscrowHandler.sol";
+import "../../token/escrow/IEscrowTicketer.sol";
 import "../MarketClient.sol";
 
+/**
+ * @title HandleSale
+ * @author Cliff Hall
+ * @notice Handles the creation, running, and disposition of Seen.Haus sales.
+ */
 contract HandleSale is MarketClient {
 
     // Events
@@ -198,7 +203,7 @@ contract HandleSale is MarketClient {
             );
 
             // Issue an escrow ticket to the buyer
-            IEscrowHandler(escrowTicketer).issueTicket(consignment.tokenId, _amount, payable(msg.sender));
+            IEscrowTicketer(escrowTicketer).issueTicket(consignment.tokenId, _amount, payable(msg.sender));
 
         } else {
 

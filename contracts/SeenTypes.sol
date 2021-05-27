@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+/**
+ * @title SeenTypes
+ * @author Cliff Hall
+ * @notice Constants, enums, and structs used by the Seen.Haus contract ecosystem.
+ */
 contract SeenTypes {
 
-    bytes4 public constant INTERFACE_ID_2981 = 0x6057361d;
+    bytes4 public constant INTERFACE_ID_2981 = bytes4(keccak256("royaltyInfo(uint256,uint256,bytes)"));
 
-    bytes32 public constant ADMIN = keccak256("ADMIN");
+    bytes32 public constant ADMIN = keccak256("ADMIN");                   // Deployer and any other admins as needed
     bytes32 public constant SELLER = keccak256("SELLER");                 // Whitelisted sellers amd Seen.Haus reps
     bytes32 public constant MINTER = keccak256("MINTER");                 // Whitelisted artists and Seen.Haus reps
     bytes32 public constant ESCROW_AGENT = keccak256("ESCROW_AGENT");     // Seen.Haus Tangible Item Escrow Agent

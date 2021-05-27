@@ -5,6 +5,11 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "../MarketClient.sol";
 
+/**
+ * @title HandleAuction
+ * @author Cliff Hall
+ * @notice Handles the creation, running, and disposition of Seen.Haus auctions.
+ */
 contract HandleAuction is MarketClient {
 
     // Events
@@ -265,7 +270,7 @@ contract HandleAuction is MarketClient {
             );
 
             // For tangibles, issue an escrow ticket to the buyer
-            IEscrowHandler(escrowTicketer).issueTicket(consignment.tokenId, 1, auction.buyer);
+            IEscrowTicketer(escrowTicketer).issueTicket(consignment.tokenId, 1, auction.buyer);
 
         } else {
 
