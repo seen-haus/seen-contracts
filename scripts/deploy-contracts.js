@@ -47,7 +47,7 @@ async function main() {
     console.log("🔱 Deployer account: ", deployer ? deployer : "not found" && process.exit() );
 
     // Deploy contracts
-    const SeenHaus = await ethers.getContractFactory("SeenHaus");
+    const SeenHaus = await ethers.getContractFactory("MarketController");
     const seenHaus = await SeenHaus.deploy();
     await seenHaus.deployed();
     if (deps) await seenHaus.setCollaborators(deps.weth, deps.sushi, deps.seen);
