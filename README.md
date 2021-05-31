@@ -7,6 +7,11 @@ converting [old contracts](https://github.com/seen-haus/auction-house) to:
   * Deploy to mainnet, rinkeby, and local hardhat network
   * Expand unit tests
 
+
+## Overview
+![overview](docs/images/SeenHausContractsOverview.png)
+
+
 # Developer Setup
 ## Prerequisites
 ### Install Node (also installs NPM)

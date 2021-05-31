@@ -161,6 +161,9 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      * @return _receiver - address of who should be sent the royalty payment
      * @return _royaltyAmount - the royalty payment amount for _value sale price
      * @return _royaltyPaymentData - the _data argument passed through without modification
+     *
+     *
+     * TODO: Remove _data param & _royaltyPaymentData return if they get tossed from the 2981 draft - CLH
      */
     function royaltyInfo(uint256 _tokenId, uint256 _value, bytes calldata _data)
     external view override
@@ -168,7 +171,7 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
     {
         _receiver = creators[_tokenId];
         _royaltyAmount = (_value / 100) * marketController.getRoyaltyPercentage();
-        _royaltyPaymentData = _data;
+        _royaltyPaymentData = _data; // TODO: Remove me too!
     }
 
     /**

@@ -8,7 +8,7 @@ import "../../../market/MarketClient.sol";
 import "../IEscrowTicketer.sol";
 
 /**
- * @title HandleAsLot
+ * @title TicketAsLot
  * @author Cliff Hall
  * @notice An escrow ticketer contract implemented with ERC-721.
  *
@@ -23,7 +23,7 @@ import "../IEscrowTicketer.sol";
  * scooping up a bunch of the available items in a multi-edition
  * sale must flip or claim them all at once, not individually.
  */
-contract HandleAsLot is IEscrowTicketer, MarketClient, ERC721 {
+contract TicketAsLot is IEscrowTicketer, MarketClient, ERC721 {
 
     // Ticket ID => Ticket
     mapping (uint256 => EscrowTicket) tickets;

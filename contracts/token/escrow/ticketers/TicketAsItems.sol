@@ -6,7 +6,7 @@ import "../../../market/MarketClient.sol";
 import "../IEscrowTicketer.sol";
 
 /**
- * @title HandleAsItems
+ * @title TicketAsItems
  * @author Cliff Hall
  * @notice An escrow ticketer contract implemented with ERC-1155.
  *
@@ -23,7 +23,7 @@ import "../IEscrowTicketer.sol";
  * in a multi-edition sale with the purpose of flipping each
  * item individually to make maximum profit.
  */
-contract HandleAsItems is IEscrowTicketer, MarketClient, ERC1155 {
+contract TicketAsItems is IEscrowTicketer, MarketClient, ERC1155 {
 
     // Ticket ID => Ticket
     mapping (uint256 => EscrowTicket) tickets;
