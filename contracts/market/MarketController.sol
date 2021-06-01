@@ -65,8 +65,6 @@ contract MarketController is AccessClient {
      * @notice Constructor
      *
      * @param _accessController - the Seen.Haus AccessController
-     * @param _nft - Seen.Haus NFT contract
-     * @param _escrowTicketer - Seen.Haus escrow ticket contract
      * @param _staking - Seen.Haus staking contract
      * @param _multisig - Seen.Haus multi-sig wallet
      * @param _vipStakerAmount - the minimum amount of xSEEN ERC-20 a caller must hold to participate in VIP events
@@ -77,8 +75,6 @@ contract MarketController is AccessClient {
      */
     constructor(
         address _accessController,
-        address _nft,
-        address _escrowTicketer,
         address payable _staking,
         address payable _multisig,
         uint256 _vipStakerAmount,
@@ -89,8 +85,6 @@ contract MarketController is AccessClient {
     )
     AccessClient(_accessController)
     {
-        nft = _nft;
-        escrowTicketer = _escrowTicketer;
         staking = _staking;
         multisig = _multisig;
         vipStakerAmount = _vipStakerAmount;
