@@ -1,15 +1,15 @@
 # Seen Haus Contracts
 ## Status
-WIP: In preparation for V2 contracts that support royalties and secondary markets, 
-converting [old contracts](https://github.com/seen-haus/auction-house) to:
-  * Use OpenZeppelin npm contracts
-  * Build/test/deploy with Hardhat
-  * Deploy to mainnet, rinkeby, and local hardhat network
-  * Expand unit tests
+  - Initial contract suite is written, and thoroughly documented internally.
+  - A few diagrams below show the high-level view of contract responsibilities and collaborations.
+  - Old contracts that won't be changed or reused are kept in contracts_legacy folder for reference.
+  - Currently, creating more diagrams and unit tests.
 
-
-## Overview
+## Contracts Overview
 ![overview](docs/images/SeenHausContractsOverview.png)
+
+## Digital vs Physical NFTs
+![digital-vs-physical-nfts](docs/images/SeenHausDigitalVsPhysicalNFTs.png)
 
 
 # Developer Setup
