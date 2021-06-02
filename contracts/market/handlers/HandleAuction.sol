@@ -33,9 +33,7 @@ contract HandleAuction is MarketClient {
     constructor(address _accessController, address _marketController)
     AccessClient(_accessController)
     MarketClient(_marketController)
-    {
-        grantRole(MARKET_HANDLER, address(this));
-    }
+    {}
 
     /**
      * @notice Create a new auction. (English style)

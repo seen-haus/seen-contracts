@@ -4,9 +4,24 @@ const ethers = hre.ethers;
 let contract, contracts = [];
 const divider = "-".repeat(80);
 
-function getMarketConfig() {
+// Roles
+const ADMIN = getRoleBytes("ADMIN");                   // Deployer and any other admins as needed
+const SELLER = getRoleBytes("SELLER");                 // Whitelisted sellers amd Seen.Haus reps
+const MINTER = getRoleBytes("MINTER");                 // Whitelisted artists and Seen.Haus reps
+const ESCROW_AGENT = getRoleBytes("ESCROW_AGENT");     // Seen.Haus Physical Item Escrow Agent
+const MARKET_HANDLER = getRoleBytes("MARKET_HANDLER"); // Market Handler contracts
 
-    // Market configuration
+function getRoleBytes(role) {
+    let utils = ethers.utils;
+    return utils.keccak256(utils.toUtf8Bytes(role));
+}
+
+function getConfig() {
+
+    // Get the network we're deploying to
+    const network = hre.network.name;
+
+    // Market configuration params
     const vipStakerAmount = "710000000000000000000";
     const feePercentage = "20";
     const royaltyPercentage = "15";
@@ -27,7 +42,8 @@ function getMarketConfig() {
         'hardhat': '0x0000000000000000000000000000000000000000'
     }
 
-    const network = hre.network.name;
+    // Chosen Escrow Ticketer
+    const escrowTicketer = "TicketAsLot";
 
     return {
             staking: STAKING[network],
@@ -36,7 +52,8 @@ function getMarketConfig() {
             feePercentage,
             royaltyPercentage,
             maxRoyaltyPercentage,
-            outBidPercentage
+            outBidPercentage,
+            escrowTicketer
         };
 }
 
@@ -47,31 +64,79 @@ async function main() {
 
     console.log(`\n${divider}\nNetwork: ${hre.network.name}\nDeploying. ${new Date()}\n${divider}\n`);
 
-    const marketConfig = getMarketConfig();
+    // Get th market config
+    const config = getConfig();
 
     const accounts = await ethers.provider.listAccounts();
     const deployer = accounts[0];
-    console.log("🔱 Deployer account: ", deployer ? deployer : "not found" && process.exit() );
+    console.log("🔱 Deployer account: ", deployer ? deployer : "not found" && process.exit());
 
-    // Deploy Access Controller
+    // Deploy the AccessController contract
     const AccessController = await ethers.getContractFactory("AccessController");
     const accessController = await AccessController.deploy();
     await accessController.deployed();
-    deploymentComplete('AccessController', accessController.address, [] );
+    deploymentComplete('AccessController', accessController.address, []);
 
+    // Deploy the MarketController contract
     const MarketController = await ethers.getContractFactory("MarketController");
     const marketController = await MarketController.deploy(
         accessController.address,
-        marketConfig.staking,
-        marketConfig.multisig,
-        marketConfig.vipStakerAmount,
-        marketConfig.feePercentage,
-        marketConfig.royaltyPercentage,
-        marketConfig.maxRoyaltyPercentage,
-        marketConfig.outBidPercentage
+        config.staking,
+        config.multisig,
+        config.vipStakerAmount,
+        config.feePercentage,
+        config.royaltyPercentage,
+        config.maxRoyaltyPercentage,
+        config.outBidPercentage
     );
     await marketController.deployed();
-    deploymentComplete('MarketController', marketController.address, [] );
+    deploymentComplete('MarketController', marketController.address, []);
+
+    // Deploy the chosen IEscrowTicketer implementation
+    const EscrowTicketer = await ethers.getContractFactory(config.escrowTicketer);
+    const escrowTicketer = await EscrowTicketer.deploy(
+        accessController.address,
+        marketController.address,
+    );
+    await escrowTicketer.deployed();
+    deploymentComplete(config.escrowTicketer, escrowTicketer.address, []);
+
+    // Deploy the SeenHausNFT contract
+    const SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
+    const seenHausNFT = await SeenHausNFT.deploy(
+        accessController.address,
+        marketController.address,
+    );
+    await seenHausNFT.deployed();
+    deploymentComplete('SeenHausNFT', seenHausNFT.address, []);
+
+    // Deploy the HandleAuction contract
+    const HandleAuction = await ethers.getContractFactory("HandleAuction");
+    const handleAuction = await HandleAuction.deploy(
+        accessController.address,
+        marketController.address,
+    );
+    await handleAuction.deployed();
+    deploymentComplete('HandleAuction', handleAuction.address, []);
+
+    // Deploy the HandleSale contract
+    const HandleSale = await ethers.getContractFactory("HandleSale");
+    const handleSale = await HandleSale.deploy(
+        accessController.address,
+        marketController.address,
+    );
+    await handleSale.deployed();
+    deploymentComplete('HandleSale', handleSale.address, []);
+
+    // Add Escrow Ticketer and NFT addresses to MarketController
+    await marketController.setEscrowTicketer(escrowTicketer.address);
+    await marketController.setNft(seenHausNFT.address);
+    console.log(`✅ MarketController updated with escrow ticketer and NFT addresses.`);
+
+    // Add MARKET_HANDLER role to HandleAuction and HandleSale
+    await accessController.grantRole(MARKET_HANDLER, handleAuction.address);
+    await accessController.grantRole(MARKET_HANDLER, handleSale.address);
+    console.log(`✅ Granted MARKET_HANDLER role to HandleAuction and HandleSale.`);
 
     // Bail now if deploying locally
     if (hre.network.name === 'hardhat') process.exit();

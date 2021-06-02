@@ -41,20 +41,6 @@ abstract contract AccessClient is SeenTypes  {
     }
 
     /**
-     * @dev Grants `role` to `account`.
-     *
-     * If `account` had not been already granted `role`, emits a {RoleGranted}
-     * event.
-     *
-     * Requirements:
-     *
-     * - the caller must have ``role``'s admin role.
-     */
-    function grantRole(bytes32 role, address account) internal {
-        accessController.grantRole(role, account);
-    }
-
-    /**
      * @notice Sets the address of the Seen.Haus AccessController contract.
      *
      * Emits a AccessControllerAddressChanged event.
