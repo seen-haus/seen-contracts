@@ -15,9 +15,9 @@ import "./ISeenHausNFT.sol";
  * Key features:
  * - Supports the ERC-2981 NFT Royalty Standard
  * - Tracks the original creator of each token.
- * - Tracks which tokens have a tangible part
+ * - Tracks which tokens have a physical part
  * - Logically capped token supplies; a token's supply cannot be increased after minting.
- * - Only ESCROW_AGENT-roled addresses can mint tangible NFTs.
+ * - Only ESCROW_AGENT-roled addresses can mint physical NFTs.
  * - Only MINTER-roled addresses can mint digital NFTs, e.g., Seen.Haus staff, whitelisted artists.
  */
 contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
@@ -25,8 +25,8 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
     /// @dev token id => creator
     mapping (uint256 => address) public creators;
 
-    /// @dev token id => true - only included if token id
-    mapping (uint256 => bool) public tangibles;
+    /// @dev token id => true - only included if token id has a physical component
+    mapping (uint256 => bool) public physicals;
 
     // Next token number
     uint256 public nextToken;
@@ -69,27 +69,27 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
     }
 
     /**
-     * @notice Check if a given token id corresponds to a tangible lot.
+     * @notice Check if a given token id corresponds to a physical lot.
      *
      * @param _tokenId - the id of the token to check
-     * @return tangible - true if token id corresponds to a tangible lot.
+     * @return physical - true if token id corresponds to a physical lot.
      */
-    function isTangible(uint256 _tokenId)
+    function isPhysical(uint256 _tokenId)
     public view override
-    returns (bool tangible) {
-        tangible = (tangibles[_tokenId] == true);
+    returns (bool physical) {
+        physical = (physicals[_tokenId] == true);
     }
 
     /**
-     * @notice Mint a given supply of a token, optionally flagging as tangible.
+     * @notice Mint a given supply of a token, optionally flagging as physical.
      *
      * Token supply is sent to the caller.
      *
      * @param _supply - the supply of the token
      * @param _creator - the creator of the NFT (where the royalties will go)
-     * @param _tangible - whether the NFT should be flagged as tangible or not
+     * @param _physical - whether the NFT should be flagged as physical or not
      */
-    function mint(uint256 _supply, address _creator, bool _tangible)
+    function mint(uint256 _supply, address _creator, bool _physical)
     internal
     {
 
@@ -99,8 +99,8 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
         // Record the creator of the token
         creators[tokenId] = _creator;
 
-        // Optionally flag it as tangible
-        if (_tangible) tangibles[tokenId] = true;
+        // Optionally flag it as physical
+        if (_physical) physicals[tokenId] = true;
 
         // Mint the token, sending it to the caller
         _mint(msg.sender, tokenId, _supply, new bytes(0x0));
@@ -108,7 +108,7 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
     }
 
     /**
-     * @notice Mint a given supply of a token, marking it as tangible.
+     * @notice Mint a given supply of a token, marking it as physical.
      *
      * Entire supply must be minted at once.
      * More cannot be minted later for the same token id.
@@ -118,12 +118,12 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      * @param _supply - the supply of the token
      * @param _creator - the creator of the NFT (where the royalties will go)
      */
-    function mintTangible(uint256 _supply, address _creator)
+    function mintPhysical(uint256 _supply, address _creator)
     external override
     onlyRole(ESCROW_AGENT)
     {
 
-        // Mint the token, flagging it as tangible, sending to caller
+        // Mint the token, flagging it as physical, sending to caller
         mint(_supply, _creator, true);
 
     }

@@ -11,7 +11,7 @@ interface IEscrowTicketer {
     /**
      * Issue an escrow ticket to the buyer
      *
-     * For tangible consignments, Seen.Haus must hold physical items in escrow
+     * For physical consignments, Seen.Haus must hold the items in escrow
      * until the buyer(s) claim them.
      *
      * When a buyer wins an auction or makes a purchase in a sale, the market

@@ -19,8 +19,8 @@ contract MarketController is AccessClient {
     event EscrowTicketerAddressChanged(address indexed escrowTicketer);
     event StakingAddressChanged(address indexed staking);
     event MultisigAddressChanged(address indexed multisig);
-    event TangibleItemsAddressChanged(address indexed tangibleItems);
-    event TangibleLotsAddressChanged(address indexed tangibleLots);
+    event PhysicalItemsAddressChanged(address indexed physicalItems);
+    event PhysicalLotsAddressChanged(address indexed physicalLots);
     event VipStakerAmountChanged(uint256 indexed vipStakerAmount);
     event FeePercentageChanged(uint8 indexed feePercentage);
     event RoyaltyPercentageChanged(uint8 indexed royaltyPercentage);

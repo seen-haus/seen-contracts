@@ -187,10 +187,10 @@ contract HandleSale is MarketClient {
             emit SaleStarted(sale);
         }
 
-        // Determine if consignment is tangible
+        // Determine if consignment is physical
         Consignment memory consignment = marketController.getConsignment(_consignmentId);
         address nft = marketController.getNft();
-        if (nft == consignment.token && ISeenHausNFT(nft).isTangible(consignment.tokenId)) {
+        if (nft == consignment.token && ISeenHausNFT(nft).isPhysical(consignment.tokenId)) {
 
             // Transfer the ERC-1155 to escrow contract
             address escrowTicketer = marketController.getEscrowTicketer();

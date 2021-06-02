@@ -25,15 +25,15 @@ interface ISeenHausNFT is IERC2981, IERC1155 {
     function getCreator(uint256 _tokenId) external returns (address creator);
 
     /**
-     * @notice Check if a given token id corresponds to a tangible lot.
+     * @notice Check if a given token id corresponds to a physical lot.
      *
      * @param _tokenId - the id of the token to check
-     * @return tangible - true if the item corresponds to a tangible lot
+     * @return physical - true if the item corresponds to a physical lot
      */
-    function isTangible(uint256 _tokenId) external returns (bool tangible);
+    function isPhysical(uint256 _tokenId) external returns (bool physical);
 
     /**
-     * @notice Mint a given supply of a token, marking it as tangible.
+     * @notice Mint a given supply of a token, marking it as physical.
      *
      * Entire supply must be minted at once.
      * More cannot be minted later for the same token id.
@@ -43,7 +43,7 @@ interface ISeenHausNFT is IERC2981, IERC1155 {
      * @param _supply - the supply of the token
      * @param _creator - the creator of the NFT (where the royalties will go)
      */
-    function mintTangible(uint256 _supply, address _creator) external;
+    function mintPhysical(uint256 _supply, address _creator) external;
 
     /**
      * @notice Mint a given supply of a token.

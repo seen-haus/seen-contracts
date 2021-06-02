@@ -255,9 +255,9 @@ contract HandleAuction is MarketClient {
         // Get consignment
         Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
-        // Determine if consignment is tangible
+        // Determine if consignment is physical
         address nft = marketController.getNft();
-        if (nft == consignment.token && ISeenHausNFT(nft).isTangible(consignment.tokenId)) {
+        if (nft == consignment.token && ISeenHausNFT(nft).isPhysical(consignment.tokenId)) {
 
             // Transfer the ERC-1155 to escrow contract
             address escrowTicketer = marketController.getEscrowTicketer();
@@ -269,7 +269,7 @@ contract HandleAuction is MarketClient {
                 new bytes(0x0)
             );
 
-            // For tangibles, issue an escrow ticket to the buyer
+            // For physicals, issue an escrow ticket to the buyer
             IEscrowTicketer(escrowTicketer).issueTicket(consignment.tokenId, 1, auction.buyer);
 
         } else {
