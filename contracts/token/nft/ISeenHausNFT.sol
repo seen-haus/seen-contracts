@@ -42,8 +42,9 @@ interface ISeenHausNFT is IERC2981, IERC1155 {
      *
      * @param _supply - the supply of the token
      * @param _creator - the creator of the NFT (where the royalties will go)
+     * @param _tokenURI - the URI of the token metadata
      */
-    function mintPhysical(uint256 _supply, address _creator) external;
+    function mintPhysical(uint256 _supply, address _creator, string memory _tokenURI) external;
 
     /**
      * @notice Mint a given supply of a token.
@@ -55,7 +56,8 @@ interface ISeenHausNFT is IERC2981, IERC1155 {
      *
      * @param _supply - the supply of the token
      * @param _creator - the creator of the NFT (where the royalties will go)
+     * @param _tokenURI - the URI of the token metadata
      */
-    function mintDigital(uint256 _supply, address _creator) external;
+    function mintDigital(uint256 _supply, address _creator, string memory _tokenURI) external;
 
 }

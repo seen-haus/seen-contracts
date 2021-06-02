@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "../../../market/MarketClient.sol";
+import "../../../util/StringUtils.sol";
 import "../IEscrowTicketer.sol";
 
 /**
@@ -23,9 +24,7 @@ import "../IEscrowTicketer.sol";
  * in a multi-edition sale with the purpose of flipping each
  * item individually to make maximum profit.
  */
-contract TicketAsItems is IEscrowTicketer, MarketClient, ERC1155 {
-
-    string public constant BASE_URI = "Seen.Haus Escrowed Lot Ticket";
+contract TicketAsItems is StringUtils, IEscrowTicketer, MarketClient, ERC1155 {
 
     // Ticket ID => Ticket
     mapping (uint256 => EscrowTicket) tickets;
@@ -38,13 +37,39 @@ contract TicketAsItems is IEscrowTicketer, MarketClient, ERC1155 {
      *
      * @param _accessController - the Seen.Haus AccessController
      * @param _marketController - the Seen.Haus MarketController
-     * @param _baseURI - base URI for all tokens, with {id} embedded for token id replacement
      */
-    constructor(address _accessController, address _marketController, string memory _baseURI)
+    constructor(address _accessController, address _marketController)
     AccessClient(_accessController)
     MarketClient(_marketController)
-    ERC1155(_baseURI)
+    ERC1155(ESCROW_TICKET_URI_BASE)
     {}
+
+    /**
+     * @notice Get the token URI
+     *
+     * This method is overrides the Open Zeppelin version, returning
+     * a unique endpoint address on the seen.haus site for each token id.
+     *
+     * Tickets are transient and will be burned when claimed to obtain
+     * proof of ownership NFTs with their metadata on IPFS as usual.
+     *
+     * TODO: Create a dynamic endpoint on the web for generating the JSON
+     * Just needs to call this contract: tickets(tokenId) and create JSON
+     * with a fixed name, description, and image, adding these fields
+     *  - token: [SeenHausNFT contract address]
+     *  - tokenId: [the token id from EscrowTicket]
+     *  - amount: [the amount of that token this ticket can claim]
+     *
+     * @param _tokenId - the ticket's token id
+     * @return tokenURI - the URI for the given token id's metadata
+     */
+    function uri(uint256 _tokenId)
+    public pure override
+    returns (string memory)
+    {
+        string memory id = uintToStr(_tokenId);
+        return strConcat(ESCROW_TICKET_URI_BASE, id);
+    }
 
     /**
      * Issue an escrow ticket to the buyer
@@ -83,8 +108,11 @@ contract TicketAsItems is IEscrowTicketer, MarketClient, ERC1155 {
         uint256 amount = balanceOf(msg.sender, _ticketId);
         require(amount > 0, "Caller has no balance for this ticket");
 
-        // Get the ticket
+        // Copy the ticket to memory
         EscrowTicket memory ticket = tickets[_ticketId];
+
+        // Delete the ticket from storage
+        delete tickets[_ticketId];
 
         // Burn the caller's balance
         _burn(msg.sender, _ticketId, amount);
@@ -98,6 +126,7 @@ contract TicketAsItems is IEscrowTicketer, MarketClient, ERC1155 {
             amount,
             new bytes(0x0)
         );
+
     }
 
     /**

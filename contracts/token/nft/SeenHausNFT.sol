@@ -28,6 +28,9 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
     /// @dev token id => true - only included if token id has a physical component
     mapping (uint256 => bool) public physicals;
 
+    /// @dev token id => Token URI
+    mapping (uint256 => string) public uris;
+
     // Next token number
     uint256 public nextToken;
 
@@ -36,12 +39,11 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      *
      * @param _accessController - the Seen.Haus AccessController
      * @param _marketController - the Seen.Haus MarketController
-     * @param _baseURI - base URI for all tokens, with {id} embedded for token id replacement
      */
-    constructor(address _accessController, address _marketController, string memory _baseURI)
+    constructor(address _accessController, address _marketController)
     AccessClient(_accessController)
     MarketClient(_marketController)
-    ERC1155(_baseURI)
+    ERC1155("")
     {
         _registerInterface(INTERFACE_ID_2981);
     }
@@ -87,17 +89,19 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      *
      * @param _supply - the supply of the token
      * @param _creator - the creator of the NFT (where the royalties will go)
+     * @param _tokenURI - the URI of the token metadata
      * @param _physical - whether the NFT should be flagged as physical or not
      */
-    function mint(uint256 _supply, address _creator, bool _physical)
+    function mint(uint256 _supply, address _creator, string memory _tokenURI, bool _physical)
     internal
     {
 
         // Get the next token id
         uint256 tokenId = nextToken++;
 
-        // Record the creator of the token
+        // Record the creator of the token, the token URI
         creators[tokenId] = _creator;
+        uris[tokenId] = _tokenURI;
 
         // Optionally flag it as physical
         if (_physical) physicals[tokenId] = true;
@@ -117,14 +121,15 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      *
      * @param _supply - the supply of the token
      * @param _creator - the creator of the NFT (where the royalties will go)
+     * @param _tokenURI - the URI of the token metadata
      */
-    function mintPhysical(uint256 _supply, address _creator)
+    function mintPhysical(uint256 _supply, address _creator, string memory _tokenURI)
     external override
     onlyRole(ESCROW_AGENT)
     {
 
         // Mint the token, flagging it as physical, sending to caller
-        mint(_supply, _creator, true);
+        mint(_supply, _creator, _tokenURI, true);
 
     }
 
@@ -138,14 +143,15 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      *
      * @param _supply - the supply of the token
      * @param _creator - the creator of the NFT (where the royalties will go)
+     * @param _tokenURI - the URI of the token metadata
      */
-    function mintDigital(uint256 _supply, address _creator)
+    function mintDigital(uint256 _supply, address _creator, string memory _tokenURI)
     external override
     onlyRole(MINTER)
     {
 
         // Mint the token, sending to caller
-        mint(_supply, _creator, false);
+        mint(_supply, _creator, _tokenURI, false);
 
     }
 
@@ -186,6 +192,21 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
     returns (bool)
     {
         return interfaceId == type(IERC165).interfaceId;
+    }
+
+    /**
+     * @notice Get the token URI
+     *
+     * This method is overrides the Open Zeppelin version, returning
+     * a unique stored metadata URI for each token rather than a
+     * replaceable baseURI template, since the latter is not compatible
+     * with IPFS hashes.
+     */
+    function uri(uint256 _tokenId)
+    public view override
+    returns (string memory)
+    {
+        return uris[_tokenId];
     }
 
 }

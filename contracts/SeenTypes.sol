@@ -8,7 +8,9 @@ pragma solidity ^0.8.0;
  */
 contract SeenTypes {
 
-    bytes4 public constant INTERFACE_ID_2981 = bytes4(keccak256("royaltyInfo(uint256,uint256,bytes)"));
+    string public constant ESCROW_TICKET_URI_BASE = "https://seen.haus/escrowticket/";
+
+    bytes4 public constant INTERFACE_ID_2981 = bytes4(keccak256("royaltyInfo(uint256,uint256,bytes)")); // TODO, possibly remove bytes
 
     bytes32 public constant ADMIN = keccak256("ADMIN");                   // Deployer and any other admins as needed
     bytes32 public constant SELLER = keccak256("SELLER");                 // Whitelisted sellers amd Seen.Haus reps

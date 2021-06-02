@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "../../../access/AccessClient.sol";
 import "../../../market/MarketClient.sol";
+import "../../../util/StringUtils.sol";
 import "../IEscrowTicketer.sol";
 
 /**
@@ -23,7 +24,7 @@ import "../IEscrowTicketer.sol";
  * scooping up a bunch of the available items in a multi-edition
  * sale must flip or claim them all at once, not individually.
  */
-contract TicketAsLot is IEscrowTicketer, MarketClient, ERC721 {
+contract TicketAsLot is StringUtils, IEscrowTicketer, MarketClient, ERC721 {
 
     // Ticket ID => Ticket
     mapping (uint256 => EscrowTicket) tickets;
@@ -45,6 +46,38 @@ contract TicketAsLot is IEscrowTicketer, MarketClient, ERC721 {
     MarketClient(_marketController)
     ERC721(NAME, SYMBOL)
     {}
+
+    /**
+     * @notice Get the token URI
+     *
+     * This method is overrides the Open Zeppelin version, returning
+     * a unique endpoint address on the seen.haus site for each token id.
+     *
+     * Tickets are transient and will be burned when claimed to obtain
+     * proof of ownership NFTs with their metadata on IPFS as usual.
+     *
+     * TODO: Create a dynamic endpoint on the web for generating the JSON
+     * Just needs to call this contract: tickets(tokenId) and create JSON
+     * with a fixed name, description, and image, adding these fields
+     *  - token: [SeenHausNFT contract address]
+     *  - tokenId: [the token id from EscrowTicket]
+     *  - amount: [the amount of that token this ticket can claim]
+     *
+     * @param _tokenId - the ticket's token id
+     * @return tokenURI - the URI for the given token id's metadata
+     */
+    function tokenURI(uint256 _tokenId) public pure override returns (string memory) {
+        string memory id = uintToStr(_tokenId);
+        return strConcat(ESCROW_TICKET_URI_BASE, id);
+    }
+
+    /**
+     * @dev Base URI for computing {tokenURI}. Empty by default, can be overriden
+     * in child contracts.
+     */
+    function _baseURI() internal pure override returns (string memory) {
+        return ESCROW_TICKET_URI_BASE;
+    }
 
     /**
      * Mint an escrow ticket
