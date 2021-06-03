@@ -71,9 +71,9 @@ contract SeenTypes {
         address payable[] buyers;
         uint256 consignmentId;
         uint256 start;
-        uint256 lotSize;
-        uint256 itemPrice;
-        uint256 maxBuy;
+        uint256 quantity;
+        uint256 price;
+        uint256 perTxCap;
         State state;
         Outcome outcome;
     }

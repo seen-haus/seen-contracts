@@ -1,20 +1,13 @@
+/**
+ * Seen.Haus contract suite deployment script
+ * @author Cliff Hall <cliff@futurescale.com>
+ */
+const Role = require("../domain/Role");
 const hre = require("hardhat");
-const ethers = hre.ethers;
 
+const ethers = hre.ethers;
 let contract, contracts = [];
 const divider = "-".repeat(80);
-
-// Roles
-const ADMIN = getRoleBytes("ADMIN");                   // Deployer and any other admins as needed
-const SELLER = getRoleBytes("SELLER");                 // Whitelisted sellers amd Seen.Haus reps
-const MINTER = getRoleBytes("MINTER");                 // Whitelisted artists and Seen.Haus reps
-const ESCROW_AGENT = getRoleBytes("ESCROW_AGENT");     // Seen.Haus Physical Item Escrow Agent
-const MARKET_HANDLER = getRoleBytes("MARKET_HANDLER"); // Market Handler contracts
-
-function getRoleBytes(role) {
-    let utils = ethers.utils;
-    return utils.keccak256(utils.toUtf8Bytes(role));
-}
 
 function getConfig() {
 
@@ -90,16 +83,28 @@ async function main() {
         config.outBidPercentage
     );
     await marketController.deployed();
-    deploymentComplete('MarketController', marketController.address, []);
+    deploymentComplete('MarketController', marketController.address, [
+        accessController.address,
+        config.staking,
+        config.multisig,
+        config.vipStakerAmount,
+        config.feePercentage,
+        config.royaltyPercentage,
+        config.maxRoyaltyPercentage,
+        config.outBidPercentage
+    ]);
 
     // Deploy the chosen IEscrowTicketer implementation
     const EscrowTicketer = await ethers.getContractFactory(config.escrowTicketer);
     const escrowTicketer = await EscrowTicketer.deploy(
         accessController.address,
-        marketController.address,
+        marketController.address
     );
     await escrowTicketer.deployed();
-    deploymentComplete(config.escrowTicketer, escrowTicketer.address, []);
+    deploymentComplete(config.escrowTicketer, escrowTicketer.address, [
+        accessController.address,
+        marketController.address
+    ]);
 
     // Deploy the SeenHausNFT contract
     const SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
@@ -108,7 +113,10 @@ async function main() {
         marketController.address,
     );
     await seenHausNFT.deployed();
-    deploymentComplete('SeenHausNFT', seenHausNFT.address, []);
+    deploymentComplete('SeenHausNFT', seenHausNFT.address, [
+        accessController.address,
+        marketController.address
+    ]);
 
     // Deploy the HandleAuction contract
     const HandleAuction = await ethers.getContractFactory("HandleAuction");
@@ -117,7 +125,10 @@ async function main() {
         marketController.address,
     );
     await handleAuction.deployed();
-    deploymentComplete('HandleAuction', handleAuction.address, []);
+    deploymentComplete('HandleAuction', handleAuction.address, [
+        accessController.address,
+        marketController.address
+    ]);
 
     // Deploy the HandleSale contract
     const HandleSale = await ethers.getContractFactory("HandleSale");
@@ -126,7 +137,10 @@ async function main() {
         marketController.address,
     );
     await handleSale.deployed();
-    deploymentComplete('HandleSale', handleSale.address, []);
+    deploymentComplete('HandleSale', handleSale.address, [
+        accessController.address,
+        marketController.address
+    ]);
 
     // Add Escrow Ticketer and NFT addresses to MarketController
     await marketController.setEscrowTicketer(escrowTicketer.address);
@@ -134,8 +148,8 @@ async function main() {
     console.log(`✅ MarketController updated with escrow ticketer and NFT addresses.`);
 
     // Add MARKET_HANDLER role to HandleAuction and HandleSale
-    await accessController.grantRole(MARKET_HANDLER, handleAuction.address);
-    await accessController.grantRole(MARKET_HANDLER, handleSale.address);
+    await accessController.grantRole(Role.MARKET_HANDLER, handleAuction.address);
+    await accessController.grantRole(Role.MARKET_HANDLER, handleSale.address);
     console.log(`✅ Granted MARKET_HANDLER role to HandleAuction and HandleSale.`);
 
     // Bail now if deploying locally

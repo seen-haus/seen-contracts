@@ -70,8 +70,9 @@ contract HandleAuction is MarketClient {
         // Make sure this contract is approved to transfer the token
         require(IERC1155(_token).isApprovedForAll(_seller, address(this)), "Not approved to transfer seller's tokens");
 
-        // Ensure seller owns _lotSize tokens
-        require(IERC1155(_token).balanceOf(_seller, _tokenId) >= 1, "Seller has zero balance of consigned token");
+        // Ensure seller a positive number of tokens
+        require(IERC1155(_token).balanceOf(_seller, _tokenId) > 0, "Seller has zero balance of consigned token");
+
 
         // Register the consignment
         Consignment memory consignment = marketController.registerConsignment(_market, _seller, _token, _tokenId);

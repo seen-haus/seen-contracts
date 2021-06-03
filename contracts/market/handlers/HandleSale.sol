@@ -55,9 +55,9 @@ contract HandleSale is MarketClient {
      * @param _token - the contract address issuing the NFT behind the consignment
      * @param _tokenId - the id of the token being consigned
      * @param _start - the scheduled start time of the sale
-     * @param _lotSize - the supply of the given consigned token being sold
-     * @param _itemPrice - the price of each item in the lot
-     * @param _maxBuy - the maximum amount that can be bought in a single transaction
+     * @param _quantity - the supply of the given consigned token being sold
+     * @param _price - the price of each item in the lot
+     * @param _perTxCap - the maximum amount that can be bought in a single transaction
      * @param _audience - the initial audience that can participate. See {SeenTypes.Audience}
      * @param _market - the market for the consignment. See {SeenTypes.Market}
      */
@@ -66,9 +66,9 @@ contract HandleSale is MarketClient {
         address _token,
         uint256 _tokenId,
         uint256 _start,
-        uint256 _lotSize,
-        uint256 _itemPrice,
-        uint256 _maxBuy,
+        uint256 _quantity,
+        uint256 _price,
+        uint256 _perTxCap,
         Audience _audience,
         Market _market
     )
@@ -81,8 +81,8 @@ contract HandleSale is MarketClient {
         // Make sure this contract is approved to transfer the token
         require(IERC1155(_token).isApprovedForAll(_seller, address(this)), "Not approved to transfer seller's tokens");
 
-        // Ensure seller owns _lotSize tokens
-        require(IERC1155(_token).balanceOf(_seller, _tokenId) >= _lotSize, "Seller token balance less than lot size");
+        // Ensure seller owns _quantity tokens
+        require(IERC1155(_token).balanceOf(_seller, _tokenId) >= _quantity, "Seller token balance less than quantity");
 
         // Register the consignment
         Consignment memory consignment = marketController.registerConsignment(_market, _seller, _token, _tokenId);
@@ -92,9 +92,9 @@ contract HandleSale is MarketClient {
         Sale storage sale = sales[consignment.id];
         sale.consignmentId = consignment.id;
         sale.start = _start;
-        sale.lotSize = _lotSize;
-        sale.itemPrice = _itemPrice;
-        sale.maxBuy = _maxBuy;
+        sale.quantity = _quantity;
+        sale.price = _price;
+        sale.perTxCap = _perTxCap;
         sale.state = State.Pending;
         sale.outcome = Outcome.Pending;
 
@@ -103,7 +103,7 @@ contract HandleSale is MarketClient {
             _seller,
             address(this),
             _tokenId,
-            _lotSize,
+            _quantity,
             new bytes(0x0)
         );
 
@@ -162,8 +162,8 @@ contract HandleSale is MarketClient {
         // Make sure we can accept the buy order
         require(block.timestamp >= sale.start, "Sale hasn't started");
         require(!Address.isContract(msg.sender), "Contracts may not buy");
-        require(_amount <= sale.maxBuy, "Per transaction limit for this sale exceeded");
-        require(msg.value == sale.itemPrice * _amount, "Payment does not cover order price");
+        require(_amount <= sale.perTxCap, "Per transaction limit for this sale exceeded");
+        require(msg.value == sale.price * _amount, "Payment does not cover order price");
 
         // Unless sale is for an open audience, check buyer's staking status
         Audience audience = audiences[_consignmentId];
@@ -247,7 +247,7 @@ contract HandleSale is MarketClient {
         sale.outcome = Outcome.Closed;
 
         // Distribute the funds (handles royalties, staking, multisig, and seller)
-        disburseFunds(_consignmentId, sale.lotSize * sale.itemPrice);
+        disburseFunds(_consignmentId, sale.quantity * sale.price);
 
         // Notify listeners about state change
         emit SaleEnded(sale);
@@ -284,11 +284,11 @@ contract HandleSale is MarketClient {
 
         // Determine the amount sold and remaining
         uint256 remaining = supply(consignment);
-        uint256 sold = sale.lotSize - remaining;
+        uint256 sold = sale.quantity - remaining;
 
         // Disburse the funds for the sold items
         if (sold > 0) {
-            uint256 salesTotal = sold * sale.itemPrice;
+            uint256 salesTotal = sold * sale.price;
             disburseFunds(_consignmentId, salesTotal);
         }
 
