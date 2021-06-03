@@ -5,12 +5,14 @@
   - Old contracts that won't be changed or reused are kept in contracts_legacy folder for reference.
   - Currently, creating more diagrams and unit tests.
 
-## Contracts Overview
+## Overview
 ![overview](docs/images/SeenHausContractsOverview.png)
 
-## Digital vs Physical NFTs
-![digital-vs-physical-nfts](docs/images/SeenHausDigitalVsPhysicalNFTs.png)
+## Access Control
+![access-control](docs/images/SeenHausContractAccessControl.png)
 
+## Digital vs Physical
+![digital-vs-physical-nfts](docs/images/SeenHausDigitalVsPhysicalNFTs.png)
 
 # Developer Setup
 ## Prerequisites
