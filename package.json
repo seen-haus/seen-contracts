@@ -22,9 +22,9 @@
   "scripts": {
     "build": "npx hardhat compile",
     "test": "npx hardhat test",
-    "deploy:local": "npx hardhat run --network hardhat scripts/deploy-contracts.js",
-    "deploy:rinkeby": "npx hardhat run --network rinkeby scripts/deploy-contracts.js >> deploy.contracts.rinkeby.txt",
-    "deploy:mainnet": "npx hardhat run --network mainnet scripts/deploy-contracts.js >> deploy.contracts.mainnet.txt"
+    "deploy:local": "npx hardhat run --network hardhat scripts/deploy-suite.js",
+    "deploy:rinkeby": "npx hardhat run --network rinkeby scripts/deploy-suite.js >> deploy.contracts.rinkeby.txt",
+    "deploy:mainnet": "npx hardhat run --network mainnet scripts/deploy-suite.js >> deploy.contracts.mainnet.txt"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.0.0"
