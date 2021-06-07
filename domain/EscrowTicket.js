@@ -3,8 +3,7 @@
  * @author Cliff Hall <cliff@futurescale.com>
  */
 const NODE = (typeof module !== 'undefined' && typeof module.exports !== 'undefined');
-const Market = require("./Market");
-const eip55 = require("eip55");
+const ethers = require("ethers");
 
 class EscrowTicket {
 
@@ -28,7 +27,7 @@ class EscrowTicket {
      * @returns {object}
      */
     toObject() {
-        return JSON.parse(JSON.stringify(this));
+        return JSON.parse(this.toString());
     }
 
     /**
@@ -36,30 +35,49 @@ class EscrowTicket {
      * @returns {string}
      */
     toString() {
-        const {market, seller, token, tokenId, id} = this;
-        return [
-            market, seller, token, tokenId, id
-        ].join(', ');
+        return JSON.stringify(this);
+    }
+
+    /**
+     * Clone this EscrowTicket
+     * @returns {EscrowTicket}
+     */
+    clone () {
+        return EscrowTicket.fromObject(this.toObject());
     }
 
     /**
      * Is this EscrowTicket instance's tokenId field valid?
-     * Must be a number
+     * Must be a string that converts to a BigNumber greater than or equal to zero
      * @returns {boolean}
      */
     tokenIdIsValid() {
         let {tokenId} = this;
-        return typeof tokenId === "number";
+        let valid = false;
+        try {
+            valid = (
+                typeof tokenId === "string" &&
+                ethers.BigNumber.from(tokenId).gte("0")
+            )
+        } catch(e){}
+        return valid;
     }
 
     /**
      * Is this EscrowTicket instance's amount field valid?
-     * Must be a positive number
+     * Must be a string that converts to a positive BigNumber
      * @returns {boolean}
      */
     amountIsValid() {
         let {amount} = this;
-        return typeof amount === "number" && amount > 0;
+        let valid = false;
+        try {
+            valid = (
+                typeof amount === "string" &&
+                ethers.BigNumber.from(amount).gt("0")
+            )
+        } catch(e){}
+        return valid;
     }
 
     /**
@@ -72,14 +90,6 @@ class EscrowTicket {
             this.amountIsValid()
         );
     };
-
-    /**
-     * Clone this EscrowTicket
-     * @returns {EscrowTicket}
-     */
-    clone () {
-       return EscrowTicket.fromObject(this.toObject());
-    }
 
 }
 

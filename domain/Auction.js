@@ -3,6 +3,7 @@
  * @author Cliff Hall <cliff@futurescale.com>
  */
 const NODE = (typeof module !== 'undefined' && typeof module.exports !== 'undefined');
+const ethers = require("ethers");
 const eip55 = require("eip55");
 const Clock = require("./Clock");
 const State = require("./State");
@@ -37,7 +38,7 @@ class Auction {
      * @returns {object}
      */
     toObject() {
-        return JSON.parse(JSON.stringify(this));
+        return JSON.parse(this.toString());
     }
 
     /**
@@ -45,10 +46,15 @@ class Auction {
      * @returns {string}
      */
     toString() {
-        const {buyer, consignmentId, start, duration, reserve, bid, clock, state, outcome} = this;
-        return [
-            buyer, consignmentId, start, duration, reserve, bid, clock, state, outcome
-        ].join(', ');
+        return JSON.stringify(this);
+    }
+
+    /**
+     * Clone this Auction
+     * @returns {Auction}
+     */
+    clone () {
+        return Auction.fromObject(this.toObject());
     }
 
     /**
@@ -63,7 +69,8 @@ class Auction {
             valid = (
                 buyer === undefined ||
                 buyer === null ||
-                eip55.verify(buyer)
+                eip55.verify(buyer) ||
+                eip55.verify(eip55.encode(buyer))
             );
         } catch (e) {}
         return valid;
@@ -71,56 +78,90 @@ class Auction {
 
     /**
      * Is this Auction instance's consignmentId field valid?
-     * Must be a number
+     * Must be a string that converts to a BigNumber greater than or equal to zero
      * @returns {boolean}
      */
     consignmentIdIsValid() {
         let {consignmentId} = this;
-        return typeof consignmentId === "number";
+        let valid = false;
+        try {
+            valid = (
+                typeof consignmentId === "string" &&
+                ethers.BigNumber.from(consignmentId).gte("0")
+            )
+        } catch(e){}
+        return valid;
     }
 
     /**
      * Is this Auction instance's start field valid?
-     * Must be a positive number
+     * Must be a string that converts to a valid, positive BigNumber
      * @returns {boolean}
      */
     startIsValid() {
         let {start} = this;
-        return typeof start === "number" && start > 0;
+        let valid = false;
+        try {
+            valid = (
+                typeof start === "string" &&
+                ethers.BigNumber.from(start).gt("0")
+            )
+        } catch(e){}
+        return valid;
     }
 
     /**
      * Is this Auction instance's duration field valid?
-     * Must be a number
+     * Must be a string that converts to a valid, positive BigNumber
      * @returns {boolean}
      */
     durationIsValid() {
         let {duration} = this;
-        return typeof duration === "number";
+        let valid = false;
+        try {
+            valid = (
+                typeof duration === "string" &&
+                ethers.BigNumber.from(duration).gt("0")
+            )
+        } catch(e){}
+        return valid;
     }
 
     /**
      * Is this Auction instance's reserve field valid?
-     * Must be a number
+     * Must be a string that converts to a valid, positive BigNumber
      * @returns {boolean}
      */
     reserveIsValid() {
         let {reserve} = this;
-        return typeof reserve === "number";
+        let valid = false;
+        try {
+            valid = (
+                typeof reserve === "string" &&
+                ethers.BigNumber.from(reserve).gt("0")
+            )
+        } catch(e){}
+        return valid;
     }
 
     /**
      * Is this Auction instance's bid field valid?
-     * If present, must be a positive number
+     * If present, must be a string that converts to a valid, positive BigNumber
      * @returns {boolean}
      */
     bidIsValid() {
         let {bid} = this;
-        let valid = (
-            bid === undefined ||
-            bid === null ||
-            (typeof bid === "number" && bid > 0)
-        );
+        let valid = false;
+        try {
+            valid = (
+                bid === undefined ||
+                bid === null ||
+                (
+                    typeof bid === "string" &&
+                    ethers.BigNumber.from(bid).gt("0")
+                )
+            )
+        } catch(e){}
         return valid;
     }
 
@@ -186,14 +227,6 @@ class Auction {
             this.outcomeIsValid()
         );
     };
-
-    /**
-     * Clone this Auction
-     * @returns {Auction}
-     */
-    clone () {
-       return Auction.fromObject(this.toObject());
-    }
 
 }
 

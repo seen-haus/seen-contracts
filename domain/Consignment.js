@@ -3,6 +3,7 @@
  * @author Cliff Hall <cliff@futurescale.com>
  */
 const NODE = (typeof module !== 'undefined' && typeof module.exports !== 'undefined');
+const ethers = require("ethers");
 const Market = require("./Market");
 const eip55 = require("eip55");
 
@@ -31,7 +32,7 @@ class Consignment {
      * @returns {object}
      */
     toObject() {
-        return JSON.parse(JSON.stringify(this));
+        return JSON.parse(this.toString());
     }
 
     /**
@@ -39,10 +40,15 @@ class Consignment {
      * @returns {string}
      */
     toString() {
-        const {market, seller, token, tokenId, id} = this;
-        return [
-            market, seller, token, tokenId, id
-        ].join(', ');
+        return JSON.stringify(this);
+    }
+
+    /**
+     * Clone this Consignment
+     * @returns {Consignment}
+     */
+    clone () {
+        return Consignment.fromObject(this.toObject());
     }
 
     /**
@@ -70,7 +76,7 @@ class Consignment {
         let {seller} = this;
         try {
             valid = (
-                eip55.verify(seller)
+                eip55.verify(eip55.encode(seller))
             );
         } catch (e) {}
         return valid;
@@ -94,22 +100,36 @@ class Consignment {
 
     /**
      * Is this Consignment instance's tokenId field valid?
-     * Must be a number
+     * Must be a string that converts to a BigNumber greater than or equal to zero
      * @returns {boolean}
      */
     tokenIdIsValid() {
         let {tokenId} = this;
-        return typeof tokenId === "number";
+        let valid = false;
+        try {
+            valid = (
+                typeof tokenId === "string" &&
+                ethers.BigNumber.from(tokenId).gte("0")
+            )
+        } catch(e){}
+        return valid;
     }
 
     /**
      * Is this Consignment instance's id field valid?
-     * Must be a number
+     * Must be a string that converts to a BigNumber greater than or equal to zero
      * @returns {boolean}
      */
     idIsValid() {
         let {id} = this;
-        return typeof id === "number";
+        let valid = false;
+        try {
+            valid = (
+                typeof id === "string" &&
+                ethers.BigNumber.from(id).gte("0")
+            )
+        } catch(e){}
+        return valid;
     }
 
     /**
@@ -125,14 +145,6 @@ class Consignment {
             this.idIsValid()
         );
     };
-
-    /**
-     * Clone this Consignment
-     * @returns {Consignment}
-     */
-    clone () {
-       return Consignment.fromObject(this.toObject());
-    }
 
 }
 
