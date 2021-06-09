@@ -100,6 +100,24 @@ abstract contract MarketClient is AccessClient, ERC1155Holder {
     }
 
     /**
+     * @notice Get a percentage of a given amount.
+     *
+     * N.B. On the MarketController, percentage values are stored
+     * as unsigned integers, the result of multiplying the given percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
+     *
+     * @param _amount - the amount to return a percentage of
+     * @param _percentage - the percentage value represented as above
+     */
+    function getPercentageOf(uint256 _amount, uint128 _percentage)
+    internal
+    pure
+    returns (uint256 share)
+    {
+        share = _amount * _percentage / 10000;
+    }
+
+    /**
      * @notice Deduct and pay royalties on sold secondary market consignments.
      *
      * Does nothing is this is a primary market sale.
@@ -138,7 +156,7 @@ abstract contract MarketClient is AccessClient, ERC1155Holder {
                     (address recipient, uint256 expected,) = IERC2981(_consignment.token).royaltyInfo(_consignment.tokenId, _grossSale, "");
 
                     // Determine the max royalty we will pay
-                    uint256 maxRoyalty = (_grossSale / 100) * marketController.getMaxRoyaltyPercentage();
+                    uint256 maxRoyalty = getPercentageOf(_grossSale, marketController.getMaxRoyaltyPercentage());
 
                     // If a royalty is expected...
                     if (expected > 0) {
@@ -186,7 +204,7 @@ abstract contract MarketClient is AccessClient, ERC1155Holder {
 
         // With the net after royalties, calculate and split
         // the auction fee between SEEN staking and multisig,
-        uint256 feeAmount = (_netAmount / 100) * marketController.getFeePercentage();
+        uint256 feeAmount = getPercentageOf(_netAmount, marketController.getFeePercentage());
         uint256 split = feeAmount / 2;
         address payable staking = marketController.getStaking();
         address payable multisig = marketController.getMultisig();
@@ -232,5 +250,4 @@ abstract contract MarketClient is AccessClient, ERC1155Holder {
         // Notify listeners of payment
         emit PayoutDisbursed(_consignmentId, consignment.seller, payout);
     }
-
 }

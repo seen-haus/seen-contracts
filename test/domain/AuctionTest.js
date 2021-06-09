@@ -6,8 +6,9 @@ const Outcome = require("../../domain/Outcome");
 
 describe("Auction", function() {
 
-    // Shared args
-    let accounts, auction, buyer, consignmentId, start, duration, reserve, bid, clock, state, outcome;
+    // Suite-wide scope
+    let accounts, auction;
+    let buyer, consignmentId, start, duration, reserve, bid, clock, state, outcome;
 
     before( async function () {
 
@@ -37,7 +38,7 @@ describe("Auction", function() {
             buyer = null;
             bid = null;
 
-            const auction = new Auction(buyer, consignmentId, start, duration, reserve, bid, clock, state, outcome);
+            auction = new Auction(buyer, consignmentId, start, duration, reserve, bid, clock, state, outcome);
 
             expect(auction.buyerIsValid()).is.true;
             expect(auction.consignmentIdIsValid()).is.true;
@@ -58,7 +59,7 @@ describe("Auction", function() {
             buyer = accounts[0].address;
             bid = ethers.utils.parseUnits("1.75", "ether").toString();
 
-            const auction = new Auction(buyer, consignmentId, start, duration, reserve, bid, clock, state, outcome);
+            auction = new Auction(buyer, consignmentId, start, duration, reserve, bid, clock, state, outcome);
 
             expect(auction.buyerIsValid()).is.true;
             expect(auction.consignmentIdIsValid()).is.true;

@@ -22,11 +22,11 @@ contract MarketController is AccessClient {
     event PhysicalItemsAddressChanged(address indexed physicalItems);
     event PhysicalLotsAddressChanged(address indexed physicalLots);
     event VipStakerAmountChanged(uint256 indexed vipStakerAmount);
-    event FeePercentageChanged(uint8 indexed feePercentage);
-    event RoyaltyPercentageChanged(uint8 indexed royaltyPercentage);
-    event MaxRoyaltyPercentageChanged(uint8 indexed maxRoyaltyPercentage);
-    event OutBidPercentageChanged(uint8 indexed outBidPercentage);
-    event ConsignmentRegistered(SeenTypes.Consignment consignment);
+    event FeePercentageChanged(uint128 indexed feePercentage);
+    event RoyaltyPercentageChanged(uint128 indexed royaltyPercentage);
+    event MaxRoyaltyPercentageChanged(uint128 indexed maxRoyaltyPercentage);
+    event OutBidPercentageChanged(uint128 indexed outBidPercentage);
+    event ConsignmentRegistered(Consignment consignment);
 
     /// @dev the address of the Seen.Haus NFT contract
     address internal nft;
@@ -44,16 +44,16 @@ contract MarketController is AccessClient {
     uint256 public vipStakerAmount;
 
     /// @dev the percentage that will be taken as a fee from the net of a Seen.Haus sale or auction (after royalties)
-    uint8 public feePercentage;         // 0 - 100
+    uint128 public feePercentage;         // 1.75% = 175, 100% = 10000
 
     /// @dev The percentage of a Seen.Haus minted secondary sale that should go to the token's creator
-    uint8 public royaltyPercentage;     // 0 - 100
+    uint128 public royaltyPercentage;     // 1.75% = 175, 100% = 10000
 
     /// @dev the maximum percentage of a Seen.Haus sale or auction that will be paid as a royalty (meant for foreign consignments)
-    uint8 public maxRoyaltyPercentage;  // 0 - 100
+    uint128 public maxRoyaltyPercentage;  // 1.75% = 175, 100% = 10000
 
     /// @dev the minimum percentage a Seen.Haus auction bid must be above the previous bid to prevail
-    uint8 public outBidPercentage;      // 0 - 100
+    uint128 public outBidPercentage;      // 1.75% = 175, 100% = 10000
 
     /// @dev next consignment id
     uint256 public nextConsignment;
@@ -78,10 +78,10 @@ contract MarketController is AccessClient {
         address payable _staking,
         address payable _multisig,
         uint256 _vipStakerAmount,
-        uint8 _feePercentage,
-        uint8 _royaltyPercentage,
-        uint8 _maxRoyaltyPercentage,
-        uint8 _outBidPercentage
+        uint128 _feePercentage,
+        uint128 _royaltyPercentage,
+        uint128 _maxRoyaltyPercentage,
+        uint128 _outBidPercentage
     )
     AccessClient(_accessController)
     {
@@ -211,12 +211,14 @@ contract MarketController is AccessClient {
 
     /**
      * @notice Sets the marketplace fee percentage.
-     *
      * Emits a FeePercentageChanged event.
      *
      * @param _feePercentage - the percentage that will be taken as a fee from the net of a Seen.Haus sale or auction (after royalties)
+     *
+     * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
      */
-    function setFeePercentage(uint8 _feePercentage)
+    function setFeePercentage(uint128 _feePercentage)
     external
     onlyRole(ADMIN) {
         feePercentage = _feePercentage;
@@ -228,7 +230,7 @@ contract MarketController is AccessClient {
      */
     function getFeePercentage()
     external view
-    returns (uint8) {
+    returns (uint128) {
         return feePercentage;
     }
 
@@ -238,8 +240,11 @@ contract MarketController is AccessClient {
      * Emits a RoyaltyPercentageChanged event.
      *
      * @param _royaltyPercentage - the percentage of a Seen.Haus minted secondary sale that should go to the token's creator
+     *
+     * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
      */
-    function setRoyaltyPercentage(uint8 _royaltyPercentage)
+    function setRoyaltyPercentage(uint128 _royaltyPercentage)
     external
     onlyRole(ADMIN) {
         royaltyPercentage = _royaltyPercentage;
@@ -251,7 +256,7 @@ contract MarketController is AccessClient {
      */
     function getRoyaltyPercentage()
     external view
-    returns (uint8) {
+    returns (uint128) {
         return royaltyPercentage;
     }
 
@@ -261,8 +266,11 @@ contract MarketController is AccessClient {
      * Emits a MaxRoyaltyPercentageChanged event.
      *
      * @param _maxRoyaltyPercentage - the maximum percentage of a Seen.Haus sale or auction that will be paid as a royalty
+     *
+     * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
      */
-    function setMaxRoyaltyPercentage(uint8 _maxRoyaltyPercentage)
+    function setMaxRoyaltyPercentage(uint128 _maxRoyaltyPercentage)
     external
     onlyRole(ADMIN) {
         maxRoyaltyPercentage = _maxRoyaltyPercentage;
@@ -274,7 +282,7 @@ contract MarketController is AccessClient {
      */
     function getMaxRoyaltyPercentage()
     external view
-    returns (uint8) {
+    returns (uint128) {
         return maxRoyaltyPercentage;
     }
 
@@ -284,8 +292,11 @@ contract MarketController is AccessClient {
      * Emits a OutBidPercentageChanged event.
      *
      * @param _outBidPercentage - the minimum percentage a Seen.Haus auction bid must be above the previous bid to prevail
+     *
+     * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
      */
-    function setOutBidPercentage(uint8 _outBidPercentage)
+    function setOutBidPercentage(uint128 _outBidPercentage)
     external
     onlyRole(ADMIN) {
         outBidPercentage = _outBidPercentage;
@@ -297,7 +308,7 @@ contract MarketController is AccessClient {
      */
     function getOutBidPercentage()
     external view
-    returns (uint8) {
+    returns (uint128) {
         return outBidPercentage;
     }
 
@@ -358,5 +369,4 @@ contract MarketController is AccessClient {
         emit ConsignmentRegistered(consignment);
 
     }
-
 }

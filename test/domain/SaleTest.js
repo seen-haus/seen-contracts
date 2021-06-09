@@ -5,7 +5,7 @@ const Outcome = require("../../domain/Outcome");
 
 describe("Sale", function() {
 
-    // Shared args
+    // Suite-wide scope
     let accounts, sale;
     let buyers, consignmentId, start, quantity, price, perTxCap, state, outcome;
 
@@ -37,7 +37,7 @@ describe("Sale", function() {
             buyers = null;
             perTxCap = null;
 
-            const sale = new Sale(buyers, consignmentId, start, quantity, price, perTxCap, state, outcome);
+            sale = new Sale(buyers, consignmentId, start, quantity, price, perTxCap, state, outcome);
             expect(sale.buyersIsValid()).is.true;
             expect(sale.consignmentIdIsValid()).is.true;
             expect(sale.startIsValid()).is.true;
@@ -56,7 +56,7 @@ describe("Sale", function() {
             buyers = ["0x7777788200B672A42421017F65EDE4Fc759564C8","0x495f947276749ce646f68ac9c248420045cb7b5e"];
             perTxCap = "1";
 
-            const sale = new Sale(buyers, consignmentId, start, quantity, price, perTxCap, state, outcome);
+            sale = new Sale(buyers, consignmentId, start, quantity, price, perTxCap, state, outcome);
             expect(sale.buyersIsValid()).is.true;
             expect(sale.consignmentIdIsValid()).is.true;
             expect(sale.startIsValid()).is.true;

@@ -8,7 +8,7 @@ import "../SeenTypes.sol";
  * @author Cliff Hall
  * @notice Declared as abstract contract rather than interface as it must inherit for enum types.
  */
-abstract contract IMarketController is SeenTypes {
+interface IMarketController {
 
     /**
      * @notice Sets the address of the xSEEN ERC-20 staking contract.
@@ -17,12 +17,12 @@ abstract contract IMarketController is SeenTypes {
      *
      * @param _nft - the address of the nft contract
      */
-    function setNft(address _nft) external virtual;
+    function setNft(address _nft) external;
 
     /**
      * @notice The nft getter
      */
-    function getNft() external view virtual returns (address);
+    function getNft() external view returns (address);
 
     /**
      * @notice Sets the address of the Seen.Haus escrow ticket contract.
@@ -31,12 +31,12 @@ abstract contract IMarketController is SeenTypes {
      *
      * @param _escrowTicketer - the address of the escrow ticket contract
      */
-    function setEscrowTicketer(address _escrowTicketer) external virtual;
+    function setEscrowTicketer(address _escrowTicketer) external;
 
     /**
      * @notice The escrowTicketer getter
      */
-    function getEscrowTicketer() external view virtual returns (address);
+    function getEscrowTicketer() external view returns (address);
 
     /**
      * @notice Sets the address of the xSEEN ERC-20 staking contract.
@@ -45,12 +45,12 @@ abstract contract IMarketController is SeenTypes {
      *
      * @param _staking - the address of the staking contract
      */
-    function setStaking(address payable _staking) external virtual;
+    function setStaking(address payable _staking) external;
 
     /**
      * @notice The staking getter
      */
-    function getStaking() external view virtual returns (address payable);
+    function getStaking() external view returns (address payable);
 
     /**
      * @notice Sets the address of the Seen.Haus multi-sig wallet.
@@ -59,12 +59,12 @@ abstract contract IMarketController is SeenTypes {
      *
      * @param _multisig - the address of the multi-sig wallet
      */
-    function setMultisig(address payable _multisig) external virtual;
+    function setMultisig(address payable _multisig) external;
 
     /**
      * @notice The multisig getter
      */
-    function getMultisig() external view virtual returns (address payable);
+    function getMultisig() external view returns (address payable);
 
     /**
      * @notice Sets the VIP staker amount.
@@ -73,12 +73,12 @@ abstract contract IMarketController is SeenTypes {
      *
      * @param _vipStakerAmount - the minimum amount of xSEEN ERC-20 a caller must hold to participate in VIP events
      */
-    function setVipStakerAmount(uint256 _vipStakerAmount) external virtual;
+    function setVipStakerAmount(uint256 _vipStakerAmount) external;
 
     /**
      * @notice The vipStakerAmount getter
      */
-    function getVipStakerAmount() external view virtual returns (uint256);
+    function getVipStakerAmount() external view returns (uint256);
 
     /**
      * @notice Sets the marketplace fee percentage.
@@ -87,12 +87,12 @@ abstract contract IMarketController is SeenTypes {
      *
      * @param _feePercentage - the percentage that will be taken as a fee from the net of a Seen.Haus sale or auction (after royalties)
      */
-    function setFeePercentage(uint8 _feePercentage) external virtual;
+    function setFeePercentage(uint128 _feePercentage) external;
 
     /**
      * @notice The feePercentage getter
      */
-    function getFeePercentage() external view virtual returns (uint8);
+    function getFeePercentage() external view returns (uint128);
 
     /**
      * @notice Sets the marketplace royalty percentage.
@@ -101,26 +101,26 @@ abstract contract IMarketController is SeenTypes {
      *
      * @param _royaltyPercentage - the percentage of a Seen.Haus minted secondary sale that should go to the token's creator
      */
-    function setRoyaltyPercentage(uint8 _royaltyPercentage) external virtual;
+    function setRoyaltyPercentage(uint128 _royaltyPercentage) external;
 
     /**
      * @notice The royaltyPercentage getter
      */
-    function getRoyaltyPercentage() external view virtual returns (uint8);
+    function getRoyaltyPercentage() external view returns (uint128);
 
     /**
-     * @notice Sets the external virtual marketplace maximum royalty percentage.
+     * @notice Sets the external marketplace maximum royalty percentage.
      *
      * Emits a MaxRoyaltyPercentageChanged event.
      *
      * @param _maxRoyaltyPercentage - the maximum percentage of a Seen.Haus sale or auction that will be paid as a royalty
      */
-    function setMaxRoyaltyPercentage(uint8 _maxRoyaltyPercentage) external virtual;
+    function setMaxRoyaltyPercentage(uint128 _maxRoyaltyPercentage) external;
 
     /**
      * @notice The maxRoyaltyPercentage getter
      */
-    function getMaxRoyaltyPercentage() external view virtual returns (uint8);
+    function getMaxRoyaltyPercentage() external view returns (uint128);
 
     /**
      * @notice Sets the marketplace auction outbid percentage.
@@ -129,22 +129,22 @@ abstract contract IMarketController is SeenTypes {
      *
      * @param _outBidPercentage - the minimum percentage a Seen.Haus auction bid must be above the previous bid to prevail
      */
-    function setOutBidPercentage(uint8 _outBidPercentage) external virtual;
+    function setOutBidPercentage(uint128 _outBidPercentage) external;
 
     /**
      * @notice The outBidPercentage getter
      */
-    function getOutBidPercentage() external view virtual returns (uint8);
+    function getOutBidPercentage() external view returns (uint128);
 
     /**
      * @notice The nextConsignment getter
      */
-    function getNextConsignment() external view virtual returns (uint256);
+    function getNextConsignment() external view returns (uint256);
 
     /**
      * @notice The consignment getter
      */
-    function getConsignment(uint256 _consignmentId) external view virtual returns (Consignment memory);
+    function getConsignment(uint256 _consignmentId) external view returns (SeenTypes.Consignment memory);
 
     /**
      * @notice Registers a new consignment for sale or auction.
@@ -159,12 +159,12 @@ abstract contract IMarketController is SeenTypes {
      * @return Consignment - the registered consignment
      */
     function registerConsignment(
-        Market _market,
+        SeenTypes.Market _market,
         address payable _seller,
         address _token,
         uint256 _tokenId
     )
-    external virtual
-    returns(Consignment memory);
+    external
+    returns(SeenTypes.Consignment memory);
 
 }

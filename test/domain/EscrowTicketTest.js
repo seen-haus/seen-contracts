@@ -4,7 +4,7 @@ const Market = require("../../domain/Market");
 
 describe("EscrowTicket", function() {
 
-    // Shared args
+    // Suite-wide scope
     let accounts, escrowTicket;
     let tokenId, amount;
 
@@ -27,7 +27,7 @@ describe("EscrowTicket", function() {
 
         it("Should allow creation of valid, fully populated EscrowTicket instance", async function () {
 
-            const escrowTicket = new EscrowTicket(tokenId, amount);
+            escrowTicket = new EscrowTicket(tokenId, amount);
             expect(escrowTicket.tokenIdIsValid()).is.true;
             expect(escrowTicket.amountIsValid()).is.true;
             expect(escrowTicket.isValid()).is.true;

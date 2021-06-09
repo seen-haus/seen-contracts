@@ -175,7 +175,7 @@ contract HandleAuction is MarketClient {
         // - Be sure new bid outbids previous
         // - Give back the previous bidder's money
         if (auction.bid > 0) {
-            require(msg.value >= (auction.bid * (100 + marketController.getOutBidPercentage())) / 100, "Bid too small");
+            require(msg.value >= (auction.bid + getPercentageOf(auction.bid, marketController.getOutBidPercentage())), "Bid too small");
             auction.buyer.transfer(auction.bid);
         }
 

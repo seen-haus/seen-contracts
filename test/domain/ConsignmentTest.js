@@ -4,7 +4,7 @@ const Market = require("../../domain/Market");
 
 describe("Consignment", function() {
 
-    // Shared args
+    // Suite-wide scope
     let accounts, consignment;
     let market, seller, token, tokenId, id;
 
@@ -30,7 +30,7 @@ describe("Consignment", function() {
 
         it("Should allow creation of valid, fully populated Consignment instance", async function () {
 
-            const consignment = new Consignment(market, seller, token, tokenId, id);
+            consignment = new Consignment(market, seller, token, tokenId, id);
             expect(consignment.marketIsValid()).is.true;
             expect(consignment.sellerIsValid()).is.true;
             expect(consignment.tokenIsValid()).is.true;
