@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "../../../access/AccessClient.sol";
@@ -24,7 +25,7 @@ import "../IEscrowTicketer.sol";
  * scooping up a bunch of the available items in a multi-edition
  * sale must flip or claim them all at once, not individually.
  */
-contract TicketAsLot is StringUtils, IEscrowTicketer, MarketClient, ERC721 {
+contract TicketAsLot is StringUtils, IEscrowTicketer, MarketClient, ERC1155Holder, ERC721 {
 
     // Ticket ID => Ticket
     mapping (uint256 => EscrowTicket) tickets;

@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "../access/AccessClient.sol";
 import "./MarketController.sol";
 import "./IMarketController.sol";
@@ -15,7 +14,7 @@ import "./IMarketController.sol";
  * @notice Extended by contracts that need to communicate with the MarketController.
  * Provides base functionality for common actions taken by market handlers.
  */
-abstract contract MarketClient is AccessClient, ERC1155Holder {
+abstract contract MarketClient is AccessClient {
 
     // Events
     event RoyaltyDisbursed(uint256 indexed consignmentId, address indexed recipient, uint256 amount);

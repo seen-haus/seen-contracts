@@ -1,5 +1,4 @@
 const { expect } = require("chai");
-const { expectRevert } = require('@openzeppelin/test-helpers');
 const Role = require("../../domain/Role");
 const Market = require("../../domain/Market");
 const Consignment = require("../../domain/Consignment");
@@ -21,16 +20,16 @@ describe("MarketController", function() {
         accounts = await ethers.getSigners();
         deployer = accounts[0];
         admin = accounts[1];
-        marketHandler = accounts[2];
+        seller = accounts[2];
+        associate = accounts[3];
 
-        staking = accounts[3];        // We just need addresses for these,
-        multisig = accounts[4];       // not functional contracts
-        nft = accounts[5];            // .
-        escrowTicketer = accounts[6]; // .
-        replacement = accounts[7];    // .
-        associate = accounts[8];      // .
-        seller = accounts[9];         // .
-        token = accounts[10];         // .
+        staking = accounts[4];        // We just need addresses for these,
+        multisig = accounts[5];       // not functional contracts
+        nft = accounts[6];            // .
+        token = accounts[7];          // .
+        escrowTicketer = accounts[8]; // .
+        marketHandler = accounts[9];  // .
+        replacement = accounts[10];   // .
 
         // Market control values
         vipStakerAmount = "500";       // Amount of xSEEN
@@ -190,7 +189,7 @@ describe("MarketController", function() {
 
         beforeEach( async function () {
 
-            // Prepare for roled access to privileged MarketController methods
+            // Prepare for roled access to privileged methods
             await accessController.connect(deployer).grantRole(Role.ADMIN, admin.address);
 
             // Unique replacement values

@@ -46,6 +46,10 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
     ERC1155("")
     {
         _registerInterface(INTERFACE_ID_2981);
+        _registerInterface(type(ISeenHausNFT).interfaceId);
+        _registerInterface(type(IERC165).interfaceId);
+        _registerInterface(type(IERC1155).interfaceId);
+        _registerInterface(type(IERC1155MetadataURI).interfaceId);
     }
 
     /**
@@ -54,7 +58,8 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      */
     function getNextToken()
     external view override
-    returns (uint256) {
+    returns (uint256)
+    {
         return nextToken;
     }
 
@@ -184,13 +189,13 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      *
      * This method is inherited from several parents and
      * the compiler cannot decide which to use. Thus, it must
-     * be overridden here. :(
+     * be overridden here.
      */
     function supportsInterface(bytes4 interfaceId)
-    public pure override(IERC2981,ERC1155,ERC165Storage,ERC1155Receiver)
+    public view override(IERC2981, ERC1155, ERC165Storage)
     returns (bool)
     {
-        return interfaceId == type(IERC165).interfaceId;
+        return ERC165Storage.supportsInterface(interfaceId);
     }
 
     /**
