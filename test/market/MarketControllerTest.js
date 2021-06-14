@@ -9,7 +9,7 @@ describe("MarketController", function() {
     let accounts, deployer, admin, marketHandler, associate, seller;
     let AccessController, accessController;
     let MarketController, marketController;
-    let staking, multisig, vipStakerAmount, feePercentage, royaltyPercentage, maxRoyaltyPercentage, outBidPercentage;
+    let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage;
     let escrowTicketer, nft;
     let address, amount, percentage, counter, market, token, tokenId, id, consignment, nextConsignment;
     let replacement, replacementAmount, replacementPercentage;
@@ -34,7 +34,6 @@ describe("MarketController", function() {
         // Market control values
         vipStakerAmount = "500";       // Amount of xSEEN
         feePercentage = "1500";        // 15%   = 1500
-        royaltyPercentage = "12500";   // 12.5% = 12500
         maxRoyaltyPercentage = "5000"; // 50%   = 5000
         outBidPercentage = "500";      // 5%    = 500
 
@@ -51,7 +50,6 @@ describe("MarketController", function() {
             multisig.address,
             vipStakerAmount,
             feePercentage,
-            royaltyPercentage,
             maxRoyaltyPercentage,
             outBidPercentage
         );
@@ -140,19 +138,6 @@ describe("MarketController", function() {
             expect(
                 percentage.toString() === feePercentage,
                 "getFeePercentage doesn't return expected amount"
-            ).is.true;
-
-        });
-
-        it("getRoyaltyPercentage() should return the % of secondary sale gross that will be royalty for Seen.Haus creators", async function () {
-
-            // Get percentage
-            percentage = await marketController.getRoyaltyPercentage();
-
-            // Test
-            expect(
-                percentage.toString() === royaltyPercentage,
-                "getRoyaltyPercentage doesn't return expected amount"
             ).is.true;
 
         });
@@ -392,38 +377,6 @@ describe("MarketController", function() {
 
             });
 
-            it("setRoyaltyPercentage() should require ADMIN to set the royalty percentage", async function () {
-
-                // non-ADMIN attempt
-                try {
-                    await marketController.connect(associate).setRoyaltyPercentage(replacementPercentage);
-                } catch (e) {}
-
-                // Get percentage
-                percentage = await marketController.getRoyaltyPercentage();
-
-                // Test
-                expect(
-                    percentage !== replacementPercentage,
-                    "non-ADMIN can set royalty percentage"
-                ).is.true;
-
-                // ADMIN attempt
-                try {
-                    await marketController.connect(admin).setRoyaltyPercentage(replacementPercentage);
-                } catch (e) {}
-
-                // Get percentage
-                percentage = await marketController.getRoyaltyPercentage();
-
-                // Test
-                expect(
-                    percentage.toString() === replacementPercentage,
-                    "ADMIN can't set royalty percentage"
-                ).is.true;
-
-            });
-
             it("setMaxRoyaltyPercentage() should require ADMIN to set the max royalty percentage to pay other marketplaces", async function () {
 
                 // non-ADMIN attempt
@@ -543,25 +496,16 @@ describe("MarketController", function() {
                 await expect(marketController.connect(admin).setFeePercentage(replacementPercentage))
                     .to
                     .emit(marketController, 'FeePercentageChanged')
-                    .withArgs(replacementPercentage);
+                    .withArgs(Number(replacementPercentage));
             });
 
-            it("setRoyaltyPercentage() should emit a RoyaltyPercentageChanged event", async function () {
-
-                // Make change, test event
-                await expect(marketController.connect(admin).setRoyaltyPercentage(replacementPercentage))
-                    .to
-                    .emit(marketController, 'RoyaltyPercentageChanged')
-                    .withArgs(replacementPercentage);
-            });
-
-            it("setMaxRoyaltyPercentage() should emit a RoyaltyPercentageChanged event", async function () {
+            it("setMaxRoyaltyPercentage() should emit a MaxRoyaltyPercentageChanged event", async function () {
 
                 // Make change, test event
                 await expect(marketController.connect(admin).setMaxRoyaltyPercentage(replacementPercentage))
                     .to
                     .emit(marketController, 'MaxRoyaltyPercentageChanged')
-                    .withArgs(replacementPercentage);
+                    .withArgs(Number(replacementPercentage));
             });
 
             it("setOutBidPercentage() should emit a OutBidPercentageChanged event", async function () {
@@ -570,7 +514,7 @@ describe("MarketController", function() {
                 await expect(marketController.connect(admin).setOutBidPercentage(replacementPercentage))
                     .to
                     .emit(marketController, 'OutBidPercentageChanged')
-                    .withArgs(replacementPercentage);
+                    .withArgs(Number(replacementPercentage));
             });
 
         });

@@ -101,14 +101,14 @@ abstract contract MarketClient is AccessClient {
     /**
      * @notice Get a percentage of a given amount.
      *
-     * N.B. On the MarketController, percentage values are stored
+     * N.B. Represent ercentage values are stored
      * as unsigned integers, the result of multiplying the given percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
      *
      * @param _amount - the amount to return a percentage of
      * @param _percentage - the percentage value represented as above
      */
-    function getPercentageOf(uint256 _amount, uint128 _percentage)
+    function getPercentageOf(uint256 _amount, uint16 _percentage)
     internal
     pure
     returns (uint256 share)
@@ -126,7 +126,7 @@ abstract contract MarketClient is AccessClient {
      *
      * Deducts royalty and pays to recipient:
      * - entire expected amount, if below or equal to the marketplace's maximum royalty percentage
-     * - the marketplace's maximum royalty percentage {see: MarketController.maxRoyaltyPercentage}
+     * - the marketplace's maximum royalty percentage See: {MarketController.maxRoyaltyPercentage}
      *
      * Emits a RoyaltyDisbursed event with the amount actually paid.
      *
@@ -152,7 +152,7 @@ abstract contract MarketClient is AccessClient {
                 if (supported == true) {
 
                     // Get the royalty recipient and expected payment
-                    (address recipient, uint256 expected,) = IERC2981(_consignment.token).royaltyInfo(_consignment.tokenId, _grossSale, "");
+                    (address recipient, uint256 expected) = IERC2981(_consignment.token).royaltyInfo(_consignment.tokenId, _grossSale);
 
                     // Determine the max royalty we will pay
                     uint256 maxRoyalty = getPercentageOf(_grossSale, marketController.getMaxRoyaltyPercentage());

@@ -87,26 +87,12 @@ interface IMarketController {
      *
      * @param _feePercentage - the percentage that will be taken as a fee from the net of a Seen.Haus sale or auction (after royalties)
      */
-    function setFeePercentage(uint128 _feePercentage) external;
+    function setFeePercentage(uint16 _feePercentage) external;
 
     /**
      * @notice The feePercentage getter
      */
-    function getFeePercentage() external view returns (uint128);
-
-    /**
-     * @notice Sets the marketplace royalty percentage.
-     *
-     * Emits a RoyaltyPercentageChanged event.
-     *
-     * @param _royaltyPercentage - the percentage of a Seen.Haus minted secondary sale that should go to the token's creator
-     */
-    function setRoyaltyPercentage(uint128 _royaltyPercentage) external;
-
-    /**
-     * @notice The royaltyPercentage getter
-     */
-    function getRoyaltyPercentage() external view returns (uint128);
+    function getFeePercentage() external view returns (uint16);
 
     /**
      * @notice Sets the external marketplace maximum royalty percentage.
@@ -115,12 +101,12 @@ interface IMarketController {
      *
      * @param _maxRoyaltyPercentage - the maximum percentage of a Seen.Haus sale or auction that will be paid as a royalty
      */
-    function setMaxRoyaltyPercentage(uint128 _maxRoyaltyPercentage) external;
+    function setMaxRoyaltyPercentage(uint16 _maxRoyaltyPercentage) external;
 
     /**
      * @notice The maxRoyaltyPercentage getter
      */
-    function getMaxRoyaltyPercentage() external view returns (uint128);
+    function getMaxRoyaltyPercentage() external view returns (uint16);
 
     /**
      * @notice Sets the marketplace auction outbid percentage.
@@ -129,12 +115,12 @@ interface IMarketController {
      *
      * @param _outBidPercentage - the minimum percentage a Seen.Haus auction bid must be above the previous bid to prevail
      */
-    function setOutBidPercentage(uint128 _outBidPercentage) external;
+    function setOutBidPercentage(uint16 _outBidPercentage) external;
 
     /**
      * @notice The outBidPercentage getter
      */
-    function getOutBidPercentage() external view returns (uint128);
+    function getOutBidPercentage() external view returns (uint16);
 
     /**
      * @notice The nextConsignment getter

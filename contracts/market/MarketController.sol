@@ -22,10 +22,9 @@ contract MarketController is AccessClient {
     event PhysicalItemsAddressChanged(address indexed physicalItems);
     event PhysicalLotsAddressChanged(address indexed physicalLots);
     event VipStakerAmountChanged(uint256 indexed vipStakerAmount);
-    event FeePercentageChanged(uint128 indexed feePercentage);
-    event RoyaltyPercentageChanged(uint128 indexed royaltyPercentage);
-    event MaxRoyaltyPercentageChanged(uint128 indexed maxRoyaltyPercentage);
-    event OutBidPercentageChanged(uint128 indexed outBidPercentage);
+    event FeePercentageChanged(uint16 indexed feePercentage);
+    event MaxRoyaltyPercentageChanged(uint16 indexed maxRoyaltyPercentage);
+    event OutBidPercentageChanged(uint16 indexed outBidPercentage);
     event ConsignmentRegistered(Consignment consignment);
 
     /// @dev the address of the Seen.Haus NFT contract
@@ -44,16 +43,13 @@ contract MarketController is AccessClient {
     uint256 public vipStakerAmount;
 
     /// @dev the percentage that will be taken as a fee from the net of a Seen.Haus sale or auction (after royalties)
-    uint128 public feePercentage;         // 1.75% = 175, 100% = 10000
-
-    /// @dev The percentage of a Seen.Haus minted secondary sale that should go to the token's creator
-    uint128 public royaltyPercentage;     // 1.75% = 175, 100% = 10000
+    uint16 public feePercentage;         // 1.75% = 175, 100% = 10000
 
     /// @dev the maximum percentage of a Seen.Haus sale or auction that will be paid as a royalty (meant for foreign consignments)
-    uint128 public maxRoyaltyPercentage;  // 1.75% = 175, 100% = 10000
+    uint16 public maxRoyaltyPercentage;  // 1.75% = 175, 100% = 10000
 
     /// @dev the minimum percentage a Seen.Haus auction bid must be above the previous bid to prevail
-    uint128 public outBidPercentage;      // 1.75% = 175, 100% = 10000
+    uint16 public outBidPercentage;      // 1.75% = 175, 100% = 10000
 
     /// @dev next consignment id
     uint256 public nextConsignment;
@@ -69,7 +65,6 @@ contract MarketController is AccessClient {
      * @param _multisig - Seen.Haus multi-sig wallet
      * @param _vipStakerAmount - the minimum amount of xSEEN ERC-20 a caller must hold to participate in VIP events
      * @param _feePercentage - percentage that will be taken as a fee from the net of a Seen.Haus sale or auction (after royalties)
-     * @param _royaltyPercentage - percentage of a Seen.Haus secondary sale that should go to the token's creator
      * @param _maxRoyaltyPercentage - maximum percentage of a Seen.Haus sale or auction that will be paid as a royalty
      * @param _outBidPercentage - minimum percentage a Seen.Haus auction bid must be above the previous bid to prevail
      */
@@ -78,10 +73,9 @@ contract MarketController is AccessClient {
         address payable _staking,
         address payable _multisig,
         uint256 _vipStakerAmount,
-        uint128 _feePercentage,
-        uint128 _royaltyPercentage,
-        uint128 _maxRoyaltyPercentage,
-        uint128 _outBidPercentage
+        uint16 _feePercentage,
+        uint16 _maxRoyaltyPercentage,
+        uint16 _outBidPercentage
     )
     AccessClient(_accessController)
     {
@@ -89,7 +83,6 @@ contract MarketController is AccessClient {
         multisig = _multisig;
         vipStakerAmount = _vipStakerAmount;
         feePercentage = _feePercentage;
-        royaltyPercentage = _royaltyPercentage;
         maxRoyaltyPercentage = _maxRoyaltyPercentage;
         outBidPercentage = _outBidPercentage;
     }
@@ -218,7 +211,7 @@ contract MarketController is AccessClient {
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
      */
-    function setFeePercentage(uint128 _feePercentage)
+    function setFeePercentage(uint16 _feePercentage)
     external
     onlyRole(ADMIN) {
         feePercentage = _feePercentage;
@@ -230,38 +223,12 @@ contract MarketController is AccessClient {
      */
     function getFeePercentage()
     external view
-    returns (uint128) {
+    returns (uint16) {
         return feePercentage;
     }
 
     /**
-     * @notice Sets the marketplace royalty percentage.
-     *
-     * Emits a RoyaltyPercentageChanged event.
-     *
-     * @param _royaltyPercentage - the percentage of a Seen.Haus minted secondary sale that should go to the token's creator
-     *
-     * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
-     * e.g, 1.75% = 175, 100% = 10000
-     */
-    function setRoyaltyPercentage(uint128 _royaltyPercentage)
-    external
-    onlyRole(ADMIN) {
-        royaltyPercentage = _royaltyPercentage;
-        emit RoyaltyPercentageChanged(royaltyPercentage);
-    }
-
-    /**
-     * @notice The royaltyPercentage getter
-     */
-    function getRoyaltyPercentage()
-    external view
-    returns (uint128) {
-        return royaltyPercentage;
-    }
-
-    /**
-     * @notice Sets the external marketplace maximum royalty percentage.
+     * @notice Sets the maximum royalty percentage the marketplace will pay.
      *
      * Emits a MaxRoyaltyPercentageChanged event.
      *
@@ -270,7 +237,7 @@ contract MarketController is AccessClient {
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
      */
-    function setMaxRoyaltyPercentage(uint128 _maxRoyaltyPercentage)
+    function setMaxRoyaltyPercentage(uint16 _maxRoyaltyPercentage)
     external
     onlyRole(ADMIN) {
         maxRoyaltyPercentage = _maxRoyaltyPercentage;
@@ -282,7 +249,7 @@ contract MarketController is AccessClient {
      */
     function getMaxRoyaltyPercentage()
     external view
-    returns (uint128) {
+    returns (uint16) {
         return maxRoyaltyPercentage;
     }
 
@@ -296,7 +263,7 @@ contract MarketController is AccessClient {
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
      */
-    function setOutBidPercentage(uint128 _outBidPercentage)
+    function setOutBidPercentage(uint16 _outBidPercentage)
     external
     onlyRole(ADMIN) {
         outBidPercentage = _outBidPercentage;
@@ -308,7 +275,7 @@ contract MarketController is AccessClient {
      */
     function getOutBidPercentage()
     external view
-    returns (uint128) {
+    returns (uint16) {
         return outBidPercentage;
     }
 

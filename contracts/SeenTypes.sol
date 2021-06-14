@@ -47,6 +47,14 @@ contract SeenTypes {
         Ended
     }
 
+    struct Token {
+        address payable creator;
+        uint16 royaltyPercentage;
+        bool isPhysical;
+        uint256 supply;
+        string uri;
+    }
+
     struct Consignment {
         Market market;
         address payable seller;

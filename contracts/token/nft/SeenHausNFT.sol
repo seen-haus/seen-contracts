@@ -22,14 +22,8 @@ import "./ISeenHausNFT.sol";
  */
 contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
 
-    /// @dev token id => creator
-    mapping (uint256 => address) public creators;
-
-    /// @dev token id => true - only included if token id has a physical component
-    mapping (uint256 => bool) public physicals;
-
-    /// @dev token id => Token URI
-    mapping (uint256 => string) public uris;
+    /// @dev token id => Token struct
+    mapping (uint256 => Token) public tokens;
 
     // Next token number
     uint256 public nextToken;
@@ -64,27 +58,28 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
     }
 
     /**
-     * @notice Get the creator of a given token.
+     * @notice Get the info about a given token.
      *
      * @param _tokenId - the id of the token to check
+     * @return tokenInfo - the info about the token. See: {SeenTypes.Token}
      */
-    function getCreator(uint256 _tokenId)
+    function getTokenInfo(uint256 _tokenId)
     external view override
-    returns (address creator)
+    returns (Token memory tokenInfo)
     {
-        return creators[_tokenId];
+        return tokens[_tokenId];
     }
 
     /**
      * @notice Check if a given token id corresponds to a physical lot.
      *
      * @param _tokenId - the id of the token to check
-     * @return physical - true if token id corresponds to a physical lot.
      */
     function isPhysical(uint256 _tokenId)
     public view override
-    returns (bool physical) {
-        physical = (physicals[_tokenId] == true);
+    returns (bool) {
+        Token memory token = tokens[_tokenId];
+        return token.isPhysical;
     }
 
     /**
@@ -95,21 +90,26 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      * @param _supply - the supply of the token
      * @param _creator - the creator of the NFT (where the royalties will go)
      * @param _tokenURI - the URI of the token metadata
-     * @param _physical - whether the NFT should be flagged as physical or not
+     * @param _royaltyPercentage - the percentage of royalty expected on secondary market sales
+     * @param _isPhysical - whether the NFT should be flagged as physical or not
      */
-    function mint(uint256 _supply, address _creator, string memory _tokenURI, bool _physical)
+    function mint(uint256 _supply, address payable _creator, string memory _tokenURI, uint16 _royaltyPercentage, bool _isPhysical)
     internal
     {
+
+        // Make sure royalty percentage is acceptable
+        require(_royaltyPercentage <= marketController.getMaxRoyaltyPercentage(), "Royalty percentage exceeds marketplace maximum");
 
         // Get the next token id
         uint256 tokenId = nextToken++;
 
-        // Record the creator of the token, the token URI
-        creators[tokenId] = _creator;
-        uris[tokenId] = _tokenURI;
-
-        // Optionally flag it as physical
-        if (_physical) physicals[tokenId] = true;
+        // Store the token info
+        Token storage token = tokens[tokenId];
+        token.uri = _tokenURI;
+        token.supply = _supply;
+        token.creator = _creator;
+        token.isPhysical = _isPhysical;
+        token.royaltyPercentage = _royaltyPercentage;
 
         // Mint the token, sending it to the caller
         _mint(msg.sender, tokenId, _supply, new bytes(0x0));
@@ -127,14 +127,18 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      * @param _supply - the supply of the token
      * @param _creator - the creator of the NFT (where the royalties will go)
      * @param _tokenURI - the URI of the token metadata
+     * @param _royaltyPercentage - the percentage of royalty expected on secondary market sales
+     *
+     * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
      */
-    function mintPhysical(uint256 _supply, address _creator, string memory _tokenURI)
+    function mintPhysical(uint256 _supply, address payable _creator, string memory _tokenURI, uint16 _royaltyPercentage)
     external override
     onlyRole(ESCROW_AGENT)
     {
 
         // Mint the token, flagging it as physical, sending to caller
-        mint(_supply, _creator, _tokenURI, true);
+        mint(_supply, _creator, _tokenURI, _royaltyPercentage, true);
 
     }
 
@@ -149,14 +153,18 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      * @param _supply - the supply of the token
      * @param _creator - the creator of the NFT (where the royalties will go)
      * @param _tokenURI - the URI of the token metadata
+     * @param _royaltyPercentage - the percentage of royalty expected on secondary market sales
+     *
+     * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
      */
-    function mintDigital(uint256 _supply, address _creator, string memory _tokenURI)
+    function mintDigital(uint256 _supply, address payable _creator, string memory _tokenURI, uint16 _royaltyPercentage)
     external override
     onlyRole(MINTER)
     {
 
         // Mint the token, sending to caller
-        mint(_supply, _creator, _tokenURI, false);
+        mint(_supply, _creator, _tokenURI, _royaltyPercentage, false);
 
     }
 
@@ -167,21 +175,17 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      *
      * @param _tokenId - the NFT asset queried for royalty information
      * @param _value - the sale price of the NFT asset specified by _tokenId
-     * @param _data - information used by extensions of ERC2981, pass through
      *
      * @return _receiver - address of who should be sent the royalty payment
      * @return _royaltyAmount - the royalty payment amount for _value sale price
-     * @return _royaltyPaymentData - the _data argument passed through without modification
-     *
-     * TODO: Remove _data param & _royaltyPaymentData return if they get tossed from the 2981 draft - CLH
      */
-    function royaltyInfo(uint256 _tokenId, uint256 _value, bytes calldata _data)
+    function royaltyInfo(uint256 _tokenId, uint256 _value)
     external view override
-    returns (address _receiver, uint256 _royaltyAmount, bytes memory _royaltyPaymentData)
+    returns (address _receiver, uint256 _royaltyAmount)
     {
-        _receiver = creators[_tokenId];
-        _royaltyAmount = getPercentageOf(_value, marketController.getRoyaltyPercentage());
-        _royaltyPaymentData = _data; // TODO: Remove me too!
+        Token storage token = tokens[_tokenId];
+        _receiver = token.creator;
+        _royaltyAmount = getPercentageOf(_value, token.royaltyPercentage);
     }
 
     /**
@@ -192,7 +196,7 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      * be overridden here.
      */
     function supportsInterface(bytes4 interfaceId)
-    public view override(IERC2981, ERC1155, ERC165Storage)
+    public view override(IERC165, ERC1155, ERC165Storage)
     returns (bool)
     {
         return ERC165Storage.supportsInterface(interfaceId);
@@ -205,12 +209,15 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      * a unique stored metadata URI for each token rather than a
      * replaceable baseURI template, since the latter is not compatible
      * with IPFS hashes.
+     *
+     * @param _tokenId - id of the token to get the URI for
      */
     function uri(uint256 _tokenId)
     public view override
     returns (string memory)
     {
-        return uris[_tokenId];
+        Token storage token = tokens[_tokenId];
+        return token.uri;
     }
 
 }

@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "../royalty/IERC2981.sol";
+import "../../SeenTypes.sol";
 
 /**
  * @title ISeenHausNFT
@@ -18,11 +19,12 @@ interface ISeenHausNFT is IERC2981, IERC1155 {
     function getNextToken() external view returns (uint256 nextToken);
 
     /**
-     * @notice Get the creator of a given token.
+     * @notice Get the info about a given token.
      *
      * @param _tokenId - the id of the token to check
+     * @return tokenInfo - the info about the token. See: {SeenTypes.Token}
      */
-    function getCreator(uint256 _tokenId) external returns (address creator);
+    function getTokenInfo(uint256 _tokenId) external view returns (SeenTypes.Token memory tokenInfo);
 
     /**
      * @notice Check if a given token id corresponds to a physical lot.
@@ -30,7 +32,7 @@ interface ISeenHausNFT is IERC2981, IERC1155 {
      * @param _tokenId - the id of the token to check
      * @return physical - true if the item corresponds to a physical lot
      */
-    function isPhysical(uint256 _tokenId) external returns (bool physical);
+    function isPhysical(uint256 _tokenId) external returns (bool);
 
     /**
      * @notice Mint a given supply of a token, marking it as physical.
@@ -44,7 +46,7 @@ interface ISeenHausNFT is IERC2981, IERC1155 {
      * @param _creator - the creator of the NFT (where the royalties will go)
      * @param _tokenURI - the URI of the token metadata
      */
-    function mintPhysical(uint256 _supply, address _creator, string memory _tokenURI) external;
+    function mintPhysical(uint256 _supply, address payable _creator, string memory _tokenURI, uint16 _royaltyPercentage) external;
 
     /**
      * @notice Mint a given supply of a token.
@@ -58,6 +60,6 @@ interface ISeenHausNFT is IERC2981, IERC1155 {
      * @param _creator - the creator of the NFT (where the royalties will go)
      * @param _tokenURI - the URI of the token metadata
      */
-    function mintDigital(uint256 _supply, address _creator, string memory _tokenURI) external;
+    function mintDigital(uint256 _supply, address payable _creator, string memory _tokenURI, uint16 _royaltyPercentage) external;
 
 }
