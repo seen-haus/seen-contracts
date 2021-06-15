@@ -13,12 +13,12 @@ import "../MarketClient.sol";
  */
 contract HandleAuction is MarketClient, ERC1155Holder {
 
-    // Events
-    event AuctionPending(uint256 indexed consignmentId, Auction indexed auction);
-    event AuctionStarted(uint256 indexed consignmentId, Auction indexed auction);
-    event AuctionExtended(uint256 indexed consignmentId, Auction indexed auction);
-    event AuctionEnded(uint256 indexed consignmentId, Auction indexed auction);
-    event BidAccepted(uint256 indexed consignmentId, Auction indexed auction);
+    /// Events
+    event AuctionPending(Consignment indexed consignment, Auction indexed auction);
+    event AuctionStarted(Consignment indexed consignment);
+    event AuctionExtended(Consignment indexed consignment);
+    event AuctionEnded(Consignment indexed consignment, Outcome indexed outcome);
+    event BidAccepted(Consignment indexed consignment, address indexed buyer, uint256 indexed bid);
 
     /// @notice map a consignment id to an auction
     mapping(uint256 => Auction) public auctions;
@@ -35,6 +35,15 @@ contract HandleAuction is MarketClient, ERC1155Holder {
     AccessClient(_accessController)
     MarketClient(_marketController)
     {}
+
+    /**
+     * @notice The auction getter
+     */
+    function getAuction(uint256 _consignmentId)
+    external view
+    returns (Auction memory) {
+        return auctions[_consignmentId];
+    }
 
     /**
      * @notice Create a new auction. (English style)
@@ -99,7 +108,7 @@ contract HandleAuction is MarketClient, ERC1155Holder {
         );
 
         // Notify listeners of state change
-        emit AuctionPending(consignment.id, auction);
+        emit AuctionPending(consignment, auction);
     }
 
     /**
@@ -184,6 +193,9 @@ contract HandleAuction is MarketClient, ERC1155Holder {
         auction.bid = msg.value;
         auction.buyer = payable(msg.sender);
 
+        // Get consignment
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
+
         // If this was the first successful bid...
         if (auction.state == State.Pending) {
 
@@ -196,7 +208,7 @@ contract HandleAuction is MarketClient, ERC1155Holder {
             }
 
             // Notify listeners of state change
-            emit AuctionStarted(_consignmentId, auction);
+            emit AuctionStarted(consignment);
 
         // Otherwise, if auction is already underway
         } else if (auction.state == State.Running) {
@@ -204,13 +216,13 @@ contract HandleAuction is MarketClient, ERC1155Holder {
             // For bids placed within the extension window, extend the run time by 15 minutes
             if (block.timestamp <= endTime && block.timestamp >= extendTime) {
                 auction.duration += 15 minutes;
-                emit AuctionExtended(_consignmentId, auction);
+                emit AuctionExtended(consignment);
             }
 
         }
 
         // Announce the bid
-        emit BidAccepted(_consignmentId, auction);
+        emit BidAccepted(consignment, auction.buyer, auction.bid);
     }
 
     /**
@@ -286,7 +298,7 @@ contract HandleAuction is MarketClient, ERC1155Holder {
         }
 
         // Notify listeners about state change
-        emit AuctionEnded(_consignmentId, auction);
+        emit AuctionEnded(consignment, auction.outcome);
 
     }    
     
@@ -336,7 +348,7 @@ contract HandleAuction is MarketClient, ERC1155Holder {
         );
 
         // Notify listeners about state change
-        emit AuctionEnded(_consignmentId, auction);
+        emit AuctionEnded(consignment, auction.outcome);
 
     }
 
@@ -389,7 +401,7 @@ contract HandleAuction is MarketClient, ERC1155Holder {
         );
 
         // Notify listeners about state change
-        emit AuctionEnded(_consignmentId, auction);
+        emit AuctionEnded(consignment, auction.outcome);
 
     }
 

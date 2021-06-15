@@ -16,10 +16,10 @@ import "../MarketClient.sol";
 contract HandleSale is MarketClient, ERC1155Holder {
 
     // Events
-    event SalePending(Sale indexed sale);
-    event SaleStarted(Sale indexed sale);
-    event SaleEnded(Sale indexed sale);
-    event Purchase(Sale indexed sale, address indexed buyer, uint256 amount);
+    event SalePending(Consignment indexed consignment, Sale sale);
+    event SaleStarted(Consignment indexed consignment);
+    event SaleEnded(Consignment indexed consignment, Outcome outcome);
+    event Purchase(Consignment indexed consignment, address indexed buyer, uint256 amount);
 
     /// @notice map a consignment id to a sale
     mapping(uint256 => Sale) public sales;
@@ -36,6 +36,15 @@ contract HandleSale is MarketClient, ERC1155Holder {
     AccessClient(_accessController)
     MarketClient(_marketController)
     {}
+
+    /**
+     * @notice The sale getter
+     */
+    function getSale(uint256 _consignmentId)
+    external view
+    returns (Sale memory) {
+        return sales[_consignmentId];
+    }
 
     /**
      * @notice Create a new sale.
@@ -109,7 +118,7 @@ contract HandleSale is MarketClient, ERC1155Holder {
         );
 
         // Notify listeners of state change
-        emit SalePending(sale);
+        emit SalePending(consignment, sale);
     }
 
     /**
@@ -176,6 +185,9 @@ contract HandleSale is MarketClient, ERC1155Holder {
             }
         }
 
+        // Get the consignment
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
+
         // If this was the first successful purchase...
         if (sale.state == State.Pending) {
 
@@ -183,11 +195,10 @@ contract HandleSale is MarketClient, ERC1155Holder {
             sale.state = State.Running;
 
             // Notify listeners of state change
-            emit SaleStarted(sale);
+            emit SaleStarted(consignment);
         }
 
         // Determine if consignment is physical
-        Consignment memory consignment = marketController.getConsignment(_consignmentId);
         address nft = marketController.getNft();
         if (nft == consignment.token && ISeenHausNFT(nft).isPhysical(consignment.tokenId)) {
 
@@ -218,7 +229,7 @@ contract HandleSale is MarketClient, ERC1155Holder {
         }
 
         // Announce the purchase
-        emit Purchase(sale, msg.sender, _amount);
+        emit Purchase(consignment, msg.sender, _amount);
     }
 
     /**
@@ -250,8 +261,11 @@ contract HandleSale is MarketClient, ERC1155Holder {
         // Distribute the funds (handles royalties, staking, multisig, and seller)
         disburseFunds(_consignmentId, sale.quantity * sale.price);
 
+        // Get the consignment
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
+
         // Notify listeners about state change
-        emit SaleEnded(sale);
+        emit SaleEnded(consignment, sale.outcome);
 
     }
 
@@ -305,7 +319,7 @@ contract HandleSale is MarketClient, ERC1155Holder {
         }
 
         // Notify listeners about state change
-        emit SaleEnded(sale);
+        emit SaleEnded(consignment, sale.outcome);
 
     }
 

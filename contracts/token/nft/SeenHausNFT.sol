@@ -191,15 +191,24 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
     /**
      * @notice Implementation of the {IERC165} interface.
      *
-     * This method is inherited from several parents and
-     * the compiler cannot decide which to use. Thus, it must
+     * N.B. This method is inherited from several parents and
+     * the compiler cannot decide which to use. Thus, they must
      * be overridden here.
+     *
+     * if you just call super.supportsInterface, it chooses
+     * 'the most derived contract'. But that's not good for this
+     * particular function because you may inherit from several
+     * IERC165 contracts, and all concrete ones need to be allowed
+     * to respond.
      */
     function supportsInterface(bytes4 interfaceId)
     public view override(IERC165, ERC1155, ERC165Storage)
     returns (bool)
     {
-        return ERC165Storage.supportsInterface(interfaceId);
+        return (
+            ERC1155.supportsInterface(interfaceId) ||
+            ERC165Storage.supportsInterface(interfaceId)
+        );
     }
 
     /**
