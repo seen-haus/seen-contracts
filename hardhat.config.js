@@ -1,6 +1,7 @@
 const environments = require('./environments');
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-waffle");
+require("@nomiclabs/hardhat-web3");
 require("hardhat-gas-reporter");
 require("solidity-coverage");
 

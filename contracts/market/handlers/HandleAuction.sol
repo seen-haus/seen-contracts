@@ -14,11 +14,11 @@ import "../MarketClient.sol";
 contract HandleAuction is MarketClient, ERC1155Holder {
 
     /// Events
-    event AuctionPending(Consignment indexed consignment, Auction indexed auction);
-    event AuctionStarted(Consignment indexed consignment);
-    event AuctionExtended(Consignment indexed consignment);
-    event AuctionEnded(Consignment indexed consignment, Outcome indexed outcome);
-    event BidAccepted(Consignment indexed consignment, address indexed buyer, uint256 indexed bid);
+    event AuctionPending(Auction auction);
+    event AuctionStarted(uint256 indexed consignmentId);
+    event AuctionExtended(uint256 indexed consignmentId);
+    event AuctionEnded(uint256 indexed consignmentId, Outcome indexed outcome);
+    event BidAccepted(uint256 indexed consignmentId, address indexed buyer, uint256 indexed bid);
 
     /// @notice map a consignment id to an auction
     mapping(uint256 => Auction) public auctions;
@@ -51,7 +51,7 @@ contract HandleAuction is MarketClient, ERC1155Holder {
      * For a single edition of one ERC-1155 token.
      *
      * @param _seller - the current owner of the consignment
-     * @param _token - the contract address issuing the NFT behind the consignment
+     * @param _tokenAddress - the contract address issuing the NFT behind the consignment
      * @param _tokenId - the id of the token being consigned
      * @param _start - the scheduled start time of the auction
      * @param _duration - the scheduled duration of the auction
@@ -62,7 +62,7 @@ contract HandleAuction is MarketClient, ERC1155Holder {
      */
     function createAuction (
         address payable _seller,
-        address _token,
+        address _tokenAddress,
         uint256 _tokenId,
         uint256 _start,
         uint256 _duration,
@@ -78,14 +78,13 @@ contract HandleAuction is MarketClient, ERC1155Holder {
         require (_start >= block.timestamp, "Time runs backward?");
 
         // Make sure this contract is approved to transfer the token
-        require(IERC1155(_token).isApprovedForAll(_seller, address(this)), "Not approved to transfer seller's tokens");
+        require(IERC1155(_tokenAddress).isApprovedForAll(_seller, address(this)), "Not approved to transfer seller's tokens");
 
         // Ensure seller a positive number of tokens
-        require(IERC1155(_token).balanceOf(_seller, _tokenId) > 0, "Seller has zero balance of consigned token");
-
+        require(IERC1155(_tokenAddress).balanceOf(_seller, _tokenId) > 0, "Seller has zero balance of consigned token");
 
         // Register the consignment
-        Consignment memory consignment = marketController.registerConsignment(_market, _seller, _token, _tokenId);
+        Consignment memory consignment = marketController.registerConsignment(_market, _seller, _tokenAddress, _tokenId);
 
         // Set up the auction
         setAudience(consignment.id, _audience);
@@ -99,7 +98,7 @@ contract HandleAuction is MarketClient, ERC1155Holder {
         auction.outcome = Outcome.Pending;
 
         // Transfer a balance of one of the ERC-1155 to this auction contract
-        IERC1155(_token).safeTransferFrom(
+        IERC1155(_tokenAddress).safeTransferFrom(
             _seller,
             address(this),
             _tokenId,
@@ -108,7 +107,7 @@ contract HandleAuction is MarketClient, ERC1155Holder {
         );
 
         // Notify listeners of state change
-        emit AuctionPending(consignment, auction);
+        emit AuctionPending(auction);
     }
 
     /**
@@ -208,7 +207,7 @@ contract HandleAuction is MarketClient, ERC1155Holder {
             }
 
             // Notify listeners of state change
-            emit AuctionStarted(consignment);
+            emit AuctionStarted(consignment.id);
 
         // Otherwise, if auction is already underway
         } else if (auction.state == State.Running) {
@@ -216,13 +215,13 @@ contract HandleAuction is MarketClient, ERC1155Holder {
             // For bids placed within the extension window, extend the run time by 15 minutes
             if (block.timestamp <= endTime && block.timestamp >= extendTime) {
                 auction.duration += 15 minutes;
-                emit AuctionExtended(consignment);
+                emit AuctionExtended(consignment.id);
             }
 
         }
 
         // Announce the bid
-        emit BidAccepted(consignment, auction.buyer, auction.bid);
+        emit BidAccepted(consignment.id, auction.buyer, auction.bid);
     }
 
     /**
@@ -298,7 +297,7 @@ contract HandleAuction is MarketClient, ERC1155Holder {
         }
 
         // Notify listeners about state change
-        emit AuctionEnded(consignment, auction.outcome);
+        emit AuctionEnded(consignment.id, auction.outcome);
 
     }    
     
@@ -348,7 +347,7 @@ contract HandleAuction is MarketClient, ERC1155Holder {
         );
 
         // Notify listeners about state change
-        emit AuctionEnded(consignment, auction.outcome);
+        emit AuctionEnded(consignment.id, auction.outcome);
 
     }
 
@@ -401,7 +400,7 @@ contract HandleAuction is MarketClient, ERC1155Holder {
         );
 
         // Notify listeners about state change
-        emit AuctionEnded(consignment, auction.outcome);
+        emit AuctionEnded(consignment.id, auction.outcome);
 
     }
 

@@ -305,7 +305,7 @@ contract MarketController is AccessClient {
      *
      * @param _market - the market for the consignment. See {SeenTypes.Market}
      * @param _seller - the current owner of the consignment
-     * @param _token - the contract address issuing the NFT behind the consignment
+     * @param _tokenAddress - the contract address issuing the NFT behind the consignment
      * @param _tokenId - the id of the token being consigned
      *
      * @return consignment - the registered consignment
@@ -313,7 +313,7 @@ contract MarketController is AccessClient {
     function registerConsignment(
         Market _market,
         address payable _seller,
-        address _token,
+        address _tokenAddress,
         uint256 _tokenId
     )
     external
@@ -326,7 +326,7 @@ contract MarketController is AccessClient {
         consignment = Consignment(
             _market,
             _seller,
-            _token,
+            _tokenAddress,
             _tokenId,
             id
         );

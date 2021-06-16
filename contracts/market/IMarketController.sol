@@ -139,7 +139,7 @@ interface IMarketController {
      *
      * @param _market - the market for the consignment. See {SeenTypes.Market}
      * @param _seller - the current owner of the consignment
-     * @param _token - the contract address issuing the NFT behind the consignment
+     * @param _tokenAddress - the contract address issuing the NFT behind the consignment
      * @param _tokenId - the id of the token being consigned
      *
      * @return Consignment - the registered consignment
@@ -147,7 +147,7 @@ interface IMarketController {
     function registerConsignment(
         SeenTypes.Market _market,
         address payable _seller,
-        address _token,
+        address _tokenAddress,
         uint256 _tokenId
     )
     external

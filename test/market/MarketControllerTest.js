@@ -1,3 +1,5 @@
+const hre = require("hardhat");
+const ethers = hre.ethers;
 const { expect } = require("chai");
 const Role = require("../../domain/Role");
 const Market = require("../../domain/Market");
@@ -188,9 +190,9 @@ describe("MarketController", function() {
             it("setStaking() should require ADMIN to set the staking address", async function () {
 
                 // non-ADMIN attempt
-                try {
-                    await marketController.connect(associate).setStaking(replacement.address)
-                } catch (e) {}
+                await expect(
+                    marketController.connect(associate).setStaking(replacement.address)
+                ).to.be.revertedWith("Access denied, caller doesn't have role");
 
                 // Get address
                 address = await marketController.getStaking();
@@ -202,9 +204,7 @@ describe("MarketController", function() {
                 ).is.true;
 
                 // ADMIN attempt
-                try {
-                    await marketController.connect(admin).setStaking(replacement.address)
-                } catch (e) {}
+                await marketController.connect(admin).setStaking(replacement.address)
 
                 // Get address
                 address = await marketController.getStaking();
@@ -220,9 +220,9 @@ describe("MarketController", function() {
             it("setMultisig() should require ADMIN to set the multisig address", async function () {
 
                 // non-ADMIN attempt
-                try {
-                    await marketController.connect(associate).setMultisig(replacement.address)
-                } catch (e) {}
+                await expect(
+                    marketController.connect(associate).setMultisig(replacement.address)
+                ).to.be.revertedWith("Access denied, caller doesn't have role");
 
                 // Get address
                 address = await marketController.getMultisig();
@@ -234,9 +234,7 @@ describe("MarketController", function() {
                 ).is.true;
 
                 // ADMIN attempt
-                try {
-                    await marketController.connect(admin).setMultisig(replacement.address)
-                } catch (e) {}
+                await marketController.connect(admin).setMultisig(replacement.address)
 
                 // Get address
                 address = await marketController.getMultisig();
@@ -252,9 +250,9 @@ describe("MarketController", function() {
             it("setNft() should require ADMIN to set the nft address", async function () {
 
                 // non-ADMIN attempt
-                try {
-                    await marketController.connect(associate).setNft(replacement.address)
-                } catch (e) {}
+                await expect(
+                    marketController.connect(associate).setNft(replacement.address)
+                ).to.be.revertedWith("Access denied, caller doesn't have role");
 
                 // Get address
                 address = await marketController.getNft();
@@ -266,9 +264,7 @@ describe("MarketController", function() {
                 ).is.true;
 
                 // ADMIN attempt
-                try {
-                    await marketController.connect(admin).setNft(replacement.address)
-                } catch (e) {}
+                await marketController.connect(admin).setNft(replacement.address)
 
                 // Get address
                 address = await marketController.getNft();
@@ -284,9 +280,9 @@ describe("MarketController", function() {
             it("setEscrowTicketer() should require ADMIN to set the IEscrowTicketer address", async function () {
 
                 // non-ADMIN attempt
-                try {
-                    await marketController.connect(associate).setEscrowTicketer(replacement.address)
-                } catch (e) {}
+                await expect(
+                    marketController.connect(associate).setEscrowTicketer(replacement.address)
+                ).to.be.revertedWith("Access denied, caller doesn't have role");
 
                 // Get address
                 address = await marketController.getEscrowTicketer();
@@ -298,9 +294,7 @@ describe("MarketController", function() {
                 ).is.true;
 
                 // ADMIN attempt
-                try {
-                    await marketController.connect(admin).setEscrowTicketer(replacement.address)
-                } catch (e) {}
+                await marketController.connect(admin).setEscrowTicketer(replacement.address)
 
                 // Get address
                 address = await marketController.getEscrowTicketer();
@@ -316,9 +310,9 @@ describe("MarketController", function() {
             it("setVipStakerAmount() should require ADMIN to set the VIP staker amount", async function () {
 
                 // non-ADMIN attempt
-                try {
-                    await marketController.connect(associate).setVipStakerAmount(replacementAmount);
-                } catch (e) {}
+                await expect(
+                    marketController.connect(associate).setVipStakerAmount(replacementAmount)
+                ).to.be.revertedWith("Access denied, caller doesn't have role");
 
                 // Get amount
                 amount = await marketController.getVipStakerAmount();
@@ -330,9 +324,7 @@ describe("MarketController", function() {
                 ).is.true;
 
                 // ADMIN attempt
-                try {
-                    await marketController.connect(admin).setVipStakerAmount(replacementAmount);
-                } catch (e) {}
+                await marketController.connect(admin).setVipStakerAmount(replacementAmount);
 
                 // Get amount
                 amount = await marketController.getVipStakerAmount();
@@ -348,9 +340,9 @@ describe("MarketController", function() {
             it("setFeePercentage() should require ADMIN to set the fee percentage", async function () {
 
                 // non-ADMIN attempt
-                try {
-                    await marketController.connect(associate).setFeePercentage(replacementPercentage);
-                } catch (e) {}
+                await expect(
+                    marketController.connect(associate).setFeePercentage(replacementPercentage)
+                ).to.be.revertedWith("Access denied, caller doesn't have role");
 
                 // Get percentage
                 percentage = await marketController.getFeePercentage();
@@ -362,9 +354,7 @@ describe("MarketController", function() {
                 ).is.true;
 
                 // ADMIN attempt
-                try {
-                    await marketController.connect(admin).setFeePercentage(replacementPercentage);
-                } catch (e) {}
+                await marketController.connect(admin).setFeePercentage(replacementPercentage);
 
                 // Get percentage
                 percentage = await marketController.getFeePercentage();
@@ -380,9 +370,9 @@ describe("MarketController", function() {
             it("setMaxRoyaltyPercentage() should require ADMIN to set the max royalty percentage to pay other marketplaces", async function () {
 
                 // non-ADMIN attempt
-                try {
-                    await marketController.connect(associate).setMaxRoyaltyPercentage(replacementPercentage);
-                } catch (e) {}
+                await expect(
+                    marketController.connect(associate).setMaxRoyaltyPercentage(replacementPercentage)
+                ).to.be.revertedWith("Access denied, caller doesn't have role");
 
                 // Get percentage
                 percentage = await marketController.getMaxRoyaltyPercentage();
@@ -394,9 +384,7 @@ describe("MarketController", function() {
                 ).is.true;
 
                 // ADMIN attempt
-                try {
-                    await marketController.connect(admin).setMaxRoyaltyPercentage(replacementPercentage);
-                } catch (e) {}
+                await marketController.connect(admin).setMaxRoyaltyPercentage(replacementPercentage);
 
                 // Get percentage
                 percentage = await marketController.getMaxRoyaltyPercentage();
@@ -412,9 +400,9 @@ describe("MarketController", function() {
             it("setOutBidPercentage() should require ADMIN to set the outbid percentage", async function () {
 
                 // non-ADMIN attempt
-                try {
-                    await marketController.connect(associate).setOutBidPercentage(replacementPercentage);
-                } catch (e) {}
+                await expect(
+                    marketController.connect(associate).setOutBidPercentage(replacementPercentage)
+                ).to.be.revertedWith("Access denied, caller doesn't have role");
 
                 // Get percentage
                 percentage = await marketController.getOutBidPercentage();
@@ -426,9 +414,7 @@ describe("MarketController", function() {
                 ).is.true;
 
                 // ADMIN attempt
-                try {
-                    await marketController.connect(admin).setOutBidPercentage(replacementPercentage);
-                } catch (e) {}
+                await marketController.connect(admin).setOutBidPercentage(replacementPercentage);
 
                 // Get percentage
                 percentage = await marketController.getOutBidPercentage();
@@ -448,72 +434,72 @@ describe("MarketController", function() {
             it("setStaking() should emit a StakingAddressChanged event", async function () {
 
                 // Make change, test event
-                await expect(marketController.connect(admin).setStaking(replacement.address))
-                    .to
-                    .emit(marketController, 'StakingAddressChanged')
+                await expect(
+                    marketController.connect(admin).setStaking(replacement.address)
+                ).to.emit(marketController, 'StakingAddressChanged')
                     .withArgs(replacement.address);
             });
 
             it("setMultisig() should emit a MultisigAddressChanged event", async function () {
 
                 // Make change, test event
-                await expect(marketController.connect(admin).setMultisig(replacement.address))
-                    .to
-                    .emit(marketController, 'MultisigAddressChanged')
+                await expect(
+                    marketController.connect(admin).setMultisig(replacement.address)
+                ).to.emit(marketController, 'MultisigAddressChanged')
                     .withArgs(replacement.address);
             });
 
             it("setNft() should emit a NFTAddressChanged event", async function () {
 
                 // Make change, test event
-                await expect(marketController.connect(admin).setNft(replacement.address))
-                    .to
-                    .emit(marketController, 'NFTAddressChanged')
+                await expect(
+                    marketController.connect(admin).setNft(replacement.address)
+                ).to.emit(marketController, 'NFTAddressChanged')
                     .withArgs(replacement.address);
             });
 
             it("setEscrowTicketer() should emit a EscrowTicketerAddressChanged event", async function () {
 
                 // Make change, test event
-                await expect(marketController.connect(admin).setEscrowTicketer(replacement.address))
-                    .to
-                    .emit(marketController, 'EscrowTicketerAddressChanged')
+                await expect(
+                    marketController.connect(admin).setEscrowTicketer(replacement.address)
+                ).to.emit(marketController, 'EscrowTicketerAddressChanged')
                     .withArgs(replacement.address);
             });
 
             it("setVipStakerAmount() should emit a VipStakerAmountChanged event", async function () {
 
                 // Make change, test event
-                await expect(marketController.connect(admin).setVipStakerAmount(replacementAmount))
-                    .to
-                    .emit(marketController, 'VipStakerAmountChanged')
+                await expect(
+                    marketController.connect(admin).setVipStakerAmount(replacementAmount)
+                ).to.emit(marketController, 'VipStakerAmountChanged')
                     .withArgs(replacementAmount);
             });
 
             it("setFeePercentage() should emit a FeePercentageChanged event", async function () {
 
                 // Make change, test event
-                await expect(marketController.connect(admin).setFeePercentage(replacementPercentage))
-                    .to
-                    .emit(marketController, 'FeePercentageChanged')
+                await expect(
+                    marketController.connect(admin).setFeePercentage(replacementPercentage)
+                ).to.emit(marketController, 'FeePercentageChanged')
                     .withArgs(Number(replacementPercentage));
             });
 
             it("setMaxRoyaltyPercentage() should emit a MaxRoyaltyPercentageChanged event", async function () {
 
                 // Make change, test event
-                await expect(marketController.connect(admin).setMaxRoyaltyPercentage(replacementPercentage))
-                    .to
-                    .emit(marketController, 'MaxRoyaltyPercentageChanged')
+                await expect(
+                    marketController.connect(admin).setMaxRoyaltyPercentage(replacementPercentage)
+                ).to.emit(marketController, 'MaxRoyaltyPercentageChanged')
                     .withArgs(Number(replacementPercentage));
             });
 
             it("setOutBidPercentage() should emit a OutBidPercentageChanged event", async function () {
 
                 // Make change, test event
-                await expect(marketController.connect(admin).setOutBidPercentage(replacementPercentage))
-                    .to
-                    .emit(marketController, 'OutBidPercentageChanged')
+                await expect(
+                    marketController.connect(admin).setOutBidPercentage(replacementPercentage)
+                ).to.emit(marketController, 'OutBidPercentageChanged')
                     .withArgs(Number(replacementPercentage));
             });
 
@@ -541,9 +527,10 @@ describe("MarketController", function() {
                 nextConsignment = await marketController.getNextConsignment();
 
                 // non-MARKET_HANDLER attempt
-                try {
-                    await marketController.connect(associate).registerConsignment(market, seller.address, token.address, tokenId);
-                } catch (e) {}
+                await expect(
+                    marketController.connect(associate).registerConsignment(market, seller.address, token.address, tokenId)
+                ).to.be.revertedWith("Access denied, caller doesn't have role");
+
 
                 // Get counter
                 counter = await marketController.getNextConsignment();
@@ -555,9 +542,7 @@ describe("MarketController", function() {
                 ).is.true;
 
                 // MARKET_HANDLER attempt
-                try {
-                    await marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId);
-                } catch (e) {}
+                await marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId);
 
                 // Get counter
                 counter = await marketController.getNextConsignment();
@@ -582,8 +567,7 @@ describe("MarketController", function() {
                 // Make change, test event
                 await expect(
                     marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId)
-                ).to
-                    .emit(marketController, 'ConsignmentRegistered')
+                ).to.emit(marketController, 'ConsignmentRegistered')
                     .withArgs(
                         [market, seller.address, token.address, tokenId, nextConsignment]
                     );

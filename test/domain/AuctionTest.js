@@ -225,14 +225,14 @@ describe("Auction", function() {
             expect(auction.isValid()).is.false;
 
             // Invalid field value
-            auction.bid = "0";
-            expect(auction.bidIsValid()).is.false;
-            expect(auction.isValid()).is.false;
-
-            // Invalid field value
             auction.bid = "zedzdeadbaby";
             expect(auction.bidIsValid()).is.false;
             expect(auction.isValid()).is.false;
+
+            // Valid field value
+            auction.bid = "0";
+            expect(auction.bidIsValid()).is.true;
+            expect(auction.isValid()).is.true;
 
             // Valid field value
             auction.bid = "1";

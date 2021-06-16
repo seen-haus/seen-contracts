@@ -6,7 +6,7 @@ describe("Consignment", function() {
 
     // Suite-wide scope
     let accounts, consignment;
-    let market, seller, token, tokenId, id;
+    let market, seller, tokenAddress, tokenId, id;
 
     before( async function () {
 
@@ -22,7 +22,7 @@ describe("Consignment", function() {
             // Required constructor params
             market = Market.PRIMARY;
             seller = accounts[0].address;
-            token = "0x7777788200B672A42421017F65EDE4Fc759564C8";
+            tokenAddress = "0x7777788200B672A42421017F65EDE4Fc759564C8";
             tokenId = "100";
             id = "1";
             
@@ -30,10 +30,10 @@ describe("Consignment", function() {
 
         it("Should allow creation of valid, fully populated Consignment instance", async function () {
 
-            consignment = new Consignment(market, seller, token, tokenId, id);
+            consignment = new Consignment(market, seller, tokenAddress, tokenId, id);
             expect(consignment.marketIsValid()).is.true;
             expect(consignment.sellerIsValid()).is.true;
-            expect(consignment.tokenIsValid()).is.true;
+            expect(consignment.tokenAddressIsValid()).is.true;
             expect(consignment.tokenIdIsValid()).is.true;
             expect(consignment.idIsValid()).is.true;
             expect(consignment.isValid()).is.true;
@@ -49,12 +49,12 @@ describe("Consignment", function() {
             // Set params to a fully valid Consignment
             market = Market.PRIMARY;
             seller = accounts[0].address;
-            token = "0x7777788200B672A42421017F65EDE4Fc759564C8";
+            tokenAddress = "0x7777788200B672A42421017F65EDE4Fc759564C8";
             tokenId = "100";
             id = "1";
 
             // Create a valid consignment, then set fields in tests directly
-            consignment = new Consignment(market, seller, token, tokenId, id);
+            consignment = new Consignment(market, seller, tokenAddress, tokenId, id);
             expect(consignment.isValid()).is.true;
         });
 
@@ -106,21 +106,21 @@ describe("Consignment", function() {
 
         });
 
-        it("Always present, token  must be a string representation of an EIP-55 compliant address", async function() {
+        it("Always present, tokenAddress  must be a string representation of an EIP-55 compliant address", async function() {
 
             // Invalid field value
             consignment.token = "0xASFADF";
-            expect(consignment.tokenIsValid()).is.false;
+            expect(consignment.tokenAddressIsValid()).is.false;
             expect(consignment.isValid()).is.false;
 
             // Invalid field value
             consignment.token = "zedzdeadbaby";
-            expect(consignment.tokenIsValid()).is.false;
+            expect(consignment.tokenAddressIsValid()).is.false;
             expect(consignment.isValid()).is.false;
 
             // Valid field value
             consignment.token = "0x7777788200B672A42421017F65EDE4Fc759564C8";
-            expect(consignment.tokenIsValid()).is.true;
+            expect(consignment.tokenAddressIsValid()).is.true;
             expect(consignment.isValid()).is.true;
 
         });
@@ -182,12 +182,12 @@ describe("Consignment", function() {
             // Set params to a fully valid Consignment
             market = Market.PRIMARY;
             seller = accounts[0].address;
-            token = "0x7777788200B672A42421017F65EDE4Fc759564C8";
+            tokenAddress = "0x7777788200B672A42421017F65EDE4Fc759564C8";
             tokenId = "100";
             id = "1";
 
             // Create a valid Consignment instance, then operate on its methods in the tests
-            consignment = new Consignment(market, seller, token, tokenId, id);
+            consignment = new Consignment(market, seller, tokenAddress, tokenId, id);
             expect(consignment.isValid()).is.true;
 
         })
@@ -196,7 +196,7 @@ describe("Consignment", function() {
 
             // Get plain object
             const object = {
-                market, seller, token, tokenId, id
+                market, seller, token: tokenAddress, tokenId, id
             }
 
             // Promote to instance

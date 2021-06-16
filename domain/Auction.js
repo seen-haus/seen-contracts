@@ -146,7 +146,7 @@ class Auction {
 
     /**
      * Is this Auction instance's bid field valid?
-     * If present, must be a string that converts to a valid, positive BigNumber
+     * If present, must be a string that converts to a valid BigNumber
      * @returns {boolean}
      */
     bidIsValid() {
@@ -158,7 +158,7 @@ class Auction {
                 bid === null ||
                 (
                     typeof bid === "string" &&
-                    ethers.BigNumber.from(bid).gt("0")
+                    ethers.BigNumber.from(bid).gte("0")
                 )
             )
         } catch(e){}

@@ -16,10 +16,10 @@ import "../MarketClient.sol";
 contract HandleSale is MarketClient, ERC1155Holder {
 
     // Events
-    event SalePending(Consignment indexed consignment, Sale sale);
-    event SaleStarted(Consignment indexed consignment);
-    event SaleEnded(Consignment indexed consignment, Outcome outcome);
-    event Purchase(Consignment indexed consignment, address indexed buyer, uint256 amount);
+    event SalePending(Sale sale);
+    event SaleStarted(uint256 indexed consignmentId);
+    event SaleEnded(uint256 indexed consignmentId, Outcome outcome);
+    event Purchase(uint256 indexed consignmentId, address indexed buyer, uint256 amount);
 
     /// @notice map a consignment id to a sale
     mapping(uint256 => Sale) public sales;
@@ -62,7 +62,7 @@ contract HandleSale is MarketClient, ERC1155Holder {
      * Emits a SalePending event.
      *
      * @param _seller - the current owner of the consignment
-     * @param _token - the contract address issuing the NFT behind the consignment
+     * @param _tokenAddress - the contract address issuing the NFT behind the consignment
      * @param _tokenId - the id of the token being consigned
      * @param _start - the scheduled start time of the sale
      * @param _quantity - the supply of the given consigned token being sold
@@ -73,7 +73,7 @@ contract HandleSale is MarketClient, ERC1155Holder {
      */
     function createSale (
         address payable _seller,
-        address _token,
+        address _tokenAddress,
         uint256 _tokenId,
         uint256 _start,
         uint256 _quantity,
@@ -89,13 +89,13 @@ contract HandleSale is MarketClient, ERC1155Holder {
         require (_start >= block.timestamp, "Time runs backward?");
 
         // Make sure this contract is approved to transfer the token
-        require(IERC1155(_token).isApprovedForAll(_seller, address(this)), "Not approved to transfer seller's tokens");
+        require(IERC1155(_tokenAddress).isApprovedForAll(_seller, address(this)), "Not approved to transfer seller's tokens");
 
         // Ensure seller owns _quantity tokens
-        require(IERC1155(_token).balanceOf(_seller, _tokenId) >= _quantity, "Seller token balance less than quantity");
+        require(IERC1155(_tokenAddress).balanceOf(_seller, _tokenId) >= _quantity, "Seller token balance less than quantity");
 
         // Register the consignment
-        Consignment memory consignment = marketController.registerConsignment(_market, _seller, _token, _tokenId);
+        Consignment memory consignment = marketController.registerConsignment(_market, _seller, _tokenAddress, _tokenId);
 
         // Set up the sale
         setAudience(consignment.id, _audience);
@@ -109,7 +109,7 @@ contract HandleSale is MarketClient, ERC1155Holder {
         sale.outcome = Outcome.Pending;
 
         // Transfer the sale's lot size of the ERC-1155 to this sale contract
-        IERC1155(_token).safeTransferFrom(
+        IERC1155(_tokenAddress).safeTransferFrom(
             _seller,
             address(this),
             _tokenId,
@@ -118,7 +118,7 @@ contract HandleSale is MarketClient, ERC1155Holder {
         );
 
         // Notify listeners of state change
-        emit SalePending(consignment, sale);
+        emit SalePending(sale);
     }
 
     /**
@@ -195,7 +195,7 @@ contract HandleSale is MarketClient, ERC1155Holder {
             sale.state = State.Running;
 
             // Notify listeners of state change
-            emit SaleStarted(consignment);
+            emit SaleStarted(consignment.id);
         }
 
         // Determine if consignment is physical
@@ -229,7 +229,7 @@ contract HandleSale is MarketClient, ERC1155Holder {
         }
 
         // Announce the purchase
-        emit Purchase(consignment, msg.sender, _amount);
+        emit Purchase(consignment.id, msg.sender, _amount);
     }
 
     /**
@@ -265,7 +265,7 @@ contract HandleSale is MarketClient, ERC1155Holder {
         Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Notify listeners about state change
-        emit SaleEnded(consignment, sale.outcome);
+        emit SaleEnded(consignment.id, sale.outcome);
 
     }
 
@@ -319,7 +319,7 @@ contract HandleSale is MarketClient, ERC1155Holder {
         }
 
         // Notify listeners about state change
-        emit SaleEnded(consignment, sale.outcome);
+        emit SaleEnded(consignment.id, sale.outcome);
 
     }
 

@@ -9,10 +9,10 @@ const eip55 = require("eip55");
 
 class Consignment {
 
-    constructor (market, seller, token, tokenId, id) {
+    constructor (market, seller, tokenAddress, tokenId, id) {
         this.market = market;
         this.seller = seller;
-        this.token = token;
+        this.token = tokenAddress;
         this.tokenId = tokenId;
         this.id = id;
     }
@@ -87,7 +87,7 @@ class Consignment {
      * Must be a eip55 compliant Ethereum address
      * @returns {boolean}
      */
-    tokenIsValid() {
+    tokenAddressIsValid() {
         let valid = false;
         let {token} = this;
         try {
@@ -140,7 +140,7 @@ class Consignment {
         return (
             this.marketIsValid() &&
             this.sellerIsValid() &&
-            this.tokenIsValid() &&
+            this.tokenAddressIsValid() &&
             this.tokenIdIsValid() &&
             this.idIsValid()
         );

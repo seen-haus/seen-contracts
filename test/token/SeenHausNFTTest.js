@@ -1,3 +1,5 @@
+const hre = require("hardhat");
+const ethers = hre.ethers;
 const { expect } = require("chai");
 const Role = require("../../domain/Role");
 const Token = require("../../domain/Token");
@@ -91,9 +93,9 @@ describe("SeenHausNFT", function() {
                 nextToken = await seenHausNFT.getNextToken();
 
                 // non-MINTER attempt
-                try {
-                    await seenHausNFT.connect(associate).mintDigital(supply, creator.address, tokenURI, royaltyPercentage);
-                } catch (e) {}
+                await expect(
+                    seenHausNFT.connect(associate).mintDigital(supply, creator.address, tokenURI, royaltyPercentage)
+                ).to.be.revertedWith("Access denied, caller doesn't have role");
 
                 // Get counter
                 counter = await seenHausNFT.getNextToken();
@@ -105,9 +107,7 @@ describe("SeenHausNFT", function() {
                 ).is.true;
 
                 // MINTER attempt
-                try {
-                    await seenHausNFT.connect(minter).mintDigital(supply, creator.address, tokenURI, royaltyPercentage);
-                } catch (e) {}
+                await seenHausNFT.connect(minter).mintDigital(supply, creator.address, tokenURI, royaltyPercentage);
 
                 // Get counter
                 counter = await seenHausNFT.getNextToken();
@@ -125,9 +125,9 @@ describe("SeenHausNFT", function() {
                 nextToken = await seenHausNFT.getNextToken();
 
                 // non-ESCROW_AGENT attempt
-                try {
-                    await seenHausNFT.connect(associate).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage);
-                } catch (e) {}
+                await expect(
+                    seenHausNFT.connect(associate).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage)
+                ).to.be.revertedWith("Access denied, caller doesn't have role");
 
                 // Get counter
                 counter = await seenHausNFT.getNextToken();
@@ -139,9 +139,7 @@ describe("SeenHausNFT", function() {
                 ).is.true;
 
                 // ESCROW_AGENT attempt
-                try {
-                    await seenHausNFT.connect(escrowAgent).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage);
-                } catch (e) {}
+                await seenHausNFT.connect(escrowAgent).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage);
 
                 // Get counter
                 counter = await seenHausNFT.getNextToken();
