@@ -19,6 +19,10 @@ contract HandleAuction is MarketClient, ERC1155Holder {
     event AuctionExtended(uint256 indexed consignmentId);
     event AuctionEnded(uint256 indexed consignmentId, Outcome indexed outcome);
     event BidAccepted(uint256 indexed consignmentId, address indexed buyer, uint256 indexed bid);
+    event BidReturned(uint256 indexed consignmentId, address indexed buyer, uint256 indexed bid);
+
+    // TODO support and test this (probably move to MarketClient)
+    event ConsignmentTransferred(uint256 indexed consignmentId, address indexed recipient, uint256 indexed amount);
 
     /// @notice map a consignment id to an auction
     mapping(uint256 => Auction) public auctions;
@@ -186,6 +190,7 @@ contract HandleAuction is MarketClient, ERC1155Holder {
         if (auction.bid > 0) {
             require(msg.value >= (auction.bid + getPercentageOf(auction.bid, marketController.getOutBidPercentage())), "Bid too small");
             auction.buyer.transfer(auction.bid);
+            emit BidReturned(_consignmentId, auction.buyer, auction.bid);
         }
 
         // Record the new bid
@@ -302,7 +307,7 @@ contract HandleAuction is MarketClient, ERC1155Holder {
     }    
     
     /**
-     * @notice Close out an auction when it ends with no bids.
+     * @notice Pull an auction when it ends with no bids.
      *
      * Consigned inventory will be transferred back to the seller.
      *
@@ -317,7 +322,6 @@ contract HandleAuction is MarketClient, ERC1155Holder {
      *
      * @param _consignmentId - the id of the consignment being sold
      */
-    // TODO: is there really a need to have pull AND cancel? Cancel would do the same if it ignored end time.
     function pull(uint256 _consignmentId) external onlyRole(ADMIN) {
 
         // Make sure the auction exists
@@ -387,6 +391,7 @@ contract HandleAuction is MarketClient, ERC1155Holder {
         // Give back the previous bidder's money
         if (auction.bid > 0) {
             auction.buyer.transfer(auction.bid);
+            emit BidReturned(_consignmentId, auction.buyer, auction.bid);
         }
 
         // Transfer the ERC-1155 back to the seller
