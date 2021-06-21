@@ -76,7 +76,6 @@ contract SeenTypes {
     }
 
     struct Sale {
-        address payable[] buyers;
         uint256 consignmentId;
         uint256 start;
         uint256 quantity;

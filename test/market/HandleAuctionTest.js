@@ -120,6 +120,7 @@ describe("HandleAuction", function() {
             await accessController.connect(admin).grantRole(Role.SELLER, seller.address);
             await accessController.connect(admin).grantRole(Role.MINTER, seller.address);
 
+            // Escrow Agent needed to create auctions of escrowed items
             await accessController.connect(admin).grantRole(Role.ESCROW_AGENT, escrowAgent.address);
 
             // Seller approves HandleAuction contract to transfer their tokens
@@ -996,7 +997,7 @@ describe("HandleAuction", function() {
 
                     });
 
-                    it("should transfer a escrow ticket to buyer if physical", async function () {
+                    it("should transfer an escrow ticket to buyer if physical", async function () {
 
                         // Get contract balance of token
                         contractBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
@@ -1050,6 +1051,21 @@ describe("HandleAuction", function() {
 
                     });
 
+                    it("should transfer consigned balance of token to seller if physical", async function () {
+
+                        // Admin pulls auction with no bids
+                        await handleAuction.connect(admin).pull(physicalConsignmentId);
+
+                        // Get contract's new balance of token
+                        newBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
+                        expect(contractBalance.sub(supply).eq(newBalance));
+
+                        // Get seller's new balance of token
+                        sellerBalance = await seenHausNFT.balanceOf(seller.address, physicalTokenId);
+                        expect(buyerBalance.eq(contractBalance));
+
+                    });
+
                 });
 
                 context("cancel()", async function () {
@@ -1083,6 +1099,21 @@ describe("HandleAuction", function() {
 
                         // Get seller's new balance of token
                         sellerBalance = await seenHausNFT.balanceOf(seller.address, tokenId);
+                        expect(buyerBalance.eq(contractBalance));
+
+                    });
+
+                    it("should transfer consigned balance of token to seller if physical", async function () {
+
+                        // Admin pulls auction with no bids
+                        await handleAuction.connect(admin).cancel(physicalConsignmentId);
+
+                        // Get contract's new balance of token
+                        newBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
+                        expect(contractBalance.sub(supply).eq(newBalance));
+
+                        // Get seller's new balance of token
+                        sellerBalance = await seenHausNFT.balanceOf(seller.address, physicalTokenId);
                         expect(buyerBalance.eq(contractBalance));
 
                     });

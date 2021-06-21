@@ -7,7 +7,7 @@ describe("Sale", function() {
 
     // Suite-wide scope
     let accounts, sale;
-    let buyers, consignmentId, start, quantity, price, perTxCap, state, outcome;
+    let consignmentId, start, quantity, price, perTxCap, state, outcome;
 
     before( async function () {
 
@@ -33,12 +33,10 @@ describe("Sale", function() {
 
         it("Should allow creation of valid, minimal Sale instance", async function () {
 
-            // Buyers and perTxCap are not required, but validated if present
-            buyers = null;
+            // Not required, but validated if present
             perTxCap = null;
 
-            sale = new Sale(buyers, consignmentId, start, quantity, price, perTxCap, state, outcome);
-            expect(sale.buyersIsValid()).is.true;
+            sale = new Sale(consignmentId, start, quantity, price, perTxCap, state, outcome);
             expect(sale.consignmentIdIsValid()).is.true;
             expect(sale.startIsValid()).is.true;
             expect(sale.quantityIsValid()).is.true;
@@ -52,12 +50,9 @@ describe("Sale", function() {
 
         it("Should allow creation of valid, fully populated Sale instance", async function () {
 
-            // Buyers and perTxCap are not required, but validated if present
-            buyers = ["0x7777788200B672A42421017F65EDE4Fc759564C8","0x495f947276749ce646f68ac9c248420045cb7b5e"];
             perTxCap = "1";
 
-            sale = new Sale(buyers, consignmentId, start, quantity, price, perTxCap, state, outcome);
-            expect(sale.buyersIsValid()).is.true;
+            sale = new Sale(consignmentId, start, quantity, price, perTxCap, state, outcome);
             expect(sale.consignmentIdIsValid()).is.true;
             expect(sale.startIsValid()).is.true;
             expect(sale.quantityIsValid()).is.true;
@@ -76,7 +71,6 @@ describe("Sale", function() {
         beforeEach( async function () {
 
             // Set params to a fully valid Sale
-            buyers = ["0x7777788200B672A42421017F65EDE4Fc759564C8","0x495f947276749ce646f68ac9c248420045cb7b5e"];
             consignmentId = "1";
             price = ethers.utils.parseUnits("1.5", "ether").toString();
             start = ethers.BigNumber.from(Date.now()).toString();
@@ -86,23 +80,9 @@ describe("Sale", function() {
             outcome = Outcome.CLOSED;
 
             // Create a valid sale, then set fields in tests directly
-            sale = new Sale(buyers, consignmentId, start, quantity, price, perTxCap, state, outcome);
+            sale = new Sale(consignmentId, start, quantity, price, perTxCap, state, outcome);
             expect(sale.isValid()).is.true;
         })
-
-        it("If present, buyers must be an array strings that represent EIP-55 compliant addresses", async function() {
-
-            // Invalid field value
-            sale.buyers = ["tothamoonalice",9];
-            expect(sale.buyersIsValid()).is.false;
-            expect(sale.isValid()).is.false;
-
-            // Valid field value
-            sale.buyers = ["0x7777788200B672A42421017F65EDE4Fc759564C8","0x495f947276749ce646f68ac9c248420045cb7b5e"];
-            expect(sale.buyersIsValid()).is.true;
-            expect(sale.isValid()).is.true;
-
-        });
 
         it("Always present, consignmentId must be the string representation of a BigNumber", async function() {
 
@@ -295,7 +275,6 @@ describe("Sale", function() {
         beforeEach( async function () {
 
             // Set params to a fully valid Sale
-            buyers = ["0x7777788200B672A42421017F65EDE4Fc759564C8","0x495f947276749ce646f68ac9c248420045cb7b5e"];
             consignmentId = "1";
             price = ethers.utils.parseUnits("1.5", "ether").toString();
             start = ethers.BigNumber.from(Date.now()).toString();
@@ -305,7 +284,7 @@ describe("Sale", function() {
             outcome = Outcome.CLOSED;
 
             // Create a valid Sale instance, then operate on its methods in the tests
-            sale = new Sale(buyers, consignmentId, start, quantity, price, perTxCap, state, outcome);
+            sale = new Sale(consignmentId, start, quantity, price, perTxCap, state, outcome);
             expect(sale.isValid()).is.true;
         })
 
@@ -313,7 +292,7 @@ describe("Sale", function() {
 
             // Get plain object
             const object = {
-                buyers, consignmentId, start, quantity, price, perTxCap, state, outcome
+                consignmentId, start, quantity, price, perTxCap, state, outcome
             }
 
             // Promote to instance

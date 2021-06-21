@@ -161,9 +161,9 @@ contract HandleSale is MarketClient, ERC1155Holder {
      * May emit a SaleStarted event, on the first purchase.
      *
      * @param _consignmentId - id of the consignment being sold
-     * @param _amount - the amount of the remaining supply to buy
+     * @param _quantity - the amount of the remaining supply to buy
      */
-    function buy(uint256 _consignmentId, uint256 _amount) external payable {
+    function buy(uint256 _consignmentId, uint256 _quantity) external payable {
 
         // Make sure the sale exists
         Sale storage sale = sales[_consignmentId];
@@ -172,8 +172,8 @@ contract HandleSale is MarketClient, ERC1155Holder {
         // Make sure we can accept the buy order
         require(block.timestamp >= sale.start, "Sale hasn't started");
         require(!Address.isContract(msg.sender), "Contracts may not buy");
-        require(_amount <= sale.perTxCap, "Per transaction limit for this sale exceeded");
-        require(msg.value == sale.price * _amount, "Payment does not cover order price");
+        require(_quantity <= sale.perTxCap, "Per transaction limit for this sale exceeded");
+        require(msg.value == sale.price * _quantity, "Payment does not cover order price");
 
         // Unless sale is for an open audience, check buyer's staking status
         Audience audience = audiences[_consignmentId];
@@ -208,12 +208,12 @@ contract HandleSale is MarketClient, ERC1155Holder {
                 address(this),
                 escrowTicketer,
                 consignment.tokenId,
-                _amount,
+                _quantity,
                 new bytes(0x0)
             );
 
             // Issue an escrow ticket to the buyer
-            IEscrowTicketer(escrowTicketer).issueTicket(consignment.tokenId, _amount, payable(msg.sender));
+            IEscrowTicketer(escrowTicketer).issueTicket(consignment.tokenId, _quantity, payable(msg.sender));
 
         } else {
 
@@ -222,14 +222,14 @@ contract HandleSale is MarketClient, ERC1155Holder {
                 address(this),
                 msg.sender,
                 consignment.tokenId,
-                _amount,
+                _quantity,
                 new bytes(0x0)
             );
 
         }
 
         // Announce the purchase
-        emit Purchase(consignment.id, msg.sender, _amount);
+        emit Purchase(consignment.id, msg.sender, _quantity);
     }
 
     /**

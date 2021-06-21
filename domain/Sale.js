@@ -10,8 +10,7 @@ const Outcome = require("./Outcome");
 
 class Sale {
 
-    constructor (buyers, consignmentId, start, quantity, price, perTxCap, state, outcome) {
-        this.buyers = buyers;
+    constructor (consignmentId, start, quantity, price, perTxCap, state, outcome) {
         this.consignmentId = consignmentId;
         this.start = start;
         this.quantity = quantity;
@@ -27,8 +26,8 @@ class Sale {
      * @returns {Sale}
      */
     static fromObject(o) {
-        const {buyers, consignmentId, start, quantity, price, perTxCap, state, outcome} = o;
-        return new Sale(buyers, consignmentId, start, quantity, price, perTxCap, state, outcome);
+        const {consignmentId, start, quantity, price, perTxCap, state, outcome} = o;
+        return new Sale(consignmentId, start, quantity, price, perTxCap, state, outcome);
     }
 
     /**
@@ -53,31 +52,6 @@ class Sale {
      */
     clone () {
         return Sale.fromObject(this.toObject());
-    }
-
-    /**
-     * Is this Sale instance's buyers field valid?
-     * If present, must be an array of eip55 compliant Ethereum addresses
-     * @returns {boolean}
-     */
-    buyersIsValid() {
-        let valid = false;
-        let {buyers} = this;
-        try {
-            valid = (
-                buyers === undefined || buyers === null ||
-                Array.isArray(buyers) &&
-                buyers.length &&
-                buyers.reduce((valid, buyer) => valid === (
-                    valid &&
-                    (
-                        eip55.verify(buyer) ||
-                        eip55.verify(eip55.encode(buyer))
-                    )
-                ), true)
-            )
-        } catch (e) {}
-        return valid;
     }
 
     /**
@@ -205,7 +179,6 @@ class Sale {
      */
     isValid() {
         return (
-            this.buyersIsValid() &&
             this.consignmentIdIsValid() &&
             this.startIsValid() &&
             this.quantityIsValid() &&
