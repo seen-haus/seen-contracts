@@ -10,9 +10,8 @@ import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 interface IERC2981 is IERC165 {
 
     /**
-     * @notice Called with the sale price to determine how much royalty
-     *          is owed and to whom.
-     *  @param _tokenId - the NFT asset queried for royalty information
+     * @notice Determine how much royalty is owed (if any) and to whom.
+     * @param _tokenId - the NFT asset queried for royalty information
      * @param _value - the sale price of the NFT asset specified by _tokenId
      * @return _receiver - address of who should be sent the royalty payment
      * @return _royaltyAmount - the royalty payment amount for _value sale price

@@ -146,13 +146,13 @@ abstract contract MarketClient is AccessClient {
         if (_consignment.market == Market.Secondary) {
 
             // Determine if NFT contract supports NFT Royalty Standard EIP-2981
-            try IERC165(_consignment.token).supportsInterface(INTERFACE_ID_2981) returns (bool supported) {
+            try IERC165(_consignment.tokenAddress).supportsInterface(INTERFACE_ID_2981) returns (bool supported) {
 
                 // If so, find out the who to pay and how much
                 if (supported == true) {
 
                     // Get the royalty recipient and expected payment
-                    (address recipient, uint256 expected) = IERC2981(_consignment.token).royaltyInfo(_consignment.tokenId, _grossSale);
+                    (address recipient, uint256 expected) = IERC2981(_consignment.tokenAddress).royaltyInfo(_consignment.tokenId, _grossSale);
 
                     // Determine the max royalty we will pay
                     uint256 maxRoyalty = getPercentageOf(_grossSale, marketController.getMaxRoyaltyPercentage());

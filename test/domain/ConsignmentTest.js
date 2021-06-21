@@ -109,17 +109,17 @@ describe("Consignment", function() {
         it("Always present, tokenAddress  must be a string representation of an EIP-55 compliant address", async function() {
 
             // Invalid field value
-            consignment.token = "0xASFADF";
+            consignment.tokenAddress = "0xASFADF";
             expect(consignment.tokenAddressIsValid()).is.false;
             expect(consignment.isValid()).is.false;
 
             // Invalid field value
-            consignment.token = "zedzdeadbaby";
+            consignment.tokenAddress = "zedzdeadbaby";
             expect(consignment.tokenAddressIsValid()).is.false;
             expect(consignment.isValid()).is.false;
 
             // Valid field value
-            consignment.token = "0x7777788200B672A42421017F65EDE4Fc759564C8";
+            consignment.tokenAddress = "0x7777788200B672A42421017F65EDE4Fc759564C8";
             expect(consignment.tokenAddressIsValid()).is.true;
             expect(consignment.isValid()).is.true;
 
@@ -196,7 +196,7 @@ describe("Consignment", function() {
 
             // Get plain object
             const object = {
-                market, seller, token: tokenAddress, tokenId, id
+                market, seller, tokenAddress: tokenAddress, tokenId, id
             }
 
             // Promote to instance

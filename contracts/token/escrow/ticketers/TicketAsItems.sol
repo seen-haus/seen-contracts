@@ -57,7 +57,7 @@ contract TicketAsItems is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
      * TODO: Create a dynamic endpoint on the web for generating the JSON
      * Just needs to call this contract: tickets(tokenId) and create JSON
      * with a fixed name, description, and image, adding these fields
-     *  - token: [SeenHausNFT contract address]
+     *  - tokenAddress: [SeenHausNFT contract address]
      *  - tokenId: [the token id from EscrowTicket]
      *  - amount: [the amount of that token this ticket can claim]
      *

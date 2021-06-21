@@ -594,7 +594,7 @@ describe("MarketController", function() {
                 consignment = new Consignment(
                     response.market,
                     response.seller,
-                    response.token,
+                    response.tokenAddress,
                     response.tokenId.toString(),
                     response.id.toString()
                 );
@@ -608,7 +608,7 @@ describe("MarketController", function() {
                 // Test expected values
                 expect(consignment.market === market).is.true;
                 expect(consignment.seller === seller.address).is.true;
-                expect(consignment.token === token.address).is.true;
+                expect(consignment.tokenAddress === token.address).is.true;
                 expect(consignment.tokenId === tokenId).is.true;
                 expect(consignment.id === id).is.true;
 

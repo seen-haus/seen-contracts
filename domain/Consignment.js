@@ -12,7 +12,7 @@ class Consignment {
     constructor (market, seller, tokenAddress, tokenId, id) {
         this.market = market;
         this.seller = seller;
-        this.token = tokenAddress;
+        this.tokenAddress = tokenAddress;
         this.tokenId = tokenId;
         this.id = id;
     }
@@ -23,8 +23,8 @@ class Consignment {
      * @returns {Consignment}
      */
     static fromObject(o) {
-        const {market, seller, token, tokenId, id} = o;
-        return new Consignment(market, seller, token, tokenId, id);
+        const {market, seller, tokenAddress, tokenId, id} = o;
+        return new Consignment(market, seller, tokenAddress, tokenId, id);
     }
 
     /**
@@ -83,16 +83,16 @@ class Consignment {
     }
 
     /**
-     * Is this Consignment instance's token field valid?
+     * Is this Consignment instance's tokenAddress field valid?
      * Must be a eip55 compliant Ethereum address
      * @returns {boolean}
      */
     tokenAddressIsValid() {
         let valid = false;
-        let {token} = this;
+        let {tokenAddress} = this;
         try {
             valid = (
-                eip55.verify(token)
+                eip55.verify(tokenAddress)
             );
         } catch (e) {}
         return valid;

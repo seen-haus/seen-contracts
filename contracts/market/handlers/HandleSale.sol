@@ -200,11 +200,11 @@ contract HandleSale is MarketClient, ERC1155Holder {
 
         // Determine if consignment is physical
         address nft = marketController.getNft();
-        if (nft == consignment.token && ISeenHausNFT(nft).isPhysical(consignment.tokenId)) {
+        if (nft == consignment.tokenAddress && ISeenHausNFT(nft).isPhysical(consignment.tokenId)) {
 
             // Transfer the ERC-1155 to escrow contract
             address escrowTicketer = marketController.getEscrowTicketer();
-            IERC1155(consignment.token).safeTransferFrom(
+            IERC1155(consignment.tokenAddress).safeTransferFrom(
                 address(this),
                 escrowTicketer,
                 consignment.tokenId,
@@ -218,7 +218,7 @@ contract HandleSale is MarketClient, ERC1155Holder {
         } else {
 
             // For digital, transfer the purchase to the buyer
-            IERC1155(consignment.token).safeTransferFrom(
+            IERC1155(consignment.tokenAddress).safeTransferFrom(
                 address(this),
                 msg.sender,
                 consignment.tokenId,
@@ -309,7 +309,7 @@ contract HandleSale is MarketClient, ERC1155Holder {
 
         // Transfer the remaining ERC-1155 balance back to the seller
         if (remaining > 0) {
-            IERC1155(consignment.token).safeTransferFrom(
+            IERC1155(consignment.tokenAddress).safeTransferFrom(
                 address(this),
                 consignment.seller,
                 consignment.tokenId,
@@ -329,7 +329,7 @@ contract HandleSale is MarketClient, ERC1155Holder {
      * @param _consignment - the unique consignment being sold
      */
     function supply(Consignment memory _consignment) public view returns(uint256) {
-        return IERC1155(_consignment.token).balanceOf(address(this), _consignment.tokenId);
+        return IERC1155(_consignment.tokenAddress).balanceOf(address(this), _consignment.tokenId);
     }
 
 }
