@@ -46,6 +46,19 @@ contract TicketAsItems is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
     {}
 
     /**
+     * @notice The getNextTicket getter
+     * @dev does not increment counter
+     */
+    function getNextTicket()
+    external
+    view
+    override
+    returns (uint256)
+    {
+        return nextTicket;
+    }
+
+    /**
      * @notice Get the token URI
      *
      * This method is overrides the Open Zeppelin version, returning
@@ -65,7 +78,9 @@ contract TicketAsItems is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
      * @return tokenURI - the URI for the given token id's metadata
      */
     function uri(uint256 _tokenId)
-    public pure override
+    public
+    pure
+    override
     returns (string memory)
     {
         string memory id = uintToStr(_tokenId);
@@ -82,13 +97,23 @@ contract TicketAsItems is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
      * handler contract they interacted with will call this method to issue an
      * escrow ticket, which is an NFT that can be sold, transferred, or claimed.
      *
+     * Reverts if token amount hasn't already been transferred to this contract
+     *
      * @param _tokenId - the token id on the Seen.Haus NFT contract
      * @param _amount - the amount of the given token to escrow
      * @param _buyer - the buyer of the escrowed item(s) to whom the ticket is issued
      */
     function issueTicket(uint256 _tokenId, uint256 _amount, address payable _buyer)
-    external override
-    onlyRole(MARKET_HANDLER) {
+    external
+    override
+    onlyRole(MARKET_HANDLER)
+    {
+        // Make sure amount is non-zero
+        require(_amount > 0, "Token amount cannot be zero.");
+
+        // Ensure market handler has transferred the token to this contract
+        address nft = marketController.getNft();
+        require(IERC1155(nft).balanceOf(address(this), _tokenId) >= _amount, "Must transfer token amount to ticketer first.");
 
         // Create and store escrow ticket
         uint256 ticketId = nextTicket++;
@@ -105,20 +130,28 @@ contract TicketAsItems is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
      *
      * @param _ticketId - the ticket representing the escrowed item(s)
      */
-    function claim(uint256 _ticketId) external override {
+    function claim(uint256 _ticketId) external override
+    {
         uint256 amount = balanceOf(msg.sender, _ticketId);
         require(amount > 0, "Caller has no balance for this ticket");
-
-        // Copy the ticket to memory
-        EscrowTicket memory ticket = tickets[_ticketId];
-
-        // Delete the ticket from storage
-        delete tickets[_ticketId];
 
         // Burn the caller's balance
         _burn(msg.sender, _ticketId, amount);
 
-        // Transfer the ERC-1155 to escrow contract
+        // Copy the ticket to memory
+        EscrowTicket memory ticket = tickets[_ticketId];
+
+        // Reduce the ticket's amount by the claim amount
+        ticket.amount -= amount;
+
+        // When entire supply is claimed and burned, delete the ticket structure
+        if (ticket.amount == 0) {
+            delete tickets[_ticketId];
+        } else {
+            tickets[_ticketId] = ticket;
+        }
+
+        // Transfer the ERC-1155 to the caller
         IERC1155 nft = IERC1155(marketController.getNft());
         nft.safeTransferFrom(
             address(this),
@@ -144,7 +177,9 @@ contract TicketAsItems is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
      * to respond.
      */
     function supportsInterface(bytes4 interfaceId)
-    public view override(ERC1155, ERC1155Receiver)
+    public
+    view
+    override(ERC1155, ERC1155Receiver)
     returns (bool)
     {
         return (

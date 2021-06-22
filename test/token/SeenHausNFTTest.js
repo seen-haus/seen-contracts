@@ -90,8 +90,6 @@ describe("SeenHausNFT", function() {
 
             it("mintDigital() should require MINTER to mint a digital token", async function () {
 
-                nextToken = await seenHausNFT.getNextToken();
-
                 // non-MINTER attempt
                 await expect(
                     seenHausNFT.connect(associate).mintDigital(supply, creator.address, tokenURI, royaltyPercentage)
@@ -121,8 +119,6 @@ describe("SeenHausNFT", function() {
             });
 
             it("mintPhysical() should require ESCROW_AGENT to mint a physical token", async function () {
-
-                nextToken = await seenHausNFT.getNextToken();
 
                 // non-ESCROW_AGENT attempt
                 await expect(

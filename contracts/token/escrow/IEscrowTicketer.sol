@@ -8,6 +8,12 @@ pragma solidity ^0.8.0;
  */
 interface IEscrowTicketer {
 
+
+    /**
+     * @notice The nextTicket getter
+     */
+    function getNextTicket() external view returns (uint256);
+
     /**
      * Issue an escrow ticket to the buyer
      *
