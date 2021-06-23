@@ -3,6 +3,7 @@ const ethers = hre.ethers;
 const { expect } = require("chai");
 const Role = require("../../domain/Role");
 const Token = require("../../domain/Token");
+const Ticketer = require("../../domain/Ticketer");
 
 describe("SeenHausNFT", function() {
 
@@ -11,7 +12,7 @@ describe("SeenHausNFT", function() {
     let AccessController, accessController;
     let MarketController, marketController;
     let SeenHausNFT, seenHausNFT;
-    let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage;
+    let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let counter, tokenURI, nextToken, supply, salePrice, royaltyAmount, expectedRoyalty, percentage, royaltyPercentage;
     let token, isPhysical, balance, amount, tokenId, uri;
 
@@ -33,10 +34,11 @@ describe("SeenHausNFT", function() {
         multisig = accounts[10];      // not functional contracts
 
         // Market control values
-        vipStakerAmount = "500";       // Amount of xSEEN to be l33t
-        feePercentage = "1500";        // 15%   = 1500
-        maxRoyaltyPercentage = "1500"; // 15%   = 1500
-        outBidPercentage = "500";      // 5%    = 500
+        vipStakerAmount = "500";              // Amount of xSEEN to be l33t
+        feePercentage = "1500";               // 15%   = 1500
+        maxRoyaltyPercentage = "1500";        // 15%   = 1500
+        outBidPercentage = "500";             // 5%    = 500
+        defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
 
         // Deploy the AccessController contract
         AccessController = await ethers.getContractFactory("AccessController");
@@ -52,7 +54,8 @@ describe("SeenHausNFT", function() {
             vipStakerAmount,
             feePercentage,
             maxRoyaltyPercentage,
-            outBidPercentage
+            outBidPercentage,
+            defaultTicketerType
         );
         await marketController.deployed();
 

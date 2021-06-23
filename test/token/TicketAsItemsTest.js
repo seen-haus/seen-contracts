@@ -2,7 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 const Role = require("../../domain/Role");
-const Token = require("../../domain/Token");
+const Ticketer = require("../../domain/Ticketer");
 
 describe("TicketAsItems", function() {
 
@@ -12,7 +12,7 @@ describe("TicketAsItems", function() {
     let MarketController, marketController;
     let SeenHausNFT, seenHausNFT;
     let TicketAsItems, ticketAsItems;
-    let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage;
+    let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let ticketId, tokenId, tokenURI, counter, supply, half, balance, royaltyPercentage;
 
     beforeEach( async function () {
@@ -32,10 +32,11 @@ describe("TicketAsItems", function() {
         marketHandler = accounts[9];
 
         // Market control values
-        vipStakerAmount = "500";       // Amount of xSEEN to be l33t
-        feePercentage = "1500";        // 15%   = 1500
-        maxRoyaltyPercentage = "1500"; // 15%   = 1500
-        outBidPercentage = "500";      // 5%    = 500
+        vipStakerAmount = "500";              // Amount of xSEEN to be VIP
+        feePercentage = "1500";               // 15%   = 1500
+        maxRoyaltyPercentage = "5000";        // 50%   = 5000
+        outBidPercentage = "500";             // 5%    = 500
+        defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
 
         // Deploy the AccessController contract
         AccessController = await ethers.getContractFactory("AccessController");
@@ -51,7 +52,8 @@ describe("TicketAsItems", function() {
             vipStakerAmount,
             feePercentage,
             maxRoyaltyPercentage,
-            outBidPercentage
+            outBidPercentage,
+            defaultTicketerType
         );
         await marketController.deployed();
 
@@ -74,10 +76,6 @@ describe("TicketAsItems", function() {
             marketController.address
         );
         await ticketAsItems.deployed();
-
-        // Escrow Ticketer address gets set after deployment since it requires
-        // the MarketController's address in its constructor
-        await marketController.setEscrowTicketer(ticketAsItems.address);
 
     });
 

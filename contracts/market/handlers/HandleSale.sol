@@ -203,7 +203,7 @@ contract HandleSale is MarketClient, ERC1155Holder {
         if (nft == consignment.tokenAddress && ISeenHausNFT(nft).isPhysical(consignment.tokenId)) {
 
             // Transfer the ERC-1155 to escrow contract
-            address escrowTicketer = marketController.getEscrowTicketer();
+            address escrowTicketer = marketController.getEscrowTicketer(_consignmentId);
             IERC1155(consignment.tokenAddress).safeTransferFrom(
                 address(this),
                 escrowTicketer,

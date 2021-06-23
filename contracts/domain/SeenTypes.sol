@@ -47,6 +47,12 @@ contract SeenTypes {
         Ended
     }
 
+    enum Ticketer {
+        Default,
+        Lots,
+        Items
+    }
+
     struct Token {
         address payable creator;
         uint16 royaltyPercentage;

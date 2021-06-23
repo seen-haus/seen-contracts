@@ -9,6 +9,7 @@ const Auction = require("../../domain/Auction");
 const State = require("../../domain/State");
 const Outcome = require("../../domain/Outcome");
 const Audience = require("../../domain/Audience");
+const Ticketer = require("../../domain/Ticketer");
 
 describe("HandleAuction", function() {
 
@@ -17,11 +18,12 @@ describe("HandleAuction", function() {
     let AccessController, accessController;
     let MarketController, marketController;
     let HandleAuction, handleAuction;
-    let EscrowTicketer, escrowTicketer;
+    let TicketAsLot, ticketAsLot;
+    let TicketAsItems, ticketAsItems;
     let SeenHausNFT, seenHausNFT;
-    let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage;
+    let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let market, tokenAddress, tokenId, tokenURI, auction, physicalTokenId, physicalConsignmentId, consignmentId, nextConsignment, block, blockNumber, outbid;
-    let royaltyPercentage, supply, start, duration, reserve, audience, clock;
+    let royaltyPercentage, supply, start, duration, reserve, audience, clock, escrowTicketer;
     let royaltyAmount, sellerAmount, feeAmount, multisigAmount, stakingAmount, grossSale, netAfterRoyalties;
     let sellerBalance, contractBalance, buyerBalance, ticketerBalance, newBalance;
 
@@ -49,10 +51,11 @@ describe("HandleAuction", function() {
         multisig = accounts[10];       // not functional contracts
 
         // Market control values
-        vipStakerAmount = "500";       // Amount of xSEEN
-        feePercentage = "1500";        // 15%   = 1500
-        maxRoyaltyPercentage = "5000"; // 50%   = 5000
-        outBidPercentage = "500";      // 5%    = 500
+        vipStakerAmount = "500";              // Amount of xSEEN to be VIP
+        feePercentage = "1500";               // 15%   = 1500
+        maxRoyaltyPercentage = "5000";        // 50%   = 5000
+        outBidPercentage = "500";             // 5%    = 500
+        defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
 
         // Deploy the AccessController contract
         AccessController = await ethers.getContractFactory("AccessController");
@@ -68,7 +71,8 @@ describe("HandleAuction", function() {
             vipStakerAmount,
             feePercentage,
             maxRoyaltyPercentage,
-            outBidPercentage
+            outBidPercentage,
+            defaultTicketerType
         );
         await marketController.deployed();
 
@@ -88,18 +92,27 @@ describe("HandleAuction", function() {
         );
         await handleAuction.deployed();
 
-        // Deploy an IEscrowTicketer implementation
-        EscrowTicketer = await ethers.getContractFactory('TicketAsLot');
-        escrowTicketer = await EscrowTicketer.deploy(
+        // Deploy the TicketAsItems contract
+        TicketAsItems = await ethers.getContractFactory('TicketAsItems');
+        ticketAsItems = await TicketAsItems.deploy(
             accessController.address,
             marketController.address
         );
-        await escrowTicketer.deployed();
+        await ticketAsItems.deployed();
+
+        // Deploy the TicketAsLot contract
+        TicketAsLot = await ethers.getContractFactory('TicketAsLot');
+        ticketAsLot = await TicketAsLot.deploy(
+            accessController.address,
+            marketController.address
+        );
+        await ticketAsLot.deployed();
 
         // Escrow Ticketer and NFT addresses get set after deployment since
         // they require the MarketController's address in their constructors
-        await marketController.setEscrowTicketer(escrowTicketer.address);
         await marketController.setNft(seenHausNFT.address);
+        await marketController.setLotsTicketer(ticketAsLot.address);
+        await marketController.setItemsTicketer(ticketAsItems.address);
 
         // Grant HandleAuction contract the MARKET_HANDLER role
         await accessController.grantRole(Role.MARKET_HANDLER, handleAuction.address);
@@ -981,6 +994,9 @@ describe("HandleAuction", function() {
 
                     it("should transfer consigned balance of token to escrow ticketer if physical", async function () {
 
+                        // Get the escrow ticketer to use
+                        escrowTicketer = await marketController.getEscrowTicketer(physicalConsignmentId);
+
                         // Get contract balance of token
                         contractBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
 
@@ -992,12 +1008,15 @@ describe("HandleAuction", function() {
                         expect(contractBalance.sub(supply).eq(newBalance));
 
                         // Get escrow ticketer's new balance of token
-                        ticketerBalance = await seenHausNFT.balanceOf(escrowTicketer.address, physicalTokenId);
+                        ticketerBalance = await seenHausNFT.balanceOf(escrowTicketer, physicalTokenId);
                         expect(buyerBalance.eq(contractBalance));
 
                     });
 
                     it("should transfer an escrow ticket to buyer if physical", async function () {
+
+                        // Get the escrow ticketer to use
+                        escrowTicketer = await marketController.getEscrowTicketer(physicalConsignmentId);
 
                         // Get contract balance of token
                         contractBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
@@ -1010,7 +1029,7 @@ describe("HandleAuction", function() {
                         expect(contractBalance.sub(supply).eq(newBalance));
 
                         // Get escrow ticketer's new balance of token
-                        ticketerBalance = await seenHausNFT.balanceOf(escrowTicketer.address, physicalTokenId);
+                        ticketerBalance = await seenHausNFT.balanceOf(escrowTicketer, physicalTokenId);
                         expect(buyerBalance.eq(contractBalance));
 
                     });

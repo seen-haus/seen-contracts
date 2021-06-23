@@ -25,18 +25,32 @@ interface IMarketController {
     function getNft() external view returns (address);
 
     /**
-     * @notice Sets the address of the Seen.Haus escrow ticket contract.
+     * @notice Sets the address of the Seen.Haus lots-based escrow ticketer contract.
      *
      * Emits a EscrowTicketerAddressChanged event.
      *
-     * @param _escrowTicketer - the address of the escrow ticket contract
+     * @param _lotsTicketer - the address of the items-based escrow ticketer contract
      */
-    function setEscrowTicketer(address _escrowTicketer) external;
+    function setLotsTicketer(address _lotsTicketer) external;
 
     /**
-     * @notice The escrowTicketer getter
+     * @notice The lots-based escrow ticketer getter
      */
-    function getEscrowTicketer() external view returns (address);
+    function getLotsTicketer() external view returns (address);
+
+    /**
+     * @notice Sets the address of the Seen.Haus items-based escrow ticketer contract.
+     *
+     * Emits a EscrowTicketerAddressChanged event.
+     *
+     * @param _itemsTicketer - the address of the items-based escrow ticketer contract
+     */
+    function setItemsTicketer(address _itemsTicketer) external;
+
+    /**
+     * @notice The items-based escrow ticketer getter
+     */
+    function getItemsTicketer() external view returns (address);
 
     /**
      * @notice Sets the address of the xSEEN ERC-20 staking contract.
@@ -123,6 +137,34 @@ interface IMarketController {
     function getOutBidPercentage() external view returns (uint16);
 
     /**
+     * @notice Sets the default escrow ticketer type.
+     *
+     * Emits a DefaultTicketerTypeChanged event.
+     *
+     * Reverts if _ticketerType is Ticketer.Default
+     * Reverts if _ticketerType is already the defaultTicketerType
+     *
+     * @param _ticketerType - the new default escrow ticketer type.
+     */
+    function setDefaultTicketerType(SeenTypes.Ticketer _ticketerType) external;
+
+    /**
+     * @notice The defaultTicketerType getter
+     */
+    function getDefaultTicketerType() external view returns (SeenTypes.Ticketer);
+
+    /**
+ * @notice Get the Escrow Ticketer to be used for a given consignment
+ *
+ * If a specific ticketer has not been set for the consignment,
+ * the default escrow ticketer will be returned.
+ *
+ * @param _consignmentId - the id of the consignment
+ * @return ticketer = the address of the escrow ticketer to use
+ */
+    function getEscrowTicketer(uint256 _consignmentId) external view returns (address ticketer);
+
+    /**
      * @notice The nextConsignment getter
      */
     function getNextConsignment() external view returns (uint256);
@@ -152,5 +194,19 @@ interface IMarketController {
     )
     external
     returns(SeenTypes.Consignment memory);
+
+    /**
+     * @notice Set the type of Escrow Ticketer to be used for a consignment
+     *
+     * Default escrow ticketer is Ticketer.Lots. This only needs to be called
+     * if overriding to Ticketer.Items for a given consignment.
+     *
+     * Emits a ConsignmentTicketerSet event.
+     * Reverts if consignment is not registered.
+     *
+     * @param _consignmentId - the id of the consignment
+     * @param _ticketerType - the type of ticketer to use. See: {SeenTypes.Ticketer}
+     */
+    function setConsignmentTicketer(uint256 _consignmentId, SeenTypes.Ticketer _ticketerType) external;
 
 }

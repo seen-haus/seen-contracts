@@ -14,9 +14,9 @@ import "./IMarketController.sol";
  */
 contract MarketController is AccessClient {
 
-    // Events
+    /// Events
     event NFTAddressChanged(address indexed nft);
-    event EscrowTicketerAddressChanged(address indexed escrowTicketer);
+    event EscrowTicketerAddressChanged(address indexed escrowTicketer, Ticketer indexed ticketerType);
     event StakingAddressChanged(address indexed staking);
     event MultisigAddressChanged(address indexed multisig);
     event PhysicalItemsAddressChanged(address indexed physicalItems);
@@ -25,37 +25,48 @@ contract MarketController is AccessClient {
     event FeePercentageChanged(uint16 indexed feePercentage);
     event MaxRoyaltyPercentageChanged(uint16 indexed maxRoyaltyPercentage);
     event OutBidPercentageChanged(uint16 indexed outBidPercentage);
+    event DefaultTicketerTypeChanged(Ticketer indexed ticketerType);
     event ConsignmentRegistered(Consignment consignment);
+    event ConsignmentTicketerChanged(uint256 consignmentId, Ticketer indexed ticketerType);
 
     /// @dev the address of the Seen.Haus NFT contract
     address internal nft;
 
-    /// @dev address of the Seen.Haus escrow ticketing contract
-    address public escrowTicketer;
-
     /// @dev the address of the xSEEN ERC-20 Seen.Haus staking contract
-    address payable staking;
+    address payable internal staking;
 
     /// @dev the address of the Seen.Haus multi-sig wallet
-    address payable multisig;
+    address payable internal multisig;
+
+    /// @dev address of the Seen.Haus lots-based escrow ticketing contract
+    address public lotsTicketer;
+
+    /// @dev address of the Seen.Haus items-based escrow ticketing contract
+    address public itemsTicketer;
+
+    /// @dev the default escrow ticketer type to use for physical consignments unless overridden with setConsignmentTicketer
+    Ticketer internal defaultTicketerType;
 
     /// @dev the minimum amount of xSEEN ERC-20 a caller must hold to participate in VIP events
-    uint256 public vipStakerAmount;
+    uint256 internal vipStakerAmount;
 
     /// @dev the percentage that will be taken as a fee from the net of a Seen.Haus sale or auction (after royalties)
-    uint16 public feePercentage;         // 1.75% = 175, 100% = 10000
+    uint16 internal feePercentage;         // 1.75% = 175, 100% = 10000
 
     /// @dev the maximum percentage of a Seen.Haus sale or auction that will be paid as a royalty (meant for foreign consignments)
-    uint16 public maxRoyaltyPercentage;  // 1.75% = 175, 100% = 10000
+    uint16 internal maxRoyaltyPercentage;  // 1.75% = 175, 100% = 10000
 
     /// @dev the minimum percentage a Seen.Haus auction bid must be above the previous bid to prevail
-    uint16 public outBidPercentage;      // 1.75% = 175, 100% = 10000
+    uint16 internal outBidPercentage;      // 1.75% = 175, 100% = 10000
 
     /// @dev next consignment id
-    uint256 public nextConsignment;
+    uint256 internal nextConsignment;
 
     /// @dev consignment id => consignment
     mapping(uint256 => Consignment) public consignments;
+
+    /// @dev consignment id => ticketer type
+    mapping(uint256 => Ticketer) public consignmentTicketers;
 
     /**
      * @notice Constructor
@@ -75,7 +86,8 @@ contract MarketController is AccessClient {
         uint256 _vipStakerAmount,
         uint16 _feePercentage,
         uint16 _maxRoyaltyPercentage,
-        uint16 _outBidPercentage
+        uint16 _outBidPercentage,
+        Ticketer _defaultTicketerType
     )
     AccessClient(_accessController)
     {
@@ -85,6 +97,7 @@ contract MarketController is AccessClient {
         feePercentage = _feePercentage;
         maxRoyaltyPercentage = _maxRoyaltyPercentage;
         outBidPercentage = _outBidPercentage;
+        defaultTicketerType = _defaultTicketerType;
     }
 
     /**
@@ -111,26 +124,49 @@ contract MarketController is AccessClient {
     }
 
     /**
-     * @notice Sets the address of the Seen.Haus escrow ticketer contract.
+     * @notice Sets the address of the Seen.Haus lots-based escrow ticketer contract.
      *
      * Emits a EscrowTicketerAddressChanged event.
      *
-     * @param _escrowTicketer - the address of the escrow ticketer contract
+     * @param _lotsTicketer - the address of the lots-based escrow ticketer contract
      */
-    function setEscrowTicketer(address _escrowTicketer)
+    function setLotsTicketer(address _lotsTicketer)
     external
     onlyRole(ADMIN) {
-        escrowTicketer = _escrowTicketer;
-        emit EscrowTicketerAddressChanged(escrowTicketer);
+        lotsTicketer = _lotsTicketer;
+        emit EscrowTicketerAddressChanged(lotsTicketer, Ticketer.Lots);
     }
 
     /**
-     * @notice The escrowTicketer getter
+     * @notice The lots-based escrow ticketer getter
      */
-    function getEscrowTicketer()
+    function getLotsTicketer()
     external view
     returns (address) {
-        return escrowTicketer;
+        return lotsTicketer;
+    }
+
+    /**
+     * @notice Sets the address of the Seen.Haus items-based escrow ticketer contract.
+     *
+     * Emits a EscrowTicketerAddressChanged event.
+     *
+     * @param _itemsTicketer - the address of the items-based escrow ticketer contract
+     */
+    function setItemsTicketer(address _itemsTicketer)
+    external
+    onlyRole(ADMIN) {
+        itemsTicketer = _itemsTicketer;
+        emit EscrowTicketerAddressChanged(itemsTicketer, Ticketer.Items);
+    }
+
+    /**
+     * @notice The items-based ticketer getter
+     */
+    function getItemsTicketer()
+    external view
+    returns (address) {
+        return itemsTicketer;
     }
 
     /**
@@ -280,6 +316,52 @@ contract MarketController is AccessClient {
     }
 
     /**
+     * @notice Sets the default escrow ticketer type.
+     *
+     * Emits a DefaultTicketerTypeChanged event.
+     *
+     * Reverts if _ticketerType is Ticketer.Default
+     * Reverts if _ticketerType is already the defaultTicketerType
+     *
+     * @param _ticketerType - the new default escrow ticketer type.
+     */
+    function setDefaultTicketerType(Ticketer _ticketerType)
+    external
+    onlyRole(ADMIN) {
+        require(_ticketerType != Ticketer.Default, "Invalid ticketer type.");
+        require(_ticketerType != defaultTicketerType, "Type is already default.");
+        defaultTicketerType = _ticketerType;
+        emit DefaultTicketerTypeChanged(_ticketerType);
+    }
+
+    /**
+     * @notice The defaultTicketerType getter
+     */
+    function getDefaultTicketerType()
+    external view
+    returns (Ticketer) {
+        return defaultTicketerType;
+    }
+
+    /**
+     * @notice Get the Escrow Ticketer to be used for a given consignment
+     *
+     * If a specific ticketer has not been set for the consignment,
+     * the default escrow ticketer will be returned.
+     *
+     * @param _consignmentId - the id of the consignment
+     * @return ticketer = the address of the escrow ticketer to use
+     */
+    function getEscrowTicketer(uint256 _consignmentId)
+    external view
+    returns (address) {
+        Ticketer specified = consignmentTicketers[_consignmentId];
+        Ticketer ticketerType = (specified == Ticketer.Default) ? defaultTicketerType : specified;
+        return (ticketerType == Ticketer.Lots) ? lotsTicketer : itemsTicketer;
+    }
+
+
+    /**
      * @notice The nextConsignment getter
      * @dev does not increment counter
      */
@@ -320,6 +402,7 @@ contract MarketController is AccessClient {
     onlyRole(MARKET_HANDLER)
     returns (Consignment memory consignment)
     {
+        // Get the id for the new consignment
         uint256 id = nextConsignment++;
 
         // Create and store the consignment
@@ -336,4 +419,37 @@ contract MarketController is AccessClient {
         emit ConsignmentRegistered(consignment);
 
     }
+
+    /**
+     * @notice Set the type of Escrow Ticketer to be used for a consignment
+     *
+     * Default escrow ticketer is Ticketer.Lots. This only needs to be called
+     * if overriding to Ticketer.Items for a given consignment.
+     *
+     * Emits a ConsignmentTicketerSet event.
+     * Reverts if consignment is not registered.
+     *
+     * @param _consignmentId - the id of the consignment
+     * @param _ticketerType - the type of ticketer to use. See: {SeenTypes.Ticketer}
+     */
+    function setConsignmentTicketer(uint256 _consignmentId, Ticketer _ticketerType)
+    external
+    onlyRole(ESCROW_AGENT)
+    {
+
+        // Be sure this is an existing consignment
+        require(_consignmentId < nextConsignment, "Invalid consignment ID");
+
+        // Set the ticketer for the consignment if not different
+        if (_ticketerType != consignmentTicketers[_consignmentId]) {
+
+            // Set the ticketer for the consignment
+            consignmentTicketers[_consignmentId] = _ticketerType;
+
+            // Notify listeners of state change
+            emit ConsignmentTicketerChanged(_consignmentId, _ticketerType);
+
+        }
+    }
+
 }
