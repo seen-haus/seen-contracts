@@ -2,36 +2,39 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "../../../access/AccessClient.sol";
 import "../../../market/MarketClient.sol";
 import "../../../util/StringUtils.sol";
 import "../IEscrowTicketer.sol";
 
 /**
- * @title TicketAsItems
+ * @title LotsTicketer
  * @author Cliff Hall
- * @notice An escrow ticketer contract implemented with ERC-1155.
+ * @notice An escrow ticketer contract implemented with ERC-721.
  *
- * Holders of this style of ticket have the right to transfer or
- * claim a given number of a physical consignment, escrowed by
- * Seen.Haus.
+ * Holders of this ticket have the right to transfer or claim a
+ * given number of a physical consignment, escrowed by Seen.Haus.
  *
- * Since this is an ERC155 implementation, the holder can
- * sell / transfer part or all of the balance of their ticketed
- * items rather than claim them all.
+ * Since this is an ERC721 implementation, the holder must
+ * claim, sell, or transfer the entire lot of the ticketed
+ * items at once.
  *
- * N.B.: This contract supports piece-level reseller behavior,
- * e.g., an entity scooping up a bunch of the available items
- * in a multi-edition sale with the purpose of flipping each
- * item individually to make maximum profit.
+ * N.B.: This contract disincentivizes whale behavior, e.g., a person
+ * scooping up a bunch of the available items in a multi-edition
+ * sale must flip or claim them all at once, not individually.
  */
-contract TicketAsItems is StringUtils, IEscrowTicketer, MarketClient, ERC1155Holder, ERC1155 {
+contract LotsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Holder, ERC721 {
 
     // Ticket ID => Ticket
     mapping (uint256 => EscrowTicket) tickets;
 
     /// @dev Next ticket number
     uint256 public nextTicket;
+
+    string public constant NAME = "Seen.Haus Escrowed Lot Ticket";
+    string public constant SYMBOL = "ESCROW_TICKET";
 
     /**
      * @notice Constructor
@@ -42,7 +45,7 @@ contract TicketAsItems is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
     constructor(address _accessController, address _marketController)
     AccessClient(_accessController)
     MarketClient(_marketController)
-    ERC1155(ESCROW_TICKET_URI_BASE)
+    ERC721(NAME, SYMBOL)
     {}
 
     /**
@@ -57,6 +60,7 @@ contract TicketAsItems is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
     {
         return nextTicket;
     }
+
 
     /**
      * @notice Get the token URI
@@ -77,7 +81,7 @@ contract TicketAsItems is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
      * @param _tokenId - the ticket's token id
      * @return tokenURI - the URI for the given token id's metadata
      */
-    function uri(uint256 _tokenId)
+    function tokenURI(uint256 _tokenId)
     public
     pure
     override
@@ -88,20 +92,23 @@ contract TicketAsItems is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
     }
 
     /**
-     * Issue an escrow ticket to the buyer
-     *
-     * For physical consignments, Seen.Haus must hold the items in escrow
-     * until the buyer(s) claim them.
-     *
-     * When a buyer wins an auction or makes a purchase in a sale, the market
-     * handler contract they interacted with will call this method to issue an
-     * escrow ticket, which is an NFT that can be sold, transferred, or claimed.
-     *
-     * Reverts if token amount hasn't already been transferred to this contract
+     * @dev Base URI for computing {tokenURI}. Empty by default, can be overriden
+     * in child contracts.
+     */
+    function _baseURI()
+    internal
+    pure
+    override
+    returns (string memory)
+    {
+        return ESCROW_TICKET_URI_BASE;
+    }
+
+    /**
+     * Mint an escrow ticket
      *
      * @param _tokenId - the token id on the Seen.Haus NFT contract
      * @param _amount - the amount of the given token to escrow
-     * @param _buyer - the buyer of the escrowed item(s) to whom the ticket is issued
      */
     function issueTicket(uint256 _tokenId, uint256 _amount, address payable _buyer)
     external
@@ -121,43 +128,35 @@ contract TicketAsItems is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
         ticket.tokenId = _tokenId;
         ticket.amount = _amount;
 
-        // Mint escrow ticket and send to buyer
-        _mint(_buyer, ticketId, _amount, new bytes(0x0));
+        // Mint the ticket and send to the buyer
+        _mint(_buyer, ticketId);
     }
 
     /**
-     * Claim escrowed items associated with the ticket.
-     *
-     * @param _ticketId - the ticket representing the escrowed item(s)
-     */
-    function claim(uint256 _ticketId) external override
+      * Claim the escrowed items associated with the ticket.
+      *
+      * @param _ticketId - the ticket representing the escrowed items
+      */
+    function claim(uint256 _ticketId)
+    external
+    override
     {
-        uint256 amount = balanceOf(msg.sender, _ticketId);
-        require(amount > 0, "Caller has no balance for this ticket");
+        require(_exists(_ticketId), "Invalid ticket id");
+        require(ownerOf(_ticketId) == msg.sender, "Caller not ticket holder");
 
-        // Burn the caller's balance
-        _burn(msg.sender, _ticketId, amount);
-
-        // Copy the ticket to memory
+        // Get the ticket
         EscrowTicket memory ticket = tickets[_ticketId];
 
-        // Reduce the ticket's amount by the claim amount
-        ticket.amount -= amount;
+        // Burn the ticket
+        _burn(_ticketId);
 
-        // When entire supply is claimed and burned, delete the ticket structure
-        if (ticket.amount == 0) {
-            delete tickets[_ticketId];
-        } else {
-            tickets[_ticketId] = ticket;
-        }
-
-        // Transfer the ERC-1155 to the caller
+        // Transfer the proof of ownership NFT to the caller
         IERC1155 nft = IERC1155(marketController.getNft());
         nft.safeTransferFrom(
             address(this),
             msg.sender,
             ticket.tokenId,
-            amount,
+            ticket.amount,
             new bytes(0x0)
         );
 
@@ -179,11 +178,11 @@ contract TicketAsItems is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
     function supportsInterface(bytes4 interfaceId)
     public
     view
-    override(ERC1155, ERC1155Receiver)
+    override(ERC721, ERC1155Receiver)
     returns (bool)
     {
         return (
-            ERC1155.supportsInterface(interfaceId) ||
+            ERC721.supportsInterface(interfaceId) ||
             ERC1155Receiver.supportsInterface(interfaceId)
         );
     }

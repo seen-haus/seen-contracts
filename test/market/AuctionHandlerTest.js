@@ -11,15 +11,15 @@ const Outcome = require("../../domain/Outcome");
 const Audience = require("../../domain/Audience");
 const Ticketer = require("../../domain/Ticketer");
 
-describe("HandleAuction", function() {
+describe("AuctionHandler", function() {
 
     // Common vars
     let accounts, deployer, admin, creator, associate, seller, minter, bidder, rival, escrowAgent;
     let AccessController, accessController;
     let MarketController, marketController;
-    let HandleAuction, handleAuction;
-    let TicketAsLot, ticketAsLot;
-    let TicketAsItems, ticketAsItems;
+    let AuctionHandler, auctionHandler;
+    let LotsTicketer, lotsTicketer;
+    let ItemsTicketer, itemsTicketer;
     let SeenHausNFT, seenHausNFT;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let market, tokenAddress, tokenId, tokenURI, auction, physicalTokenId, physicalConsignmentId, consignmentId, nextConsignment, block, blockNumber, outbid;
@@ -84,38 +84,38 @@ describe("HandleAuction", function() {
         );
         await seenHausNFT.deployed();
 
-        // Deploy the HandleAuction contract
-        HandleAuction = await ethers.getContractFactory("HandleAuction");
-        handleAuction = await HandleAuction.deploy(
+        // Deploy the AuctionHandler contract
+        AuctionHandler = await ethers.getContractFactory("AuctionHandler");
+        auctionHandler = await AuctionHandler.deploy(
             accessController.address,
             marketController.address,
         );
-        await handleAuction.deployed();
+        await auctionHandler.deployed();
 
-        // Deploy the TicketAsItems contract
-        TicketAsItems = await ethers.getContractFactory('TicketAsItems');
-        ticketAsItems = await TicketAsItems.deploy(
+        // Deploy the ItemsTicketer contract
+        ItemsTicketer = await ethers.getContractFactory('ItemsTicketer');
+        itemsTicketer = await ItemsTicketer.deploy(
             accessController.address,
             marketController.address
         );
-        await ticketAsItems.deployed();
+        await itemsTicketer.deployed();
 
-        // Deploy the TicketAsLot contract
-        TicketAsLot = await ethers.getContractFactory('TicketAsLot');
-        ticketAsLot = await TicketAsLot.deploy(
+        // Deploy the LotsTicketer contract
+        LotsTicketer = await ethers.getContractFactory('LotsTicketer');
+        lotsTicketer = await LotsTicketer.deploy(
             accessController.address,
             marketController.address
         );
-        await ticketAsLot.deployed();
+        await lotsTicketer.deployed();
 
         // Escrow Ticketer and NFT addresses get set after deployment since
         // they require the MarketController's address in their constructors
         await marketController.setNft(seenHausNFT.address);
-        await marketController.setLotsTicketer(ticketAsLot.address);
-        await marketController.setItemsTicketer(ticketAsItems.address);
+        await marketController.setLotsTicketer(lotsTicketer.address);
+        await marketController.setItemsTicketer(itemsTicketer.address);
 
-        // Grant HandleAuction contract the MARKET_HANDLER role
-        await accessController.grantRole(Role.MARKET_HANDLER, handleAuction.address);
+        // Grant AuctionHandler contract the MARKET_HANDLER role
+        await accessController.grantRole(Role.MARKET_HANDLER, auctionHandler.address);
 
         // Deployer grants ADMIN role to admin address and renounces admin
         await accessController.connect(deployer).grantRole(Role.ADMIN, admin.address);
@@ -136,8 +136,8 @@ describe("HandleAuction", function() {
             // Escrow Agent needed to create auctions of escrowed items
             await accessController.connect(admin).grantRole(Role.ESCROW_AGENT, escrowAgent.address);
 
-            // Seller approves HandleAuction contract to transfer their tokens
-            await seenHausNFT.connect(seller).setApprovalForAll(handleAuction.address, true);
+            // Seller approves AuctionHandler contract to transfer their tokens
+            await seenHausNFT.connect(seller).setApprovalForAll(auctionHandler.address, true);
 
             // Mint a balance of one token for auctioning
             tokenId = await seenHausNFT.getNextToken();
@@ -174,7 +174,7 @@ describe("HandleAuction", function() {
             beforeEach(async function () {
 
                 // Seller creates auction
-                await handleAuction.connect(seller).createAuction(
+                await auctionHandler.connect(seller).createAuction(
                     seller.address,
                     tokenAddress,
                     tokenId,
@@ -191,7 +191,7 @@ describe("HandleAuction", function() {
             it("getAuction() should return a valid Auction struct", async function () {
 
                 // Get next consignment
-                const response = await handleAuction.getAuction(consignmentId);
+                const response = await auctionHandler.getAuction(consignmentId);
 
                 // Convert to entity
                 auction = new Auction(
@@ -224,7 +224,7 @@ describe("HandleAuction", function() {
 
                     // non-SELLER attempt
                     await expect(
-                        handleAuction.connect(associate).createAuction(
+                        auctionHandler.connect(associate).createAuction(
                             seller.address,
                             tokenAddress,
                             tokenId,
@@ -247,7 +247,7 @@ describe("HandleAuction", function() {
                     ).is.true;
 
                     // SELLER attempt
-                    await handleAuction.connect(seller).createAuction(
+                    await auctionHandler.connect(seller).createAuction(
                         seller.address,
                         tokenAddress,
                         tokenId,
@@ -277,7 +277,7 @@ describe("HandleAuction", function() {
                 beforeEach(async function() {
 
                     // SELLER creates auction
-                    await handleAuction.connect(seller).createAuction(
+                    await auctionHandler.connect(seller).createAuction(
                         seller.address,
                         tokenAddress,
                         tokenId,
@@ -295,7 +295,7 @@ describe("HandleAuction", function() {
 
                     // non-ADMIN attempt
                     await expect(
-                        handleAuction.connect(associate).changeAudience(
+                        auctionHandler.connect(associate).changeAudience(
                             consignmentId,
                             Audience.VIP_STAKER
                         )
@@ -303,11 +303,11 @@ describe("HandleAuction", function() {
 
                     // ADMIN attempt
                     await expect (
-                        handleAuction.connect(admin).changeAudience(
+                        auctionHandler.connect(admin).changeAudience(
                             consignmentId,
                             Audience.VIP_STAKER
                         )
-                    ).to.emit(handleAuction,"AudienceChanged");
+                    ).to.emit(auctionHandler,"AudienceChanged");
 
                 });
 
@@ -315,7 +315,7 @@ describe("HandleAuction", function() {
 
                    // Wait until auction starts and bid
                     await time.increaseTo(start);
-                    await handleAuction.connect(bidder).bid(consignmentId, {value: reserve});
+                    await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve});
 
                     // Now fast-forward to end of auction...
                     await time.increaseTo(
@@ -332,13 +332,13 @@ describe("HandleAuction", function() {
 
                     // non-ADMIN attempt
                     await expect(
-                        handleAuction.connect(associate).close(consignmentId)
+                        auctionHandler.connect(associate).close(consignmentId)
                     ).to.be.revertedWith("Access denied, caller doesn't have role");
 
                     // ADMIN attempt
                     await expect (
-                        handleAuction.connect(admin).close(consignmentId)
-                    ).to.emit(handleAuction,"AuctionEnded");
+                        auctionHandler.connect(admin).close(consignmentId)
+                    ).to.emit(auctionHandler,"AuctionEnded");
 
                 });
 
@@ -359,13 +359,13 @@ describe("HandleAuction", function() {
 
                     // non-ADMIN attempt
                     await expect(
-                        handleAuction.connect(associate).pull(consignmentId)
+                        auctionHandler.connect(associate).pull(consignmentId)
                     ).to.be.revertedWith("Access denied, caller doesn't have role");
 
                     // ADMIN attempt
                     await expect (
-                        handleAuction.connect(admin).pull(consignmentId)
-                    ).to.emit(handleAuction,"AuctionEnded");
+                        auctionHandler.connect(admin).pull(consignmentId)
+                    ).to.emit(auctionHandler,"AuctionEnded");
 
                 });
 
@@ -373,7 +373,7 @@ describe("HandleAuction", function() {
 
                     // Wait until auction starts and bid
                     await time.increaseTo(start);
-                    await handleAuction.connect(bidder).bid(consignmentId, {value: reserve});
+                    await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve});
 
                     // Fast-forward to half way through auction...
                     await time.increaseTo(
@@ -387,13 +387,13 @@ describe("HandleAuction", function() {
 
                     // non-ADMIN attempt
                     await expect(
-                        handleAuction.connect(associate).cancel(consignmentId)
+                        auctionHandler.connect(associate).cancel(consignmentId)
                     ).to.be.revertedWith("Access denied, caller doesn't have role");
 
                     // ADMIN attempt
                     await expect (
-                        handleAuction.connect(admin).cancel(consignmentId)
-                    ).to.emit(handleAuction,"AuctionEnded");
+                        auctionHandler.connect(admin).cancel(consignmentId)
+                    ).to.emit(auctionHandler,"AuctionEnded");
 
                 });
 
@@ -411,7 +411,7 @@ describe("HandleAuction", function() {
 
                         // Create auction, test event
                         await expect(
-                            handleAuction.connect(seller).createAuction(
+                            auctionHandler.connect(seller).createAuction(
                                 seller.address,
                                 tokenAddress,
                                 tokenId,
@@ -439,7 +439,7 @@ describe("HandleAuction", function() {
 
                         // Make change, test event
                         await expect(
-                            handleAuction.connect(seller).createAuction(
+                            auctionHandler.connect(seller).createAuction(
                                 seller.address,
                                 tokenAddress,
                                 tokenId,
@@ -450,7 +450,7 @@ describe("HandleAuction", function() {
                                 market,
                                 clock
                             )
-                        ).to.emit(handleAuction, 'AuctionPending')
+                        ).to.emit(auctionHandler, 'AuctionPending')
                             .withArgs([ // Auction
                                     zeroAddress,
                                     consignmentId,
@@ -477,7 +477,7 @@ describe("HandleAuction", function() {
                     market = Market.SECONDARY;
 
                     // SELLER creates secondary market auction
-                    await handleAuction.connect(seller).createAuction(
+                    await auctionHandler.connect(seller).createAuction(
                         seller.address,
                         tokenAddress,
                         tokenId,
@@ -497,11 +497,11 @@ describe("HandleAuction", function() {
 
                         // ADMIN attempt
                         await expect(
-                            handleAuction.connect(admin).changeAudience(
+                            auctionHandler.connect(admin).changeAudience(
                                 consignmentId,
                                 Audience.OPEN
                             )
-                        ).to.emit(handleAuction, "AudienceChanged")
+                        ).to.emit(auctionHandler, "AudienceChanged")
                             .withArgs(consignmentId, Audience.OPEN);
 
                     });
@@ -521,8 +521,8 @@ describe("HandleAuction", function() {
 
                         // First bidder meets reserve
                         await expect(
-                            await handleAuction.connect(bidder).bid(consignmentId, {value: reserve})
-                        ).to.emit(handleAuction, "BidAccepted")
+                            await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve})
+                        ).to.emit(auctionHandler, "BidAccepted")
                             .withArgs(
                                 consignmentId,
                                 bidder.address,
@@ -534,15 +534,15 @@ describe("HandleAuction", function() {
                     it("should emit a BidReturned event when previous bidder is outbid", async function () {
 
                         // First bidder meets reserve
-                        await handleAuction.connect(bidder).bid(consignmentId, {value: reserve})
+                        await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve})
 
                         // Double previous bid
                         outbid = ethers.BigNumber.from(reserve).mul("2");
 
                         // First bidder meets reserve
                         await expect(
-                            await handleAuction.connect(rival).bid(consignmentId, {value: outbid})
-                        ).to.emit(handleAuction, "BidReturned")
+                            await auctionHandler.connect(rival).bid(consignmentId, {value: outbid})
+                        ).to.emit(auctionHandler, "BidReturned")
                             .withArgs(
                                 consignmentId,
                                 bidder.address,
@@ -559,7 +559,7 @@ describe("HandleAuction", function() {
 
                         // Wait until auction starts and bid
                         await time.increaseTo(start);
-                        await handleAuction.connect(bidder).bid(consignmentId, {value: reserve});
+                        await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve});
 
                         // Now fast-forward to end of auction...
                         await time.increaseTo(
@@ -580,8 +580,8 @@ describe("HandleAuction", function() {
 
                         // Admin closes auction
                         await expect(
-                            handleAuction.connect(admin).close(consignmentId)
-                        ).to.emit(handleAuction, "AuctionEnded")
+                            auctionHandler.connect(admin).close(consignmentId)
+                        ).to.emit(auctionHandler, "AuctionEnded")
                             .withArgs(
                                 consignmentId,
                                 Outcome.CLOSED
@@ -593,8 +593,8 @@ describe("HandleAuction", function() {
 
                         // Admin closes auction
                         await expect(
-                            handleAuction.connect(admin).close(consignmentId)
-                        ).to.emit(handleAuction, "AuctionEnded")
+                            auctionHandler.connect(admin).close(consignmentId)
+                        ).to.emit(auctionHandler, "AuctionEnded")
                             .withArgs(
                                 consignmentId,
                                 Outcome.CLOSED
@@ -606,8 +606,8 @@ describe("HandleAuction", function() {
 
                         // Admin closes auction
                         await expect(
-                            handleAuction.connect(admin).close(consignmentId)
-                        ).to.emit(handleAuction, "PayoutDisbursed");
+                            auctionHandler.connect(admin).close(consignmentId)
+                        ).to.emit(auctionHandler, "PayoutDisbursed");
 
                     });
 
@@ -615,8 +615,8 @@ describe("HandleAuction", function() {
 
                         // Admin closes auction
                         await expect(
-                            handleAuction.connect(admin).close(consignmentId)
-                        ).to.emit(handleAuction, "FeeDisbursed");
+                            auctionHandler.connect(admin).close(consignmentId)
+                        ).to.emit(auctionHandler, "FeeDisbursed");
 
                     });
 
@@ -624,8 +624,8 @@ describe("HandleAuction", function() {
 
                         // Admin closes auction
                         await expect(
-                            handleAuction.connect(admin).close(consignmentId)
-                        ).to.emit(handleAuction, "RoyaltyDisbursed");
+                            auctionHandler.connect(admin).close(consignmentId)
+                        ).to.emit(auctionHandler, "RoyaltyDisbursed");
 
                     });
 
@@ -654,8 +654,8 @@ describe("HandleAuction", function() {
 
                         // Admin pulls auction with no bids
                         await expect(
-                            handleAuction.connect(admin).pull(consignmentId)
-                        ).to.emit(handleAuction, "AuctionEnded")
+                            auctionHandler.connect(admin).pull(consignmentId)
+                        ).to.emit(auctionHandler, "AuctionEnded")
                             .withArgs(
                                 consignmentId,
                                 Outcome.PULLED
@@ -671,7 +671,7 @@ describe("HandleAuction", function() {
 
                         // Wait until auction starts and bid
                         await time.increaseTo(start);
-                        await handleAuction.connect(bidder).bid(consignmentId, {value: reserve});
+                        await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve});
 
                         // Fast-forward to half way through auction...
                         await time.increaseTo(
@@ -690,8 +690,8 @@ describe("HandleAuction", function() {
 
                         // Admin closes auction
                         await expect(
-                            handleAuction.connect(admin).cancel(consignmentId)
-                        ).to.emit(handleAuction, "AuctionEnded")
+                            auctionHandler.connect(admin).cancel(consignmentId)
+                        ).to.emit(auctionHandler, "AuctionEnded")
                             .withArgs(
                                 consignmentId,
                                 Outcome.CANCELED
@@ -703,8 +703,8 @@ describe("HandleAuction", function() {
 
                         // Admin closes auction
                         await expect(
-                            handleAuction.connect(admin).cancel(consignmentId)
-                        ).to.emit(handleAuction, "BidReturned")
+                            auctionHandler.connect(admin).cancel(consignmentId)
+                        ).to.emit(auctionHandler, "BidReturned")
                             .withArgs(consignmentId, bidder.address, reserve);
 
                     });
@@ -723,7 +723,7 @@ describe("HandleAuction", function() {
 
                     // SELLER creates primary market auction
                     market = Market.PRIMARY;
-                    await handleAuction.connect(seller).createAuction(
+                    await auctionHandler.connect(seller).createAuction(
                         seller.address,
                         tokenAddress,
                         tokenId,
@@ -737,7 +737,7 @@ describe("HandleAuction", function() {
 
                     // Wait until auction starts and bid
                     await time.increaseTo(start);
-                    await handleAuction.connect(bidder).bid(consignmentId, {value: reserve});
+                    await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve});
 
                     // Now fast-forward to end of auction...
                     await time.increaseTo(
@@ -765,8 +765,8 @@ describe("HandleAuction", function() {
 
                     // Admin closes auction
                     await expect(
-                        handleAuction.connect(admin).close(consignmentId)
-                    ).to.emit(handleAuction, "FeeDisbursed")
+                        auctionHandler.connect(admin).close(consignmentId)
+                    ).to.emit(auctionHandler, "FeeDisbursed")
                         .withArgs(consignmentId, multisig.address, multisigAmount);
 
                 });
@@ -775,8 +775,8 @@ describe("HandleAuction", function() {
 
                     // Admin closes auction
                     await expect(
-                        handleAuction.connect(admin).close(consignmentId)
-                    ).to.emit(handleAuction, "FeeDisbursed")
+                        auctionHandler.connect(admin).close(consignmentId)
+                    ).to.emit(auctionHandler, "FeeDisbursed")
                         .withArgs(consignmentId, staking.address, stakingAmount);
 
                 });
@@ -785,8 +785,8 @@ describe("HandleAuction", function() {
 
                     // Admin closes auction
                     await expect(
-                        handleAuction.connect(admin).close(consignmentId)
-                    ).to.emit(handleAuction, "PayoutDisbursed")
+                        auctionHandler.connect(admin).close(consignmentId)
+                    ).to.emit(auctionHandler, "PayoutDisbursed")
                         .withArgs(consignmentId, seller.address, sellerAmount);
 
                 });
@@ -799,7 +799,7 @@ describe("HandleAuction", function() {
 
                     // SELLER creates secondary market auction
                     market = Market.SECONDARY;
-                    await handleAuction.connect(seller).createAuction(
+                    await auctionHandler.connect(seller).createAuction(
                         seller.address,
                         tokenAddress,
                         tokenId,
@@ -813,7 +813,7 @@ describe("HandleAuction", function() {
 
                     // Wait until auction starts and bid
                     await time.increaseTo(start);
-                    await handleAuction.connect(bidder).bid(consignmentId, {value: reserve});
+                    await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve});
 
                     // Now fast-forward to end of auction...
                     await time.increaseTo(
@@ -843,8 +843,8 @@ describe("HandleAuction", function() {
 
                     // Admin closes auction
                     await expect(
-                        handleAuction.connect(admin).close(consignmentId)
-                    ).to.emit(handleAuction, "RoyaltyDisbursed")
+                        auctionHandler.connect(admin).close(consignmentId)
+                    ).to.emit(auctionHandler, "RoyaltyDisbursed")
                         .withArgs(consignmentId, creator.address, royaltyAmount);
 
                 });
@@ -853,8 +853,8 @@ describe("HandleAuction", function() {
 
                     // Admin closes auction
                     await expect(
-                        handleAuction.connect(admin).close(consignmentId)
-                    ).to.emit(handleAuction, "FeeDisbursed")
+                        auctionHandler.connect(admin).close(consignmentId)
+                    ).to.emit(auctionHandler, "FeeDisbursed")
                         .withArgs(consignmentId, multisig.address, multisigAmount);
 
                 });
@@ -863,8 +863,8 @@ describe("HandleAuction", function() {
 
                     // Admin closes auction
                     await expect(
-                        handleAuction.connect(admin).close(consignmentId)
-                    ).to.emit(handleAuction, "FeeDisbursed")
+                        auctionHandler.connect(admin).close(consignmentId)
+                    ).to.emit(auctionHandler, "FeeDisbursed")
                         .withArgs(consignmentId, staking.address, stakingAmount);
 
                 });
@@ -873,8 +873,8 @@ describe("HandleAuction", function() {
 
                     // Admin closes auction
                     await expect(
-                        handleAuction.connect(admin).close(consignmentId)
-                    ).to.emit(handleAuction, "PayoutDisbursed")
+                        auctionHandler.connect(admin).close(consignmentId)
+                    ).to.emit(auctionHandler, "PayoutDisbursed")
                         .withArgs(consignmentId, seller.address, sellerAmount);
 
                 });
@@ -887,13 +887,13 @@ describe("HandleAuction", function() {
 
             context("New Auctions", async function () {
 
-                it("createAuction() should transfer token to HandleAuction contract", async function () {
+                it("createAuction() should transfer token to AuctionHandler contract", async function () {
 
                     // Seller balance of token
                     sellerBalance = await seenHausNFT.balanceOf(seller.address, tokenId);
 
                     // SELLER creates auction
-                    await handleAuction.connect(seller).createAuction(
+                    await auctionHandler.connect(seller).createAuction(
                         seller.address,
                         tokenAddress,
                         tokenId,
@@ -922,7 +922,7 @@ describe("HandleAuction", function() {
                 beforeEach(async function() {
 
                     // SELLER creates auction for digital
-                    await handleAuction.connect(seller).createAuction(
+                    await auctionHandler.connect(seller).createAuction(
                         seller.address,
                         tokenAddress,
                         tokenId,
@@ -936,7 +936,7 @@ describe("HandleAuction", function() {
 
                     // SELLER creates auction for physical
                     physicalConsignmentId = await marketController.getNextConsignment();
-                    await handleAuction.connect(seller).createAuction(
+                    await auctionHandler.connect(seller).createAuction(
                         seller.address,
                         tokenAddress,
                         physicalTokenId,
@@ -956,8 +956,8 @@ describe("HandleAuction", function() {
 
                         // Wait until auctions start and bid
                         await time.increaseTo(start);
-                        await handleAuction.connect(bidder).bid(consignmentId, {value: reserve});
-                        await handleAuction.connect(bidder).bid(physicalConsignmentId, {value: reserve});
+                        await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve});
+                        await auctionHandler.connect(bidder).bid(physicalConsignmentId, {value: reserve});
 
                         // Now fast-forward to end of auction...
                         await time.increaseTo(
@@ -980,7 +980,7 @@ describe("HandleAuction", function() {
                         contractBalance = await seenHausNFT.balanceOf(seenHausNFT.address, tokenId);
 
                         // Admin closes auction
-                        await handleAuction.connect(admin).close(consignmentId);
+                        await auctionHandler.connect(admin).close(consignmentId);
 
                         // Get contract's new balance of token
                         newBalance = await seenHausNFT.balanceOf(seenHausNFT.address, tokenId);
@@ -1001,7 +1001,7 @@ describe("HandleAuction", function() {
                         contractBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
 
                         // Admin closes auction
-                        await handleAuction.connect(admin).close(physicalConsignmentId);
+                        await auctionHandler.connect(admin).close(physicalConsignmentId);
 
                         // Get contract's new balance of token
                         newBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
@@ -1022,7 +1022,7 @@ describe("HandleAuction", function() {
                         contractBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
 
                         // Admin closes auction
-                        await handleAuction.connect(admin).close(physicalConsignmentId);
+                        await auctionHandler.connect(admin).close(physicalConsignmentId);
 
                         // Get contract's new balance of escrow ticket
                         buyerBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
@@ -1058,7 +1058,7 @@ describe("HandleAuction", function() {
                     it("should transfer consigned balance of token to seller if digital", async function () {
 
                         // Admin pulls auction with no bids
-                        await handleAuction.connect(admin).pull(consignmentId);
+                        await auctionHandler.connect(admin).pull(consignmentId);
 
                         // Get contract's new balance of token
                         newBalance = await seenHausNFT.balanceOf(seenHausNFT.address, tokenId);
@@ -1073,7 +1073,7 @@ describe("HandleAuction", function() {
                     it("should transfer consigned balance of token to seller if physical", async function () {
 
                         // Admin pulls auction with no bids
-                        await handleAuction.connect(admin).pull(physicalConsignmentId);
+                        await auctionHandler.connect(admin).pull(physicalConsignmentId);
 
                         // Get contract's new balance of token
                         newBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
@@ -1093,7 +1093,7 @@ describe("HandleAuction", function() {
 
                         // Wait until auction starts and bid
                         await time.increaseTo(start);
-                        await handleAuction.connect(bidder).bid(consignmentId, {value: reserve});
+                        await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve});
 
                         // Fast-forward to half way through auction...
                         await time.increaseTo(
@@ -1110,7 +1110,7 @@ describe("HandleAuction", function() {
                     it("should transfer consigned balance of token to seller if digital", async function () {
 
                         // Admin pulls auction with no bids
-                        await handleAuction.connect(admin).cancel(consignmentId);
+                        await auctionHandler.connect(admin).cancel(consignmentId);
 
                         // Get contract's new balance of token
                         newBalance = await seenHausNFT.balanceOf(seenHausNFT.address, tokenId);
@@ -1125,7 +1125,7 @@ describe("HandleAuction", function() {
                     it("should transfer consigned balance of token to seller if physical", async function () {
 
                         // Admin pulls auction with no bids
-                        await handleAuction.connect(admin).cancel(physicalConsignmentId);
+                        await auctionHandler.connect(admin).cancel(physicalConsignmentId);
 
                         // Get contract's new balance of token
                         newBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);

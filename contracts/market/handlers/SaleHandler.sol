@@ -9,11 +9,11 @@ import "../../token/escrow/IEscrowTicketer.sol";
 import "../MarketClient.sol";
 
 /**
- * @title HandleSale
+ * @title SaleHandler
  * @author Cliff Hall
  * @notice Handles the creation, running, and disposition of Seen.Haus sales.
  */
-contract HandleSale is MarketClient, ERC1155Holder {
+contract SaleHandler is MarketClient, ERC1155Holder {
 
     // Events
     event SalePending(Sale sale);

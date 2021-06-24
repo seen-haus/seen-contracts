@@ -4,6 +4,7 @@
  */
 const Role = require("../domain/Role");
 const hre = require("hardhat");
+const Ticketer = require("../domain/Ticketer");
 
 const ethers = hre.ethers;
 let contract, contracts = [];
@@ -14,12 +15,13 @@ function getConfig() {
     // Get the network we're deploying to
     const network = hre.network.name;
 
+    // TODO: DISCUSS TO GET INITIAL SETTINGS FOR ALL THESE PARAMS
     // Market configuration params
-    const vipStakerAmount = "710000000000000000000";
+    const vipStakerAmount = "500";
     const feePercentage = "20";
-    const royaltyPercentage = "15";
     const maxRoyaltyPercentage = "50";
     const outBidPercentage = "5";
+    const defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
 
     // Staking contract address
     const STAKING = {
@@ -35,18 +37,14 @@ function getConfig() {
         'hardhat': '0x0000000000000000000000000000000000000000'
     }
 
-    // Chosen Escrow Ticketer
-    const escrowTicketer = "TicketAsLot";
-
     return {
             staking: STAKING[network],
             multisig: MULTISIG[network],
             vipStakerAmount,
             feePercentage,
-            royaltyPercentage,
             maxRoyaltyPercentage,
             outBidPercentage,
-            escrowTicketer
+            defaultTicketerType
         };
 }
 
@@ -78,9 +76,9 @@ async function main() {
         config.multisig,
         config.vipStakerAmount,
         config.feePercentage,
-        config.royaltyPercentage,
         config.maxRoyaltyPercentage,
-        config.outBidPercentage
+        config.outBidPercentage,
+        config.defaultTicketerType
     );
     await marketController.deployed();
     deploymentComplete('MarketController', marketController.address, [
@@ -94,14 +92,26 @@ async function main() {
         config.outBidPercentage
     ]);
 
-    // Deploy the chosen IEscrowTicketer implementation
-    const EscrowTicketer = await ethers.getContractFactory(config.escrowTicketer);
-    const escrowTicketer = await EscrowTicketer.deploy(
+    // Deploy the chosen LotsTicketer IEscrowTicketer implementation
+    const LotsTicketer = await ethers.getContractFactory("LotsTicketer");
+    const lotsTicketer = await LotsTicketer.deploy(
         accessController.address,
         marketController.address
     );
-    await escrowTicketer.deployed();
-    deploymentComplete(config.escrowTicketer, escrowTicketer.address, [
+    await lotsTicketer.deployed();
+    deploymentComplete(config.lotsTicketer, lotsTicketer.address, [
+        accessController.address,
+        marketController.address
+    ]);
+
+    // Deploy the chosen ItemsTicketer IEscrowTicketer implementation
+    const ItemsTicketer = await ethers.getContractFactory("ItemsTicketer");
+    const itemsTicketer = await ItemsTicketer.deploy(
+        accessController.address,
+        marketController.address
+    );
+    await itemsTicketer.deployed();
+    deploymentComplete(config.itemsTicketer, itemsTicketer.address, [
         accessController.address,
         marketController.address
     ]);
@@ -118,39 +128,40 @@ async function main() {
         marketController.address
     ]);
 
-    // Deploy the HandleAuction contract
-    const HandleAuction = await ethers.getContractFactory("HandleAuction");
-    const handleAuction = await HandleAuction.deploy(
+    // Deploy the AuctionHandler contract
+    const AuctionHandler = await ethers.getContractFactory("AuctionHandler");
+    const auctionHandler = await AuctionHandler.deploy(
         accessController.address,
         marketController.address,
     );
-    await handleAuction.deployed();
-    deploymentComplete('HandleAuction', handleAuction.address, [
+    await auctionHandler.deployed();
+    deploymentComplete('AuctionHandler', auctionHandler.address, [
         accessController.address,
         marketController.address
     ]);
 
-    // Deploy the HandleSale contract
-    const HandleSale = await ethers.getContractFactory("HandleSale");
-    const handleSale = await HandleSale.deploy(
+    // Deploy the SaleHandler contract
+    const SaleHandler = await ethers.getContractFactory("SaleHandler");
+    const saleHandler = await SaleHandler.deploy(
         accessController.address,
         marketController.address,
     );
-    await handleSale.deployed();
-    deploymentComplete('HandleSale', handleSale.address, [
+    await saleHandler.deployed();
+    deploymentComplete('SaleHandler', saleHandler.address, [
         accessController.address,
         marketController.address
     ]);
 
     // Add Escrow Ticketer and NFT addresses to MarketController
-    await marketController.setEscrowTicketer(escrowTicketer.address);
+    await marketController.setLotsTicketer(lotsTicketer.address);
+    await marketController.setItemsTicketer(itemsTicketer.address);
     await marketController.setNft(seenHausNFT.address);
     console.log(`✅ MarketController updated with escrow ticketer and NFT addresses.`);
 
-    // Add MARKET_HANDLER role to HandleAuction and HandleSale
-    await accessController.grantRole(Role.MARKET_HANDLER, handleAuction.address);
-    await accessController.grantRole(Role.MARKET_HANDLER, handleSale.address);
-    console.log(`✅ Granted MARKET_HANDLER role to HandleAuction and HandleSale.`);
+    // Add MARKET_HANDLER role to AuctionHandler and SaleHandler
+    await accessController.grantRole(Role.MARKET_HANDLER, auctionHandler.address);
+    await accessController.grantRole(Role.MARKET_HANDLER, saleHandler.address);
+    console.log(`✅ Granted MARKET_HANDLER role to AuctionHandler and SaleHandler.`);
 
     // Bail now if deploying locally
     if (hre.network.name === 'hardhat') process.exit();

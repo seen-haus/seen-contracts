@@ -14,6 +14,9 @@
 ## Digital vs Physical
 ![digital-vs-physical-nfts](docs/images/SeenHausDigitalVsPhysicalNFTs.png)
 
+## Sequences: Mint + Market
+![digital-vs-physical-nfts](docs/images/SeenHausSequencesMintMarket.png)
+
 # Developer Setup
 ## Prerequisites
 ### Install Node (also installs NPM)

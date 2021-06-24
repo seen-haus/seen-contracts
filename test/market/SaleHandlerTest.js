@@ -10,15 +10,15 @@ const Outcome = require("../../domain/Outcome");
 const Audience = require("../../domain/Audience");
 const Ticketer = require("../../domain/Ticketer");
 
-describe("HandleSale", function() {
+describe("SaleHandler", function() {
 
     // Common vars
     let accounts, deployer, admin, creator, associate, seller, minter, buyer, escrowAgent;
     let AccessController, accessController;
     let MarketController, marketController;
-    let HandleSale, handleSale;
-    let TicketAsLot, ticketAsLot;
-    let TicketAsItems, ticketAsItems;
+    let SaleHandler, saleHandler;
+    let LotsTicketer, lotsTicketer;
+    let ItemsTicketer, itemsTicketer;
     let SeenHausNFT, seenHausNFT;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let market, tokenAddress, tokenId, tokenURI, sale, physicalTokenId, physicalConsignmentId, consignmentId, nextConsignment, block, blockNumber;
@@ -80,38 +80,38 @@ describe("HandleSale", function() {
         );
         await seenHausNFT.deployed();
 
-        // Deploy the HandleSale contract
-        HandleSale = await ethers.getContractFactory("HandleSale");
-        handleSale = await HandleSale.deploy(
+        // Deploy the SaleHandler contract
+        SaleHandler = await ethers.getContractFactory("SaleHandler");
+        saleHandler = await SaleHandler.deploy(
             accessController.address,
             marketController.address,
         );
-        await handleSale.deployed();
+        await saleHandler.deployed();
 
-        // Deploy the TicketAsItems contract
-        TicketAsItems = await ethers.getContractFactory('TicketAsItems');
-        ticketAsItems = await TicketAsItems.deploy(
+        // Deploy the ItemsTicketer contract
+        ItemsTicketer = await ethers.getContractFactory('ItemsTicketer');
+        itemsTicketer = await ItemsTicketer.deploy(
             accessController.address,
             marketController.address
         );
-        await ticketAsItems.deployed();
+        await itemsTicketer.deployed();
 
-        // Deploy the TicketAsLot contract
-        TicketAsLot = await ethers.getContractFactory('TicketAsLot');
-        ticketAsLot = await TicketAsLot.deploy(
+        // Deploy the LotsTicketer contract
+        LotsTicketer = await ethers.getContractFactory('LotsTicketer');
+        lotsTicketer = await LotsTicketer.deploy(
             accessController.address,
             marketController.address
         );
-        await ticketAsLot.deployed();
+        await lotsTicketer.deployed();
 
         // Escrow Ticketer and NFT addresses get set after deployment since
         // they require the MarketController's address in their constructors
         await marketController.setNft(seenHausNFT.address);
-        await marketController.setLotsTicketer(ticketAsLot.address);
-        await marketController.setItemsTicketer(ticketAsItems.address);
+        await marketController.setLotsTicketer(lotsTicketer.address);
+        await marketController.setItemsTicketer(itemsTicketer.address);
 
-        // Grant HandleSale contract the MARKET_HANDLER role
-        await accessController.grantRole(Role.MARKET_HANDLER, handleSale.address);
+        // Grant SaleHandler contract the MARKET_HANDLER role
+        await accessController.grantRole(Role.MARKET_HANDLER, saleHandler.address);
 
         // Deployer grants ADMIN role to admin address and renounces admin
         await accessController.connect(deployer).grantRole(Role.ADMIN, admin.address);
@@ -132,8 +132,8 @@ describe("HandleSale", function() {
             // Escrow Agent needed to create sales of escrowed items
             await accessController.connect(admin).grantRole(Role.ESCROW_AGENT, escrowAgent.address);
 
-            // Seller approves HandleSale contract to transfer their tokens
-            await seenHausNFT.connect(seller).setApprovalForAll(handleSale.address, true);
+            // Seller approves SaleHandler contract to transfer their tokens
+            await seenHausNFT.connect(seller).setApprovalForAll(saleHandler.address, true);
 
             // Mint a balance of 50 of the token for sale
             supply = "50";
@@ -171,7 +171,7 @@ describe("HandleSale", function() {
             beforeEach(async function () {
 
                 // Seller creates sale
-                await handleSale.connect(seller).createSale(
+                await saleHandler.connect(seller).createSale(
                     seller.address,
                     tokenAddress,
                     tokenId,
@@ -188,7 +188,7 @@ describe("HandleSale", function() {
             it("getSale() should return a valid Sale struct", async function () {
 
                 // Get next consignment
-                const response = await handleSale.getSale(consignmentId);
+                const response = await saleHandler.getSale(consignmentId);
 
                 // Convert to entity
                 sale = new Sale(
@@ -219,7 +219,7 @@ describe("HandleSale", function() {
 
                     // non-SELLER attempt
                     await expect(
-                        handleSale.connect(associate).createSale(
+                        saleHandler.connect(associate).createSale(
                             seller.address,
                             tokenAddress,
                             tokenId,
@@ -242,7 +242,7 @@ describe("HandleSale", function() {
                     ).is.true;
 
                     // SELLER attempt
-                    await handleSale.connect(seller).createSale(
+                    await saleHandler.connect(seller).createSale(
                         seller.address,
                         tokenAddress,
                         tokenId,
@@ -272,7 +272,7 @@ describe("HandleSale", function() {
                 beforeEach(async function() {
 
                     // SELLER creates sale
-                    await handleSale.connect(seller).createSale(
+                    await saleHandler.connect(seller).createSale(
                         seller.address,
                         tokenAddress,
                         tokenId,
@@ -290,7 +290,7 @@ describe("HandleSale", function() {
 
                     // non-ADMIN attempt
                     await expect(
-                        handleSale.connect(associate).changeAudience(
+                        saleHandler.connect(associate).changeAudience(
                             consignmentId,
                             Audience.VIP_STAKER
                         )
@@ -298,11 +298,11 @@ describe("HandleSale", function() {
 
                     // ADMIN attempt
                     await expect (
-                        handleSale.connect(admin).changeAudience(
+                        saleHandler.connect(admin).changeAudience(
                             consignmentId,
                             Audience.VIP_STAKER
                         )
-                    ).to.emit(handleSale,"AudienceChanged");
+                    ).to.emit(saleHandler,"AudienceChanged");
 
                 });
 
@@ -310,17 +310,17 @@ describe("HandleSale", function() {
 
                    // Wait until sale starts and buy
                     await time.increaseTo(start);
-                    await handleSale.connect(buyer).buy(consignmentId, supply, {value: buyOutPrice});
+                    await saleHandler.connect(buyer).buy(consignmentId, supply, {value: buyOutPrice});
 
                     // non-ADMIN attempt
                     await expect(
-                        handleSale.connect(associate).close(consignmentId)
+                        saleHandler.connect(associate).close(consignmentId)
                     ).to.be.revertedWith("Access denied, caller doesn't have role");
 
                     // ADMIN attempt
                     await expect (
-                        handleSale.connect(admin).close(consignmentId)
-                    ).to.emit(handleSale,"SaleEnded");
+                        saleHandler.connect(admin).close(consignmentId)
+                    ).to.emit(saleHandler,"SaleEnded");
 
                 });
 
@@ -328,17 +328,17 @@ describe("HandleSale", function() {
 
                     // Wait until sale starts and buy
                     await time.increaseTo(start);
-                    await handleSale.connect(buyer).buy(consignmentId, single, {value: price});
+                    await saleHandler.connect(buyer).buy(consignmentId, single, {value: price});
 
                     // non-ADMIN attempt
                     await expect(
-                        handleSale.connect(associate).cancel(consignmentId)
+                        saleHandler.connect(associate).cancel(consignmentId)
                     ).to.be.revertedWith("Access denied, caller doesn't have role");
 
                     // ADMIN attempt
                     await expect (
-                        handleSale.connect(admin).cancel(consignmentId)
-                    ).to.emit(handleSale,"SaleEnded");
+                        saleHandler.connect(admin).cancel(consignmentId)
+                    ).to.emit(saleHandler,"SaleEnded");
 
                 });
 
@@ -356,7 +356,7 @@ describe("HandleSale", function() {
 
                         // Create sale, test event
                         await expect(
-                            handleSale.connect(seller).createSale(
+                            saleHandler.connect(seller).createSale(
                                 seller.address,
                                 tokenAddress,
                                 tokenId,
@@ -384,7 +384,7 @@ describe("HandleSale", function() {
 
                         // Make change, test event
                         await expect(
-                            handleSale.connect(seller).createSale(
+                            saleHandler.connect(seller).createSale(
                                 seller.address,
                                 tokenAddress,
                                 tokenId,
@@ -395,7 +395,7 @@ describe("HandleSale", function() {
                                 audience,
                                 market
                             )
-                        ).to.emit(handleSale, 'SalePending')
+                        ).to.emit(saleHandler, 'SalePending')
                             .withArgs([ // Sale
                                     consignmentId,
                                     start,
@@ -420,7 +420,7 @@ describe("HandleSale", function() {
                     market = Market.SECONDARY;
 
                     // SELLER creates secondary market sale
-                    await handleSale.connect(seller).createSale(
+                    await saleHandler.connect(seller).createSale(
                         seller.address,
                         tokenAddress,
                         tokenId,
@@ -440,11 +440,11 @@ describe("HandleSale", function() {
 
                         // ADMIN attempt
                         await expect(
-                            handleSale.connect(admin).changeAudience(
+                            saleHandler.connect(admin).changeAudience(
                                 consignmentId,
                                 Audience.OPEN
                             )
-                        ).to.emit(handleSale, "AudienceChanged")
+                        ).to.emit(saleHandler, "AudienceChanged")
                             .withArgs(consignmentId, Audience.OPEN);
 
                     });
@@ -464,8 +464,8 @@ describe("HandleSale", function() {
 
                         // Buy and test event
                         await expect(
-                            await handleSale.connect(buyer).buy(consignmentId, single, {value: price})
-                        ).to.emit(handleSale, "Purchase")
+                            await saleHandler.connect(buyer).buy(consignmentId, single, {value: price})
+                        ).to.emit(saleHandler, "Purchase")
                             .withArgs(
                                 consignmentId,
                                 buyer.address,
@@ -482,7 +482,7 @@ describe("HandleSale", function() {
 
                         // Wait until sale starts and bid
                         await time.increaseTo(start);
-                        await handleSale.connect(buyer).buy(consignmentId, supply, {value: buyOutPrice});
+                        await saleHandler.connect(buyer).buy(consignmentId, supply, {value: buyOutPrice});
 
                     });
 
@@ -490,8 +490,8 @@ describe("HandleSale", function() {
 
                         // Admin closes sale
                         await expect(
-                            handleSale.connect(admin).close(consignmentId)
-                        ).to.emit(handleSale, "SaleEnded")
+                            saleHandler.connect(admin).close(consignmentId)
+                        ).to.emit(saleHandler, "SaleEnded")
                             .withArgs(
                                 consignmentId,
                                 Outcome.CLOSED
@@ -503,8 +503,8 @@ describe("HandleSale", function() {
 
                         // Admin closes sale
                         await expect(
-                            handleSale.connect(admin).close(consignmentId)
-                        ).to.emit(handleSale, "SaleEnded")
+                            saleHandler.connect(admin).close(consignmentId)
+                        ).to.emit(saleHandler, "SaleEnded")
                             .withArgs(
                                 consignmentId,
                                 Outcome.CLOSED
@@ -516,8 +516,8 @@ describe("HandleSale", function() {
 
                         // Admin closes sale
                         await expect(
-                            handleSale.connect(admin).close(consignmentId)
-                        ).to.emit(handleSale, "PayoutDisbursed");
+                            saleHandler.connect(admin).close(consignmentId)
+                        ).to.emit(saleHandler, "PayoutDisbursed");
 
                     });
 
@@ -525,8 +525,8 @@ describe("HandleSale", function() {
 
                         // Admin closes sale
                         await expect(
-                            handleSale.connect(admin).close(consignmentId)
-                        ).to.emit(handleSale, "FeeDisbursed");
+                            saleHandler.connect(admin).close(consignmentId)
+                        ).to.emit(saleHandler, "FeeDisbursed");
 
                     });
 
@@ -534,8 +534,8 @@ describe("HandleSale", function() {
 
                         // Admin closes sale
                         await expect(
-                            handleSale.connect(admin).close(consignmentId)
-                        ).to.emit(handleSale, "RoyaltyDisbursed");
+                            saleHandler.connect(admin).close(consignmentId)
+                        ).to.emit(saleHandler, "RoyaltyDisbursed");
 
                     });
 
@@ -547,7 +547,7 @@ describe("HandleSale", function() {
 
                         // Wait until sale starts and bid
                         await time.increaseTo(start);
-                        await handleSale.connect(buyer).buy(consignmentId, single, {value: price});
+                        await saleHandler.connect(buyer).buy(consignmentId, single, {value: price});
 
                     });
 
@@ -555,8 +555,8 @@ describe("HandleSale", function() {
 
                         // Admin closes sale
                         await expect(
-                            handleSale.connect(admin).cancel(consignmentId)
-                        ).to.emit(handleSale, "SaleEnded")
+                            saleHandler.connect(admin).cancel(consignmentId)
+                        ).to.emit(saleHandler, "SaleEnded")
                             .withArgs(
                                 consignmentId,
                                 Outcome.CANCELED
@@ -578,7 +578,7 @@ describe("HandleSale", function() {
 
                     // SELLER creates primary market sale
                     market = Market.PRIMARY;
-                    await handleSale.connect(seller).createSale(
+                    await saleHandler.connect(seller).createSale(
                         seller.address,
                         tokenAddress,
                         tokenId,
@@ -592,7 +592,7 @@ describe("HandleSale", function() {
 
                     // Wait until sale starts and bid
                     await time.increaseTo(start);
-                    await handleSale.connect(buyer).buy(consignmentId, supply, {value: buyOutPrice});
+                    await saleHandler.connect(buyer).buy(consignmentId, supply, {value: buyOutPrice});
 
                     // Calculate the expected distribution of funds
                     grossSale = ethers.BigNumber.from(buyOutPrice);
@@ -607,8 +607,8 @@ describe("HandleSale", function() {
 
                     // Admin closes sale
                     await expect(
-                        handleSale.connect(admin).close(consignmentId)
-                    ).to.emit(handleSale, "FeeDisbursed")
+                        saleHandler.connect(admin).close(consignmentId)
+                    ).to.emit(saleHandler, "FeeDisbursed")
                         .withArgs(consignmentId, multisig.address, multisigAmount);
 
                 });
@@ -617,8 +617,8 @@ describe("HandleSale", function() {
 
                     // Admin closes sale
                     await expect(
-                        handleSale.connect(admin).close(consignmentId)
-                    ).to.emit(handleSale, "FeeDisbursed")
+                        saleHandler.connect(admin).close(consignmentId)
+                    ).to.emit(saleHandler, "FeeDisbursed")
                         .withArgs(consignmentId, staking.address, stakingAmount);
 
                 });
@@ -627,8 +627,8 @@ describe("HandleSale", function() {
 
                     // Admin closes sale
                     await expect(
-                        handleSale.connect(admin).close(consignmentId)
-                    ).to.emit(handleSale, "PayoutDisbursed")
+                        saleHandler.connect(admin).close(consignmentId)
+                    ).to.emit(saleHandler, "PayoutDisbursed")
                         .withArgs(consignmentId, seller.address, sellerAmount);
 
                 });
@@ -641,7 +641,7 @@ describe("HandleSale", function() {
 
                     // SELLER creates secondary market sale
                     market = Market.SECONDARY;
-                    await handleSale.connect(seller).createSale(
+                    await saleHandler.connect(seller).createSale(
                         seller.address,
                         tokenAddress,
                         tokenId,
@@ -655,7 +655,7 @@ describe("HandleSale", function() {
 
                     // Wait until sale starts and bid
                     await time.increaseTo(start);
-                    await handleSale.connect(buyer).buy(consignmentId, supply, {value: buyOutPrice});
+                    await saleHandler.connect(buyer).buy(consignmentId, supply, {value: buyOutPrice});
 
                     // Calculate the expected distribution of funds
                     grossSale = ethers.BigNumber.from(buyOutPrice);
@@ -672,8 +672,8 @@ describe("HandleSale", function() {
 
                     // Admin closes sale
                     await expect(
-                        handleSale.connect(admin).close(consignmentId)
-                    ).to.emit(handleSale, "RoyaltyDisbursed")
+                        saleHandler.connect(admin).close(consignmentId)
+                    ).to.emit(saleHandler, "RoyaltyDisbursed")
                         .withArgs(consignmentId, creator.address, royaltyAmount);
 
                 });
@@ -682,8 +682,8 @@ describe("HandleSale", function() {
 
                     // Admin closes sale
                     await expect(
-                        handleSale.connect(admin).close(consignmentId)
-                    ).to.emit(handleSale, "FeeDisbursed")
+                        saleHandler.connect(admin).close(consignmentId)
+                    ).to.emit(saleHandler, "FeeDisbursed")
                         .withArgs(consignmentId, multisig.address, multisigAmount);
 
                 });
@@ -692,8 +692,8 @@ describe("HandleSale", function() {
 
                     // Admin closes sale
                     await expect(
-                        handleSale.connect(admin).close(consignmentId)
-                    ).to.emit(handleSale, "FeeDisbursed")
+                        saleHandler.connect(admin).close(consignmentId)
+                    ).to.emit(saleHandler, "FeeDisbursed")
                         .withArgs(consignmentId, staking.address, stakingAmount);
 
                 });
@@ -702,8 +702,8 @@ describe("HandleSale", function() {
 
                     // Admin closes sale
                     await expect(
-                        handleSale.connect(admin).close(consignmentId)
-                    ).to.emit(handleSale, "PayoutDisbursed")
+                        saleHandler.connect(admin).close(consignmentId)
+                    ).to.emit(saleHandler, "PayoutDisbursed")
                         .withArgs(consignmentId, seller.address, sellerAmount);
 
                 });
@@ -716,13 +716,13 @@ describe("HandleSale", function() {
 
             context("New Sales", async function () {
 
-                it("createSale() should transfer token to HandleSale contract", async function () {
+                it("createSale() should transfer token to SaleHandler contract", async function () {
 
                     // Seller balance of token
                     sellerBalance = await seenHausNFT.balanceOf(seller.address, tokenId);
 
                     // SELLER creates sale
-                    await handleSale.connect(seller).createSale(
+                    await saleHandler.connect(seller).createSale(
                         seller.address,
                         tokenAddress,
                         tokenId,
@@ -751,7 +751,7 @@ describe("HandleSale", function() {
                 beforeEach(async function() {
 
                     // SELLER creates sale for digital
-                    await handleSale.connect(seller).createSale(
+                    await saleHandler.connect(seller).createSale(
                         seller.address,
                         tokenAddress,
                         tokenId,
@@ -765,7 +765,7 @@ describe("HandleSale", function() {
 
                     // SELLER creates sale for physical
                     physicalConsignmentId = await marketController.getNextConsignment();
-                    await handleSale.connect(seller).createSale(
+                    await saleHandler.connect(seller).createSale(
                         seller.address,
                         tokenAddress,
                         physicalTokenId,
@@ -785,8 +785,8 @@ describe("HandleSale", function() {
 
                         // Wait until sales start and bid
                         await time.increaseTo(start);
-                        await handleSale.connect(buyer).buy(consignmentId, supply, {value: buyOutPrice});
-                        await handleSale.connect(buyer).buy(physicalConsignmentId, supply, {value: buyOutPrice});
+                        await saleHandler.connect(buyer).buy(consignmentId, supply, {value: buyOutPrice});
+                        await saleHandler.connect(buyer).buy(physicalConsignmentId, supply, {value: buyOutPrice});
 
                     });
 
@@ -796,7 +796,7 @@ describe("HandleSale", function() {
                         contractBalance = await seenHausNFT.balanceOf(seenHausNFT.address, tokenId);
 
                         // Admin closes sale
-                        await handleSale.connect(admin).close(consignmentId);
+                        await saleHandler.connect(admin).close(consignmentId);
 
                         // Get contract's new balance of token
                         newBalance = await seenHausNFT.balanceOf(seenHausNFT.address, tokenId);
@@ -817,7 +817,7 @@ describe("HandleSale", function() {
                         contractBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
 
                         // Admin closes sale
-                        await handleSale.connect(admin).close(physicalConsignmentId);
+                        await saleHandler.connect(admin).close(physicalConsignmentId);
 
                         // Get contract's new balance of token
                         newBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
@@ -838,7 +838,7 @@ describe("HandleSale", function() {
                         contractBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
 
                         // Admin closes sale
-                        await handleSale.connect(admin).close(physicalConsignmentId);
+                        await saleHandler.connect(admin).close(physicalConsignmentId);
 
                         // Get contract's new balance of escrow ticket
                         buyerBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
@@ -858,14 +858,14 @@ describe("HandleSale", function() {
 
                         // Wait until sale starts and bid
                         await time.increaseTo(start);
-                        await handleSale.connect(buyer).buy(consignmentId, single, {value: price});
+                        await saleHandler.connect(buyer).buy(consignmentId, single, {value: price});
 
                     });
 
                     it("should transfer consigned balance of token to seller if digital", async function () {
 
                         // Admin pulls sale with no bids
-                        await handleSale.connect(admin).cancel(consignmentId);
+                        await saleHandler.connect(admin).cancel(consignmentId);
 
                         // Get contract's new balance of token
                         newBalance = await seenHausNFT.balanceOf(seenHausNFT.address, tokenId);
@@ -880,7 +880,7 @@ describe("HandleSale", function() {
                     it("should transfer consigned balance of token to seller if physical", async function () {
 
                         // Admin pulls sale with no bids
-                        await handleSale.connect(admin).cancel(physicalConsignmentId);
+                        await saleHandler.connect(admin).cancel(physicalConsignmentId);
 
                         // Get contract's new balance of token
                         newBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);

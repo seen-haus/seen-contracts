@@ -7,11 +7,11 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "../MarketClient.sol";
 
 /**
- * @title HandleAuction
+ * @title AuctionHandler
  * @author Cliff Hall
  * @notice Handles the creation, running, and disposition of Seen.Haus auctions.
  */
-contract HandleAuction is MarketClient, ERC1155Holder {
+contract AuctionHandler is MarketClient, ERC1155Holder {
 
     /// Events
     event AuctionPending(Auction auction);

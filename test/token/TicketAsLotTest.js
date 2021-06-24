@@ -4,14 +4,14 @@ const { expect } = require("chai");
 const Role = require("../../domain/Role");
 const Ticketer = require("../../domain/Ticketer");
 
-describe("TicketAsLot", function() {
+describe("LotsTicketer", function() {
 
     // Common vars
     let accounts, deployer, admin, escrowAgent, associate, creator, marketHandler, buyer;
     let AccessController, accessController;
     let MarketController, marketController;
     let SeenHausNFT, seenHausNFT;
-    let TicketAsLot, ticketAsLot;
+    let LotsTicketer, lotsTicketer;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let ticketId, tokenId, tokenURI, counter, supply, balance, royaltyPercentage, owner;
 
@@ -69,13 +69,13 @@ describe("TicketAsLot", function() {
         // the MarketController's address in its constructor
         await marketController.setNft(seenHausNFT.address);
 
-        // Deploy the TicketAsLot contract
-        TicketAsLot = await ethers.getContractFactory("TicketAsLot");
-        ticketAsLot = await TicketAsLot.deploy(
+        // Deploy the LotsTicketer contract
+        LotsTicketer = await ethers.getContractFactory("LotsTicketer");
+        lotsTicketer = await LotsTicketer.deploy(
             accessController.address,
             marketController.address
         );
-        await ticketAsLot.deployed();
+        await lotsTicketer.deployed();
 
     });
 
@@ -106,7 +106,7 @@ describe("TicketAsLot", function() {
                 // N.B. in reality they would go from escrow agent to market handler to ticketer
                 await seenHausNFT.connect(escrowAgent).safeTransferFrom(
                     escrowAgent.address,
-                    ticketAsLot.address,
+                    lotsTicketer.address,
                     tokenId,
                     supply,
                     []
@@ -118,11 +118,11 @@ describe("TicketAsLot", function() {
 
                 // non-MARKET_HANDLER attempt
                 await expect(
-                    ticketAsLot.connect(associate).issueTicket(tokenId, supply, buyer.address)
+                    lotsTicketer.connect(associate).issueTicket(tokenId, supply, buyer.address)
                 ).to.be.revertedWith("Access denied, caller doesn't have role");
 
                 // Get counter
-                counter = await ticketAsLot.getNextTicket();
+                counter = await lotsTicketer.getNextTicket();
 
                 // Test
                 expect(
@@ -131,10 +131,10 @@ describe("TicketAsLot", function() {
                 ).is.true;
 
                 // MARKET_HANDLER attempt
-                await ticketAsLot.connect(marketHandler).issueTicket(tokenId, supply, buyer.address);
+                await lotsTicketer.connect(marketHandler).issueTicket(tokenId, supply, buyer.address);
 
                 // Get counter
-                counter = await ticketAsLot.getNextTicket();
+                counter = await lotsTicketer.getNextTicket();
 
                 // Test
                 expect(
@@ -154,22 +154,22 @@ describe("TicketAsLot", function() {
                 // N.B. in reality they would go from escrow agent to market handler to ticketer
                 await seenHausNFT.connect(escrowAgent).safeTransferFrom(
                     escrowAgent.address,
-                    ticketAsLot.address,
+                    lotsTicketer.address,
                     tokenId,
                     supply,
                     []
                 );
 
                 // MARKET_HANDLER issues ticket
-                await ticketAsLot.connect(marketHandler).issueTicket(tokenId, supply, buyer.address);
+                await lotsTicketer.connect(marketHandler).issueTicket(tokenId, supply, buyer.address);
 
                 // Get owner of ticket
-                owner = await ticketAsLot.ownerOf(tokenId);
+                owner = await lotsTicketer.ownerOf(tokenId);
 
                 // Test
                 expect(
                     owner === buyer.address,
-                    "TicketAsLot didn't transfer full supply of ticket to buyer"
+                    "LotsTicketer didn't transfer full supply of ticket to buyer"
                 ).is.true;
 
             });
@@ -180,7 +180,7 @@ describe("TicketAsLot", function() {
 
                     // MARKET_HANDLER attempts to issues ticket without transferring tokens first
                     await expect(
-                        ticketAsLot.connect(marketHandler).issueTicket(tokenId, "0", buyer.address)
+                        lotsTicketer.connect(marketHandler).issueTicket(tokenId, "0", buyer.address)
                     ).revertedWith("Token amount cannot be zero.")
 
                 });
@@ -189,7 +189,7 @@ describe("TicketAsLot", function() {
 
                     // MARKET_HANDLER attempts to issues ticket without transferring tokens first
                     await expect(
-                        ticketAsLot.connect(marketHandler).issueTicket(tokenId, supply, buyer.address)
+                        lotsTicketer.connect(marketHandler).issueTicket(tokenId, supply, buyer.address)
                     ).revertedWith("Must transfer token amount to ticketer first.")
 
 
@@ -207,34 +207,34 @@ describe("TicketAsLot", function() {
                 // N.B. in reality they would go from escrow agent to market handler to ticketer
                 await seenHausNFT.connect(escrowAgent).safeTransferFrom(
                     escrowAgent.address,
-                    ticketAsLot.address,
+                    lotsTicketer.address,
                     tokenId,
                     supply,
                     []
                 );
 
                 // MARKET_HANDLER issues ticket
-                ticketId = await ticketAsLot.getNextTicket();
-                await ticketAsLot.connect(marketHandler).issueTicket(tokenId, supply, buyer.address);
+                ticketId = await lotsTicketer.getNextTicket();
+                await lotsTicketer.connect(marketHandler).issueTicket(tokenId, supply, buyer.address);
 
             });
 
             it("should allow buyer to transfer their ticket to another address", async function () {
 
                 // Buyer transfers their ticket to associate
-                await ticketAsLot.connect(buyer).transferFrom(
+                await lotsTicketer.connect(buyer).transferFrom(
                     buyer.address,
                     associate.address,
                     tokenId
                 );
 
                 // Get owner of ticket
-                owner = await ticketAsLot.ownerOf(ticketId);
+                owner = await lotsTicketer.ownerOf(ticketId);
 
                 // Test
                 expect(
                     owner === associate.address,
-                    "TicketAsLot didn't transfer ticket to associate"
+                    "LotsTicketer didn't transfer ticket to associate"
                 ).is.true;
 
             });
@@ -249,22 +249,22 @@ describe("TicketAsLot", function() {
                 // N.B. in reality they would go from escrow agent to market handler to ticketer
                 await seenHausNFT.connect(escrowAgent).safeTransferFrom(
                     escrowAgent.address,
-                    ticketAsLot.address,
+                    lotsTicketer.address,
                     tokenId,
                     supply,
                     []
                 );
 
                 // MARKET_HANDLER issues ticket
-                ticketId = await ticketAsLot.getNextTicket();
-                await ticketAsLot.connect(marketHandler).issueTicket(tokenId, supply, buyer.address);
+                ticketId = await lotsTicketer.getNextTicket();
+                await lotsTicketer.connect(marketHandler).issueTicket(tokenId, supply, buyer.address);
 
             });
 
             it("should transfer buyer's balance of the ticketed token to buyer", async function () {
 
                 // MARKET_HANDLER issues ticket
-                await ticketAsLot.connect(buyer).claim(ticketId);
+                await lotsTicketer.connect(buyer).claim(ticketId);
 
                 // Get buyer's balance of proof-of-ownership NFT
                 balance = await seenHausNFT.balanceOf(buyer.address, tokenId);
@@ -272,7 +272,7 @@ describe("TicketAsLot", function() {
                 // Test
                 expect(
                     balance.eq(supply),
-                    "TicketAsLot didn't transfer balance of ticketed token to buyer"
+                    "LotsTicketer didn't transfer balance of ticketed token to buyer"
                 ).is.true;
 
             });
@@ -283,7 +283,7 @@ describe("TicketAsLot", function() {
 
                     // buyer claims their ticket balance
                     await expect(
-                        ticketAsLot.connect(associate).claim(ticketId)
+                        lotsTicketer.connect(associate).claim(ticketId)
                     ).revertedWith("Caller not ticket holder");
 
                 });

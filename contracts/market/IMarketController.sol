@@ -154,14 +154,14 @@ interface IMarketController {
     function getDefaultTicketerType() external view returns (SeenTypes.Ticketer);
 
     /**
- * @notice Get the Escrow Ticketer to be used for a given consignment
- *
- * If a specific ticketer has not been set for the consignment,
- * the default escrow ticketer will be returned.
- *
- * @param _consignmentId - the id of the consignment
- * @return ticketer = the address of the escrow ticketer to use
- */
+     * @notice Get the Escrow Ticketer to be used for a given consignment
+     *
+     * If a specific ticketer has not been set for the consignment,
+     * the default escrow ticketer will be returned.
+     *
+     * @param _consignmentId - the id of the consignment
+     * @return ticketer = the address of the escrow ticketer to use
+     */
     function getEscrowTicketer(uint256 _consignmentId) external view returns (address ticketer);
 
     /**
