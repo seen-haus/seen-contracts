@@ -53,7 +53,7 @@ contract MarketController is AccessClient {
     /// @dev the percentage that will be taken as a fee from the net of a Seen.Haus sale or auction (after royalties)
     uint16 internal feePercentage;         // 1.75% = 175, 100% = 10000
 
-    /// @dev the maximum percentage of a Seen.Haus sale or auction that will be paid as a royalty (meant for foreign consignments)
+    /// @dev the maximum percentage of a Seen.Haus sale or auction that will be paid as a royalty
     uint16 internal maxRoyaltyPercentage;  // 1.75% = 175, 100% = 10000
 
     /// @dev the minimum percentage a Seen.Haus auction bid must be above the previous bid to prevail
