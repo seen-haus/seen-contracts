@@ -92,7 +92,7 @@ contract SaleHandler is MarketClient, ERC1155Holder {
         require(IERC1155(_tokenAddress).isApprovedForAll(_seller, address(this)), "Not approved to transfer seller's tokens");
 
         // Ensure seller owns _quantity tokens
-        require(IERC1155(_tokenAddress).balanceOf(_seller, _tokenId) >= _quantity, "Seller token balance less than quantity");
+        require(IERC1155(_tokenAddress).balanceOf(_seller, _tokenId) >= _quantity, "Seller has insufficient balance of token");
 
         // Register the consignment
         Consignment memory consignment = marketController.registerConsignment(_market, _seller, _tokenAddress, _tokenId);

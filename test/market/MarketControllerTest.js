@@ -17,6 +17,7 @@ describe("MarketController", function() {
     let address, amount, percentage, counter, market, token, tokenId, id, consignment, nextConsignment, escrowTicketer, escrowTicketerType;
     let replacementAmount, replacementPercentage;
     let replacementAddress = "0x2d36143CC2E0E74E007E7600F341dC9D37D81C07";
+    let tooLittle,tooMuch, revertReason;
 
     beforeEach( async function () {
 
@@ -595,6 +596,15 @@ describe("MarketController", function() {
                     .withArgs(Number(replacementPercentage));
             });
 
+            it("setOutBidPercentage() should emit a OutBidPercentageChanged event", async function () {
+
+                // Make change, test event
+                await expect(
+                    marketController.connect(admin).setOutBidPercentage(replacementPercentage)
+                ).to.emit(marketController, 'OutBidPercentageChanged')
+                    .withArgs(Number(replacementPercentage));
+            });
+
             it("setDefaultTicketerType() should emit a DefaultTicketerTypeChanged event", async function () {
 
                 // Make change, test event
@@ -606,9 +616,88 @@ describe("MarketController", function() {
 
         });
 
+        context("Revert Reasons", async function () {
+
+            beforeEach( async function () {
+
+                // Invalid percentages
+                tooLittle = "0";
+                tooMuch = "50000";
+                revertReason = "Percentage representation must be between 1 and 10000";
+            });
+
+            it("setFeePercentage() should revert if percentage is zero", async function () {
+
+                // Make change, test event
+                await expect(
+                    marketController.connect(admin).setFeePercentage(tooLittle)
+                ).to.be.revertedWith(revertReason);
+            });
+
+            it("setFeePercentage() should revert if percentage is more than 100", async function () {
+
+                // Make change, test event
+                await expect(
+                    marketController.connect(admin).setFeePercentage(tooMuch)
+                ).to.be.revertedWith(revertReason);
+            });
+
+            it("setMaxRoyaltyPercentage() should revert if percentage is zero", async function () {
+
+                // Make change, test event
+                await expect(
+                    marketController.connect(admin).setMaxRoyaltyPercentage(tooLittle)
+                ).to.be.revertedWith(revertReason);
+            });
+
+            it("setMaxRoyaltyPercentage() should revert if percentage is more than 100", async function () {
+
+                // Make change, test event
+                await expect(
+                    marketController.connect(admin).setMaxRoyaltyPercentage(tooMuch)
+                ).to.be.revertedWith(revertReason);
+            });
+
+            it("setOutBidPercentage() should revert if percentage is zero", async function () {
+
+                // Make change, test event
+                await expect(
+                    marketController.connect(admin).setOutBidPercentage(tooLittle)
+                ).to.be.revertedWith(revertReason);
+            });
+
+            it("setOutBidPercentage() should revert if percentage is more than 100", async function () {
+
+                // Make change, test event
+                await expect(
+                    marketController.connect(admin).setOutBidPercentage(tooMuch)
+                ).to.be.revertedWith(revertReason);
+            });
+
+            it("setDefaultTicketerType() should revert if ticketer type is Default", async function () {
+
+                revertReason = "Invalid ticketer type.";
+                // Make change, test event
+                await expect(
+                    marketController.connect(admin).setDefaultTicketerType(Ticketer.DEFAULT)
+                ).to.be.revertedWith(revertReason);
+            });
+
+            it("setDefaultTicketerType() should revert if ticketer type is already set as default", async function () {
+
+                revertReason = "Type is already default.";
+
+                // Make change, test event
+                await expect(
+                    marketController.connect(admin).setDefaultTicketerType(Ticketer.LOTS)
+                ).to.be.revertedWith(revertReason);
+            });
+
+        });
+
     });
 
-    context("Consignment Registration", async function () {
+    context("Managing Consignments", async function () {
 
         beforeEach( async function () {
 
@@ -624,7 +713,7 @@ describe("MarketController", function() {
 
         context("Privileged Access", async function () {
 
-            it("registerConsignment() should require ADMIN to register a consignment", async function () {
+            it("registerConsignment() should require MARKET_HANDLER role", async function () {
 
                 nextConsignment = await marketController.getNextConsignment();
 
@@ -716,6 +805,23 @@ describe("MarketController", function() {
                     marketController.connect(escrowAgent).setConsignmentTicketer(nextConsignment, Ticketer.ITEMS)
                 ).to.emit(marketController, 'ConsignmentTicketerChanged')
                     .withArgs(nextConsignment, Ticketer.ITEMS);
+            });
+
+        });
+
+        context("Revert Reasons", async function () {
+
+            it("setConsignmentTicketer() should revert if consignment id is invalid", async function () {
+
+                revertReason = "Invalid consignment id.";
+
+                // Get the next consignment id
+                nextConsignment = await marketController.getNextConsignment();
+
+                // ESCROW_AGENT sets ticketer type for consignment not yet created
+                await expect(
+                    marketController.connect(escrowAgent).setConsignmentTicketer(nextConsignment, Ticketer.ITEMS)
+                ).to.be.revertedWith(revertReason);
             });
 
         });

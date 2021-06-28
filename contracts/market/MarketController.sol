@@ -250,6 +250,8 @@ contract MarketController is AccessClient {
     function setFeePercentage(uint16 _feePercentage)
     external
     onlyRole(ADMIN) {
+        require(_feePercentage > 0 && _feePercentage <= 10000,
+            "Percentage representation must be between 1 and 10000");
         feePercentage = _feePercentage;
         emit FeePercentageChanged(feePercentage);
     }
@@ -276,6 +278,8 @@ contract MarketController is AccessClient {
     function setMaxRoyaltyPercentage(uint16 _maxRoyaltyPercentage)
     external
     onlyRole(ADMIN) {
+        require(_maxRoyaltyPercentage > 0 && _maxRoyaltyPercentage <= 10000,
+            "Percentage representation must be between 1 and 10000");
         maxRoyaltyPercentage = _maxRoyaltyPercentage;
         emit MaxRoyaltyPercentageChanged(maxRoyaltyPercentage);
     }
@@ -302,6 +306,8 @@ contract MarketController is AccessClient {
     function setOutBidPercentage(uint16 _outBidPercentage)
     external
     onlyRole(ADMIN) {
+        require(_outBidPercentage > 0 && _outBidPercentage <= 10000,
+            "Percentage representation must be between 1 and 10000");
         outBidPercentage = _outBidPercentage;
         emit OutBidPercentageChanged(outBidPercentage);
     }
@@ -359,7 +365,6 @@ contract MarketController is AccessClient {
         Ticketer ticketerType = (specified == Ticketer.Default) ? defaultTicketerType : specified;
         return (ticketerType == Ticketer.Lots) ? lotsTicketer : itemsTicketer;
     }
-
 
     /**
      * @notice The nextConsignment getter
@@ -438,7 +443,7 @@ contract MarketController is AccessClient {
     {
 
         // Be sure this is an existing consignment
-        require(_consignmentId < nextConsignment, "Invalid consignment ID");
+        require(_consignmentId < nextConsignment, "Invalid consignment id.");
 
         // Set the ticketer for the consignment if not different
         if (_ticketerType != consignmentTicketers[_consignmentId]) {

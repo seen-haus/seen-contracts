@@ -24,7 +24,7 @@ describe("SaleHandler", function() {
     let market, tokenAddress, tokenId, tokenURI, sale, physicalTokenId, physicalConsignmentId, consignmentId, nextConsignment, block, blockNumber;
     let royaltyPercentage, supply, start, quantity, price, perTxCap, audience, escrowTicketer;
     let royaltyAmount, sellerAmount, feeAmount, multisigAmount, stakingAmount, grossSale, netAfterRoyalties;
-    let sellerBalance, contractBalance, buyerBalance, ticketerBalance, newBalance, buyOutPrice, single;
+    let sellerBalance, contractBalance, buyerBalance, ticketerBalance, newBalance, buyOutPrice, single, badStartTime, halfSupply, signer;
 
     beforeEach( async function () {
 
@@ -164,50 +164,6 @@ describe("SaleHandler", function() {
             market = Market.PRIMARY;
             buyOutPrice = price.mul(ethers.BigNumber.from(quantity)).toString();
             single = "1";
-        });
-
-        context("Reading Sale Information", async function () {
-
-            beforeEach(async function () {
-
-                // Seller creates sale
-                await saleHandler.connect(seller).createSale(
-                    seller.address,
-                    tokenAddress,
-                    tokenId,
-                    start,
-                    quantity,
-                    price,
-                    perTxCap,
-                    audience,
-                    market
-                );
-
-            })
-
-            it("getSale() should return a valid Sale struct", async function () {
-
-                // Get next consignment
-                const response = await saleHandler.getSale(consignmentId);
-
-                // Convert to entity
-                sale = new Sale(
-                    response.consignmentId.toString(),
-                    response.start.toString(),
-                    response.quantity.toString(),
-                    response.price.toString(),
-                    response.perTxCap.toString(),
-                    response.state,
-                    response.outcome
-                );
-
-                // Test validity
-                expect(
-                    sale.isValid(),
-                    "Sale not valid"
-                ).is.true;
-
-            });
 
         });
 
@@ -570,6 +526,283 @@ describe("SaleHandler", function() {
 
         });
 
+        context("Revert Reasons", async function () {
+
+            context("New Sales", async function () {
+
+                context("createSale()", async function () {
+
+                    it("should revert if start time is in the past", async function () {
+
+                        // 15 minutes before latest block
+                        badStartTime = ethers.BigNumber.from(block.timestamp).sub('900000').toString();
+
+                        // Create sale, expect revert
+                        await expect(
+                            saleHandler.connect(seller).createSale(
+                                seller.address,
+                                tokenAddress,
+                                tokenId,
+                                badStartTime,
+                                quantity,
+                                price,
+                                perTxCap,
+                                audience,
+                                market
+                            )
+                        ).to.be.revertedWith('Time runs backward?');
+
+                    });
+
+                    it("should revert if contract doesn't have approval to transfer seller's tokens", async function () {
+
+                        // Seller un-approves AuctionHandler contract to transfer their tokens
+                        await seenHausNFT.connect(seller).setApprovalForAll(saleHandler.address, false);
+
+                        // Create sale, expect revert
+                        await expect(
+                            saleHandler.connect(seller).createSale(
+                                seller.address,
+                                tokenAddress,
+                                tokenId,
+                                start,
+                                quantity,
+                                price,
+                                perTxCap,
+                                audience,
+                                market
+                            )
+                        ).to.be.revertedWith("Not approved to transfer seller's tokens");
+
+                    });
+
+                    it("should revert if seller has insufficient balance of given token", async function () {
+
+                        halfSupply = ethers.BigNumber.from(supply).div("2");
+
+                        // Seller transfers half their tokens to associate
+                        await seenHausNFT.connect(seller).safeTransferFrom(seller.address, associate.address, tokenId, halfSupply, []);
+
+                        // Create sale, expect revert
+                        await expect(
+                            saleHandler.connect(seller).createSale(
+                                seller.address,
+                                tokenAddress,
+                                tokenId,
+                                start,
+                                quantity,
+                                price,
+                                perTxCap,
+                                audience,
+                                market
+                            )
+                        ).to.be.revertedWith("Seller has insufficient balance of token");
+
+                    });
+
+                });
+
+            });
+
+            context("Existing Sales", async function () {
+
+                beforeEach(async function() {
+
+                    // Lets use secondary market to trigger royalties
+                    market = Market.SECONDARY;
+
+                    // Set a lower perTxCap
+                    perTxCap = "5";
+
+                    // SELLER creates secondary market sale
+                    await saleHandler.connect(seller).createSale(
+                        seller.address,
+                        tokenAddress,
+                        tokenId,
+                        start,
+                        quantity,
+                        price,
+                        perTxCap,
+                        audience,
+                        market
+                    );
+
+                });
+
+                context("changeAudience()", async function () {
+
+                    it("should revert if sale doesn't exist", async function () {
+
+                        // get next consignment id
+                        consignmentId = await marketController.getNextConsignment();
+
+                        // ADMIN attempts to set audience for nonexistent sale
+                        await expect(
+                            saleHandler.connect(admin).changeAudience(
+                                consignmentId,
+                                Audience.OPEN
+                            )
+                        ).to.be.revertedWith("Sale does not exist");
+
+                    });
+
+                    it("should revert if sale already settled", async function () {
+
+                        // Wait until sale starts and bid
+                        await time.increaseTo(start);
+
+                        // Cancel the sale
+                        saleHandler.connect(admin).cancel(consignmentId);
+
+                        // ADMIN attempts to set audience for nonexistent sale
+                        await expect(
+                            saleHandler.connect(admin).changeAudience(
+                                consignmentId,
+                                Audience.VIP_STAKER
+                            )
+                        ).to.be.revertedWith("Sale has already been settled");
+
+                    });
+
+                });
+
+                context("buy()", async function () {
+
+                    beforeEach(async function () {
+
+                        // Wait until sale starts and bid
+                        await time.increaseTo(start);
+
+                    });
+
+                    it("should revert if sale doesn't exist", async function () {
+
+                        // get next consignment id
+                        consignmentId = await marketController.getNextConsignment();
+
+                        // ADMIN attempts to set audience for nonexistent sale
+                        await expect(
+                            saleHandler.connect(buyer).buy(consignmentId, single, {value: price})
+                        ).to.be.revertedWith("Sale does not exist");
+
+                    });
+
+                    it("should revert if buyer is a contract", async function () {
+
+                        // Try to buy with a contract
+                        signer = new ethers.VoidSigner(lotsTicketer.address, ethers.provider)
+                        await expect(
+                            saleHandler.connect(signer).callStatic.buy(consignmentId, single, {value: price})
+                        ).to.be.revertedWith("Contracts may not buy");
+
+                    });
+
+                    xit("should revert if audience is STAKER and buyer is not a staker", async function () {
+
+                        // TODO: Mock the staking contract so that staking level can be tested
+
+                        // Set the audience to STAKER
+                        saleHandler.connect(admin).changeAudience(
+                            consignmentId,
+                            Audience.STAKER
+                        );
+
+                        // Try to buy
+                        await expect(
+                            saleHandler.connect(buyer).buy(consignmentId, {value: price})
+                        ).to.be.revertedWith("Buyer is not a staker");
+
+                    });
+
+                    xit("should revert if audience is VIP_STAKER and buyer is not a VIP staker", async function () {
+
+                        // TODO: Mock the staking contract so that staking level can be tested
+
+                        // Set the audience to VIP_STAKER
+                        saleHandler.connect(admin).changeAudience(
+                            consignmentId,
+                            Audience.VIP_STAKER
+                        );
+
+                        // Try to buy
+                        await expect(
+                            saleHandler.connect(buyer).buy(consignmentId, {value: price})
+                        ).to.be.revertedWith("Buyer is not a VIP staker");
+
+                    });
+
+                    it("should revert if quantity is greater than per tx cap", async function () {
+
+                        let total = ethers.BigNumber.from(supply).mul(price);
+
+                        // Try to buy entire supply when per tx cap is lower
+                        await expect(
+                            saleHandler.connect(buyer).buy(consignmentId, supply, {value: total})
+                        ).to.be.revertedWith("Per transaction limit for this sale exceeded");
+
+                    });
+
+                    it("should revert if payment does not cover order price", async function () {
+
+                        // Try to buy two and pay for one
+                        await expect(
+                            saleHandler.connect(buyer).buy(consignmentId, "2", {value: price})
+                        ).to.be.revertedWith("Payment does not cover order price");
+
+                    });
+
+                });
+
+                context("close()", async function () {
+
+                    beforeEach(async function () {
+
+                        // Wait until sale starts and bid
+                        await time.increaseTo(start);
+
+                    });
+
+                    it("should revert if sale doesn't exist", async function () {
+
+                        // get next consignment id
+                        consignmentId = await marketController.getNextConsignment();
+
+                        // ADMIN attempts to set audience for nonexistent sale
+                        await expect(
+                            saleHandler.connect(admin).close(consignmentId)
+                        ).to.be.revertedWith("Sale does not exist");
+
+                    });
+
+                });
+
+                context("cancel()", async function () {
+
+                    beforeEach(async function () {
+
+                        // Wait until sale starts and bid
+                        await time.increaseTo(start);
+
+                    });
+
+                    it("should revert if sale doesn't exist", async function () {
+
+                        // get next consignment id
+                        consignmentId = await marketController.getNextConsignment();
+
+                        // ADMIN attempts to set audience for nonexistent sale
+                        await expect(
+                            saleHandler.connect(admin).cancel(consignmentId)
+                        ).to.be.revertedWith("Sale does not exist");
+
+                    });
+
+                });
+
+            });
+
+        });
+
         context("Funds Distribution", async function () {
 
             context("Primary Market", async function () {
@@ -710,7 +943,7 @@ describe("SaleHandler", function() {
 
             });
 
-        })
+        });
 
         context("Asset Transfers", async function () {
 
@@ -896,7 +1129,52 @@ describe("SaleHandler", function() {
 
             });
 
-        })
+        });
+
+        context("Reading Sale Information", async function () {
+
+            beforeEach(async function () {
+
+                // Seller creates sale
+                await saleHandler.connect(seller).createSale(
+                    seller.address,
+                    tokenAddress,
+                    tokenId,
+                    start,
+                    quantity,
+                    price,
+                    perTxCap,
+                    audience,
+                    market
+                );
+
+            })
+
+            it("getSale() should return a valid Sale struct", async function () {
+
+                // Get next consignment
+                const response = await saleHandler.getSale(consignmentId);
+
+                // Convert to entity
+                sale = new Sale(
+                    response.consignmentId.toString(),
+                    response.start.toString(),
+                    response.quantity.toString(),
+                    response.price.toString(),
+                    response.perTxCap.toString(),
+                    response.state,
+                    response.outcome
+                );
+
+                // Test validity
+                expect(
+                    sale.isValid(),
+                    "Sale not valid"
+                ).is.true;
+
+            });
+
+        });
 
     });
 

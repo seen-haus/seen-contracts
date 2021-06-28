@@ -25,7 +25,7 @@ describe("AuctionHandler", function() {
     let market, tokenAddress, tokenId, tokenURI, auction, physicalTokenId, physicalConsignmentId, consignmentId, nextConsignment, block, blockNumber, outbid;
     let royaltyPercentage, supply, start, duration, reserve, audience, clock, escrowTicketer;
     let royaltyAmount, sellerAmount, feeAmount, multisigAmount, stakingAmount, grossSale, netAfterRoyalties;
-    let sellerBalance, contractBalance, buyerBalance, ticketerBalance, newBalance;
+    let sellerBalance, contractBalance, buyerBalance, ticketerBalance, newBalance, badStartTime, signer, belowReserve, percentage, trollBid;
 
     const zeroAddress = ethers.BigNumber.from('0x0000000000000000000000000000000000000000');
 
@@ -166,53 +166,6 @@ describe("AuctionHandler", function() {
             audience = Audience.OPEN;
             market = Market.PRIMARY;
             clock = Clock.TRIGGERED;
-
-        });
-
-        context("Reading Auction Information", async function () {
-
-            beforeEach(async function () {
-
-                // Seller creates auction
-                await auctionHandler.connect(seller).createAuction(
-                    seller.address,
-                    tokenAddress,
-                    tokenId,
-                    start,
-                    duration,
-                    reserve,
-                    audience,
-                    market,
-                    clock
-                );
-
-            })
-
-            it("getAuction() should return a valid Auction struct", async function () {
-
-                // Get next consignment
-                const response = await auctionHandler.getAuction(consignmentId);
-
-                // Convert to entity
-                auction = new Auction(
-                    response.buyer,
-                    response.consignmentId.toString(),
-                    response.start.toString(),
-                    response.duration.toString(),
-                    response.reserve.toString(),
-                    response.bid.toString(),
-                    response.clock,
-                    response.state,
-                    response.outcome
-                );
-
-                // Test validity
-                expect(
-                    auction.isValid(),
-                    "Auction not valid"
-                ).is.true;
-
-            });
 
         });
 
@@ -715,6 +668,380 @@ describe("AuctionHandler", function() {
 
         });
 
+        context("Revert Reasons", async function () {
+
+            context("New Auctions", async function () {
+
+                context("createAuction()", async function () {
+
+                    it("should revert if start time is in the past", async function () {
+
+                        // 15 minutes before latest block
+                        badStartTime = ethers.BigNumber.from(block.timestamp).sub('900000').toString();
+
+                        // Create auction, expect revert
+                        await expect(
+                            auctionHandler.connect(seller).createAuction(
+                                seller.address,
+                                tokenAddress,
+                                tokenId,
+                                badStartTime,
+                                duration,
+                                reserve,
+                                audience,
+                                market,
+                                clock
+                            )
+                        ).to.be.revertedWith('Time runs backward?');
+
+                    });
+
+                    it("should revert if contract doesn't have approval to transfer seller's tokens", async function () {
+
+                        // Seller un-approves AuctionHandler contract to transfer their tokens
+                        await seenHausNFT.connect(seller).setApprovalForAll(auctionHandler.address, false);
+
+                        // Create auction, expect revert
+                        await expect(
+                            auctionHandler.connect(seller).createAuction(
+                                seller.address,
+                                tokenAddress,
+                                tokenId,
+                                start,
+                                duration,
+                                reserve,
+                                audience,
+                                market,
+                                clock
+                            )
+                        ).to.be.revertedWith("Not approved to transfer seller's tokens");
+
+                    });
+
+                    it("should revert if seller has no balance of given token", async function () {
+
+                        // Seller transfers all their tokens to associate
+                        await seenHausNFT.connect(seller).safeTransferFrom(seller.address, associate.address, tokenId, supply, []);
+
+                        // Create auction, expect revert
+                        await expect(
+                            auctionHandler.connect(seller).createAuction(
+                                seller.address,
+                                tokenAddress,
+                                tokenId,
+                                start,
+                                duration,
+                                reserve,
+                                audience,
+                                market,
+                                clock
+                            )
+                        ).to.be.revertedWith("Seller has zero balance of consigned token");
+
+                    });
+
+                });
+
+            });
+
+            context("Existing Auctions", async function () {
+
+                beforeEach(async function() {
+
+                    // Lets use secondary market to trigger royalties
+                    market = Market.SECONDARY;
+
+                    // SELLER creates secondary market auction
+                    await auctionHandler.connect(seller).createAuction(
+                        seller.address,
+                        tokenAddress,
+                        tokenId,
+                        start,
+                        duration,
+                        reserve,
+                        audience,
+                        market,
+                        clock
+                    );
+
+                    // Lowball bid
+                    belowReserve = reserve.div("2");
+
+                });
+
+                context("changeAudience()", async function () {
+
+                    it("should revert if auction doesn't exist", async function () {
+
+                        // get next consignment id
+                        consignmentId = await marketController.getNextConsignment();
+
+                        // ADMIN attempts to set audience for nonexistent auction
+                        await expect(
+                            auctionHandler.connect(admin).changeAudience(
+                                consignmentId,
+                                Audience.OPEN
+                            )
+                        ).to.be.revertedWith("Auction does not exist");
+
+                    });
+
+                    it("should revert if auction already settled", async function () {
+
+                        // Wait until auction starts and bid
+                        await time.increaseTo(start);
+                        await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve});
+
+                        // Now fast-forward to end of auction...
+                        await time.increaseTo(
+                            ethers.BigNumber
+                                .from(start)
+                                .add(
+                                    ethers.BigNumber.from(duration)
+                                )
+                                .add(
+                                    "1000" // 1s after end of auction
+                                )
+                                .toString()
+                        );
+
+                        // Close the auction
+                        auctionHandler.connect(admin).close(consignmentId);
+
+                        // ADMIN attempts to set audience for closed auction
+                        await expect(
+                            auctionHandler.connect(admin).changeAudience(
+                                consignmentId,
+                                Audience.VIP_STAKER
+                            )
+                        ).to.be.revertedWith("Auction has already been settled");
+
+                    });
+
+                });
+
+                context("bid()", async function () {
+
+                    beforeEach(async function () {
+
+                        // Wait until auction starts and bid
+                        await time.increaseTo(start);
+
+                    });
+
+                    it("should revert if auction doesn't exist", async function () {
+
+                        // get next consignment id
+                        consignmentId = await marketController.getNextConsignment();
+
+                        // ADMIN attempts to set audience for nonexistent auction
+                        await expect(
+                            auctionHandler.connect(bidder).bid(consignmentId, {value: reserve})
+                        ).to.be.revertedWith("Auction does not exist");
+
+                    });
+
+                    it("should revert if bidder is a contract", async function () {
+
+                        // Try to bid with a contract
+                        signer = new ethers.VoidSigner(lotsTicketer.address, ethers.provider)
+                        await expect(
+                            auctionHandler.connect(signer).callStatic.bid(consignmentId, {value: reserve})
+                        ).to.be.revertedWith("Contracts may not bid");
+
+                    });
+
+                    it("should revert if auction timer has elapsed", async function () {
+
+                        // Fast-forward past end of auction...
+                        await time.increaseTo(
+                            ethers.BigNumber
+                                .from(start)
+                                .add(
+                                    ethers.BigNumber.from(duration)
+                                )
+                                .add(
+                                    "1000" // 1s after end of auction
+                                )
+                                .toString()
+                        );
+
+                        // Try to bid with a contract
+                        await expect(
+                            auctionHandler.connect(bidder).bid(consignmentId, {value: reserve})
+                        ).to.be.revertedWith("Auction timer has elapsed");
+
+                    });
+
+                    it("should revert if bid is below reserve price", async function () {
+
+                        // Try to bid below reserve
+                        await expect(
+                            auctionHandler.connect(bidder).bid(consignmentId, {value: belowReserve})
+                        ).to.be.revertedWith("Bid below reserve price");
+
+                    });
+
+                    xit("should revert if audience is STAKER and bidder is not a staker", async function () {
+
+                        // TODO: Mock the staking contract so that staking level can be tested
+
+                        // Set the audience to STAKER
+                        auctionHandler.connect(admin).changeAudience(
+                            consignmentId,
+                            Audience.STAKER
+                        );
+
+                        // Try to bid below reserve
+                        await expect(
+                            auctionHandler.connect(bidder).bid(consignmentId, {value: reserve})
+                        ).to.be.revertedWith("Buyer is not a staker");
+
+                    });
+
+                    xit("should revert if audience is VIP_STAKER and bidder is not a VIP staker", async function () {
+
+                        // TODO: Mock the staking contract so that staking level can be tested
+
+                        // Set the audience to VIP_STAKER
+                        auctionHandler.connect(admin).changeAudience(
+                            consignmentId,
+                            Audience.VIP_STAKER
+                        );
+
+                        // Try to bid below reserve
+                        await expect(
+                            auctionHandler.connect(bidder).bid(consignmentId, {value: reserve})
+                        ).to.be.revertedWith("Buyer is not a VIP staker");
+
+                    });
+
+                    it("should revert if bid is below the outbid threshold", async function () {
+
+                        // Get HALF the outbid percentage
+                        percentage = ethers.BigNumber.from(outBidPercentage).div("2");
+                        trollBid = reserve.add(reserve.mul(percentage).div(10000));
+
+                        // Bid reserve
+                        auctionHandler.connect(bidder).bid(consignmentId, {value: reserve});
+
+                        // Try to troll
+                        await expect(
+                            auctionHandler.connect(associate).bid(consignmentId, {value: trollBid})
+                        ).to.be.revertedWith("Bid too small");
+
+                    });
+
+                });
+
+                context("close()", async function () {
+
+                    beforeEach(async function () {
+
+                        // Wait until auction starts and bid
+                        await time.increaseTo(start);
+                        await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve});
+
+                        // Now fast-forward to end of auction...
+                        await time.increaseTo(
+                            ethers.BigNumber
+                                .from(start)
+                                .add(
+                                    ethers.BigNumber.from(duration)
+                                )
+                                .add(
+                                    "1000" // 1s after end of auction
+                                )
+                                .toString()
+                        );
+
+                    });
+
+                    it("should revert if auction doesn't exist", async function () {
+
+                        // get next consignment id
+                        consignmentId = await marketController.getNextConsignment();
+
+                        // ADMIN attempts close nonexistent auction
+                        await expect(
+                            auctionHandler.connect(admin).close(consignmentId)
+                        ).to.be.revertedWith("Auction does not exist");
+
+                    });
+
+                });
+
+                context("pull()", async function () {
+
+                    beforeEach(async function () {
+
+                        // Fast-forward to end of auction, no bids...
+                        await time.increaseTo(
+                            ethers.BigNumber
+                                .from(start)
+                                .add(
+                                    ethers.BigNumber.from(duration)
+                                )
+                                .add(
+                                    "1000" // 1s after end of auction
+                                )
+                                .toString()
+                        );
+
+                    });
+
+                    it("should revert if auction doesn't exist", async function () {
+
+                        // get next consignment id
+                        consignmentId = await marketController.getNextConsignment();
+
+                        // ADMIN attempts to pull nonexistent auction
+                        await expect(
+                            auctionHandler.connect(admin).pull(consignmentId)
+                        ).to.be.revertedWith("Auction does not exist");
+
+                    });
+
+                });
+
+                context("cancel()", async function () {
+
+                    beforeEach(async function () {
+
+                        // Wait until auction starts and bid
+                        await time.increaseTo(start);
+                        await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve});
+
+                        // Fast-forward to half way through auction...
+                        await time.increaseTo(
+                            ethers.BigNumber
+                                .from(start)
+                                .add(
+                                    ethers.BigNumber.from(duration).div("2")
+                                )
+                                .toString()
+                        );
+
+                    });
+
+                    it("should revert if auction doesn't exist", async function () {
+
+                        // get next consignment id
+                        consignmentId = await marketController.getNextConsignment();
+
+                        // ADMIN attempts to set cancel nonexistent auction
+                        await expect(
+                            auctionHandler.connect(admin).cancel(consignmentId)
+                        ).to.be.revertedWith("Auction does not exist");
+
+                    });
+
+                });
+
+            });
+
+        });
+
         context("Funds Distribution", async function () {
 
             context("Primary Market", async function () {
@@ -881,7 +1208,7 @@ describe("AuctionHandler", function() {
 
             });
 
-        })
+        });
 
         context("Asset Transfers", async function () {
 
@@ -1141,7 +1468,54 @@ describe("AuctionHandler", function() {
 
             });
 
-        })
+        });
+
+        context("Reading Auction Information", async function () {
+
+            beforeEach(async function () {
+
+                // Seller creates auction
+                await auctionHandler.connect(seller).createAuction(
+                    seller.address,
+                    tokenAddress,
+                    tokenId,
+                    start,
+                    duration,
+                    reserve,
+                    audience,
+                    market,
+                    clock
+                );
+
+            })
+
+            it("getAuction() should return a valid Auction struct", async function () {
+
+                // Get next consignment
+                const response = await auctionHandler.getAuction(consignmentId);
+
+                // Convert to entity
+                auction = new Auction(
+                    response.buyer,
+                    response.consignmentId.toString(),
+                    response.start.toString(),
+                    response.duration.toString(),
+                    response.reserve.toString(),
+                    response.bid.toString(),
+                    response.clock,
+                    response.state,
+                    response.outcome
+                );
+
+                // Test validity
+                expect(
+                    auction.isValid(),
+                    "Auction not valid"
+                ).is.true;
+
+            });
+
+        });
 
     });
 
