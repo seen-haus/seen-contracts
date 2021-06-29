@@ -21,8 +21,8 @@ contract SaleHandler is MarketClient, ERC1155Holder {
     event SaleEnded(uint256 indexed consignmentId, Outcome outcome);
     event Purchase(uint256 indexed consignmentId, address indexed buyer, uint256 amount);
 
-    /// @notice map a consignment id to a sale
-    mapping(uint256 => Sale) public sales;
+    /// @dev map a consignment id to a sale
+    mapping(uint256 => Sale) private sales;
 
     /**
      * @notice Constructor

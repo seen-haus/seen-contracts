@@ -9,6 +9,7 @@ const State = require("../../domain/State");
 const Outcome = require("../../domain/Outcome");
 const Audience = require("../../domain/Audience");
 const Ticketer = require("../../domain/Ticketer");
+const Consignment = require("../../domain/Consignment");
 
 describe("SaleHandler", function() {
 
@@ -23,7 +24,7 @@ describe("SaleHandler", function() {
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let market, tokenAddress, tokenId, tokenURI, sale, physicalTokenId, physicalConsignmentId, consignmentId, nextConsignment, block, blockNumber;
     let royaltyPercentage, supply, start, quantity, price, perTxCap, audience, escrowTicketer;
-    let royaltyAmount, sellerAmount, feeAmount, multisigAmount, stakingAmount, grossSale, netAfterRoyalties;
+    let royaltyAmount, sellerAmount, feeAmount, multisigAmount, stakingAmount, grossSale, netAfterRoyalties, consignment;
     let sellerBalance, contractBalance, buyerBalance, ticketerBalance, newBalance, buyOutPrice, single, badStartTime, halfSupply, signer;
 
     beforeEach( async function () {
@@ -757,7 +758,7 @@ describe("SaleHandler", function() {
 
                     beforeEach(async function () {
 
-                        // Wait until sale starts and bid
+                        // Move to sale start time
                         await time.increaseTo(start);
 
                     });
@@ -767,10 +768,31 @@ describe("SaleHandler", function() {
                         // get next consignment id
                         consignmentId = await marketController.getNextConsignment();
 
-                        // ADMIN attempts to set audience for nonexistent sale
+                        // ADMIN attempts to close a nonexistent sale
                         await expect(
                             saleHandler.connect(admin).close(consignmentId)
                         ).to.be.revertedWith("Sale does not exist");
+
+                    });
+
+                    it("should revert if sale is already settled", async function () {
+
+                        // Cancel the sale
+                        await saleHandler.connect(admin).cancel(consignmentId);
+
+                        // ADMIN attempts to close a sale that has been settled
+                        await expect(
+                            saleHandler.connect(admin).close(consignmentId)
+                        ).to.be.revertedWith("Sale has already been settled");
+
+                    });
+
+                    it("should revert if no purchases have been made", async function () {
+
+                        // ADMIN attempts to close a sale that hasn't even started
+                        await expect(
+                            saleHandler.connect(admin).close(consignmentId)
+                        ).to.be.revertedWith("Sale hasn't started");
 
                     });
 
@@ -794,6 +816,18 @@ describe("SaleHandler", function() {
                         await expect(
                             saleHandler.connect(admin).cancel(consignmentId)
                         ).to.be.revertedWith("Sale does not exist");
+
+                    });
+
+                    it("should revert if sale is already settled", async function () {
+
+                        // Cancel the sale
+                        await saleHandler.connect(admin).cancel(consignmentId);
+
+                        // ADMIN attempts to cancel a sale that has been settled
+                        await expect(
+                            saleHandler.connect(admin).cancel(consignmentId)
+                        ).to.be.revertedWith("Sale has already been settled");
 
                     });
 
@@ -1170,6 +1204,37 @@ describe("SaleHandler", function() {
                 expect(
                     sale.isValid(),
                     "Sale not valid"
+                ).is.true;
+
+            });
+
+            it("supply() should return the remaining supply of a consignment on sale", async function () {
+
+                // Create consignment
+                consignment = new Consignment(market, seller.address, tokenAddress, tokenId, consignmentId);
+
+                // Get the supply from the sale contract
+                let result = await saleHandler.supply(consignment);
+
+                // Test result
+                expect(
+                    result.eq(supply),
+                    "Supply incorrect"
+                ).is.true;
+
+                // Move to sale start time
+                await time.increaseTo(start);
+
+                // Buy one
+                await saleHandler.connect(buyer).buy(consignmentId, single, {value: price})
+
+                // Check supply again
+                result = await saleHandler.supply(consignment);
+
+                // Test result
+                expect(
+                    result.eq(ethers.BigNumber.from(supply).sub(single)),
+                    "Supply incorrect"
                 ).is.true;
 
             });

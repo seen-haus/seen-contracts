@@ -24,8 +24,8 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
     // TODO support and test this (probably move to MarketClient)
     event ConsignmentTransferred(uint256 indexed consignmentId, address indexed recipient, uint256 indexed amount);
 
-    /// @notice map a consignment id to an auction
-    mapping(uint256 => Auction) public auctions;
+    /// @dev map a consignment id to an auction
+    mapping(uint256 => Auction) private auctions;
 
     /**
      * @notice Constructor
@@ -257,8 +257,10 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
         uint256 endTime = auction.start + auction.duration;
         require(block.timestamp > endTime, "Auction end time not yet reached");
 
-        // Make sure it can be closed normally
-        require(auction.state == State.Running, "Auction has not yet started");
+        // Make sure auction hasn't been settled
+        require(auction.outcome == Outcome.Pending, "Auction has already been settled");
+
+        // Make sure it there was at least one bid
         require(auction.buyer != address(0), "No bids have been placed");
 
         // Mark auction as settled

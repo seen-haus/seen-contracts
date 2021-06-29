@@ -636,7 +636,6 @@ describe("AuctionHandler", function() {
                                 .toString()
                         );
 
-
                     });
 
                     it("should emit an AuctionEnded event", async function () {
@@ -822,14 +821,10 @@ describe("AuctionHandler", function() {
 
                 context("bid()", async function () {
 
-                    beforeEach(async function () {
-
-                        // Wait until auction starts and bid
-                        await time.increaseTo(start);
-
-                    });
-
                     it("should revert if auction doesn't exist", async function () {
+
+                        // Fast forward to auction start time
+                        await time.increaseTo(start);
 
                         // get next consignment id
                         consignmentId = await marketController.getNextConsignment();
@@ -842,6 +837,9 @@ describe("AuctionHandler", function() {
                     });
 
                     it("should revert if bidder is a contract", async function () {
+
+                        // Fast forward to auction start time
+                        await time.increaseTo(start);
 
                         // Try to bid with a contract
                         signer = new ethers.VoidSigner(lotsTicketer.address, ethers.provider)
@@ -866,14 +864,26 @@ describe("AuctionHandler", function() {
                                 .toString()
                         );
 
-                        // Try to bid with a contract
+                        // Try to bid after auction has ended
                         await expect(
                             auctionHandler.connect(bidder).bid(consignmentId, {value: reserve})
                         ).to.be.revertedWith("Auction timer has elapsed");
 
                     });
 
+                    it("should revert if auction start time hasn't arrived", async function () {
+
+                        // Try to bid before auction has started
+                        await expect(
+                            auctionHandler.connect(bidder).bid(consignmentId, {value: reserve})
+                        ).to.be.revertedWith("Auction hasn't started");
+
+                    });
+
                     it("should revert if bid is below reserve price", async function () {
+
+                        // Fast forward to auction start time
+                        await time.increaseTo(start);
 
                         // Try to bid below reserve
                         await expect(
@@ -883,6 +893,9 @@ describe("AuctionHandler", function() {
                     });
 
                     xit("should revert if audience is STAKER and bidder is not a staker", async function () {
+
+                        // Fast forward to auction start time
+                        await time.increaseTo(start);
 
                         // TODO: Mock the staking contract so that staking level can be tested
 
@@ -901,6 +914,9 @@ describe("AuctionHandler", function() {
 
                     xit("should revert if audience is VIP_STAKER and bidder is not a VIP staker", async function () {
 
+                        // Fast forward to auction start time
+                        await time.increaseTo(start);
+
                         // TODO: Mock the staking contract so that staking level can be tested
 
                         // Set the audience to VIP_STAKER
@@ -917,6 +933,9 @@ describe("AuctionHandler", function() {
                     });
 
                     it("should revert if bid is below the outbid threshold", async function () {
+
+                        // Fast forward to auction start time
+                        await time.increaseTo(start);
 
                         // Get HALF the outbid percentage
                         percentage = ethers.BigNumber.from(outBidPercentage).div("2");
@@ -940,20 +959,6 @@ describe("AuctionHandler", function() {
 
                         // Wait until auction starts and bid
                         await time.increaseTo(start);
-                        await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve});
-
-                        // Now fast-forward to end of auction...
-                        await time.increaseTo(
-                            ethers.BigNumber
-                                .from(start)
-                                .add(
-                                    ethers.BigNumber.from(duration)
-                                )
-                                .add(
-                                    "1000" // 1s after end of auction
-                                )
-                                .toString()
-                        );
 
                     });
 
@@ -969,11 +974,63 @@ describe("AuctionHandler", function() {
 
                     });
 
+                    it("should revert if end time not yet reached", async function () {
+
+                        // ADMIN attempts close auction whose timer has not elapsed
+                        await expect(
+                            auctionHandler.connect(admin).close(consignmentId)
+                        ).to.be.revertedWith("Auction end time not yet reached");
+
+                    });
+
+                    it("should revert if end time reached and no bids have been made", async function () {
+
+                        // Now fast-forward to end of auction...
+                        await time.increaseTo(
+                            ethers.BigNumber
+                                .from(start)
+                                .add(
+                                    ethers.BigNumber.from(duration)
+                                )
+                                .add(
+                                    "1000" // 1s after end of auction
+                                )
+                                .toString()
+                        );
+
+                        // ADMIN attempts close auction whose timer has not elapsed
+                        await expect(
+                            auctionHandler.connect(admin).close(consignmentId)
+                        ).to.be.revertedWith("No bids have been placed");
+
+                    });
+
                 });
 
                 context("pull()", async function () {
 
-                    beforeEach(async function () {
+                    it("should revert if auction doesn't exist", async function () {
+
+                        // get next consignment id
+                        consignmentId = await marketController.getNextConsignment();
+
+                        // ADMIN attempts to pull nonexistent auction
+                        await expect(
+                            auctionHandler.connect(admin).pull(consignmentId)
+                        ).to.be.revertedWith("Auction does not exist");
+
+                    });
+
+                    it("should revert if end time not yet reached", async function () {
+
+                        // ADMIN attempts to pull auction whose timer has not elapsed
+                        await expect(
+                            auctionHandler.connect(admin).pull(consignmentId)
+                        ).to.be.revertedWith("Auction end time not yet reached");
+
+                    });
+
+                    it("should revert if auction has already been settled", async function () {
 
                         // Fast-forward to end of auction, no bids...
                         await time.increaseTo(
@@ -988,17 +1045,39 @@ describe("AuctionHandler", function() {
                                 .toString()
                         );
 
-                    });
+                        // Pull the auction
+                        auctionHandler.connect(admin).pull(consignmentId)
 
-                    it("should revert if auction doesn't exist", async function () {
-
-                        // get next consignment id
-                        consignmentId = await marketController.getNextConsignment();
-
-                        // ADMIN attempts to pull nonexistent auction
+                        // ADMIN attempts to pull auction that has already been settled
                         await expect(
                             auctionHandler.connect(admin).pull(consignmentId)
-                        ).to.be.revertedWith("Auction does not exist");
+                        ).to.be.revertedWith("Auction has already been settled");
+
+                    });
+
+                    it("should revert if bids have been placed", async function () {
+
+                        // Fast-forward to auction start and bid
+                        await time.increaseTo(start);
+                        await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve});
+
+                        // Fast-forward to end of auction
+                        await time.increaseTo(
+                            ethers.BigNumber
+                                .from(start)
+                                .add(
+                                    ethers.BigNumber.from(duration)
+                                )
+                                .add(
+                                    "1000" // 1s after end of auction
+                                )
+                                .toString()
+                        );
+
+                        // ADMIN attempts to pull auction where bids have been placed
+                        await expect(
+                            auctionHandler.connect(admin).pull(consignmentId)
+                        ).to.be.revertedWith("Bids have been placed");
 
                     });
 
@@ -1006,11 +1085,41 @@ describe("AuctionHandler", function() {
 
                 context("cancel()", async function () {
 
-                    beforeEach(async function () {
+                    it("should revert if auction doesn't exist", async function () {
 
-                        // Wait until auction starts and bid
-                        await time.increaseTo(start);
-                        await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve});
+                        // get next consignment id
+                        consignmentId = await marketController.getNextConsignment();
+
+                        // ADMIN attempts to set cancel nonexistent auction
+                        await expect(
+                            auctionHandler.connect(admin).cancel(consignmentId)
+                        ).to.be.revertedWith("Auction does not exist");
+
+                    });
+
+                    it("should revert if auction timer has elapsed", async function () {
+
+                        // Fast-forward to end of auction, no bids
+                        await time.increaseTo(
+                            ethers.BigNumber
+                                .from(start)
+                                .add(
+                                    ethers.BigNumber.from(duration)
+                                )
+                                .add(
+                                    "1000" // 1s after end of auction
+                                )
+                                .toString()
+                        );
+
+                        // ADMIN attempts to set cancel an auction whose timer has elapsed
+                        await expect(
+                            auctionHandler.connect(admin).cancel(consignmentId)
+                        ).to.be.revertedWith("Auction timer has elapsed");
+
+                    });
+
+                    it("should revert if auction has already been settled", async function () {
 
                         // Fast-forward to half way through auction...
                         await time.increaseTo(
@@ -1022,17 +1131,13 @@ describe("AuctionHandler", function() {
                                 .toString()
                         );
 
-                    });
+                        // Cancel the auction
+                        auctionHandler.connect(admin).cancel(consignmentId)
 
-                    it("should revert if auction doesn't exist", async function () {
-
-                        // get next consignment id
-                        consignmentId = await marketController.getNextConsignment();
-
-                        // ADMIN attempts to set cancel nonexistent auction
+                        // ADMIN attempts to cancel auction that has already been settled
                         await expect(
                             auctionHandler.connect(admin).cancel(consignmentId)
-                        ).to.be.revertedWith("Auction does not exist");
+                        ).to.be.revertedWith("Auction has already been settled");
 
                     });
 
