@@ -14,7 +14,7 @@ describe("SeenHausNFT", function() {
     let SeenHausNFT, seenHausNFT;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let counter, tokenURI, nextToken, supply, salePrice, royaltyAmount, expectedRoyalty, percentage, royaltyPercentage;
-    let token, isPhysical, balance, amount, tokenId, uri;
+    let token, isPhysical, balance, amount, tokenId, uri, invalidRoyaltyPercentage;
 
     beforeEach( async function () {
 
@@ -355,6 +355,35 @@ describe("SeenHausNFT", function() {
                     royaltyAmount.toString() === expectedRoyalty.toString(),
                     "Incorrect royalty amount"
                 ).is.true;
+
+            });
+
+        });
+
+        context("Revert Reasons", async function () {
+
+            beforeEach( async function () {
+
+                invalidRoyaltyPercentage = ethers.BigNumber.from(maxRoyaltyPercentage).mul("2");
+
+            });
+
+            it("mintDigital() should revert if royalty percentage exceeds maximum", async function () {
+
+                // MINTER attempts to mint with royalty invalid royalty percentage
+                await expect(
+                    seenHausNFT.connect(minter).mintDigital(supply, creator.address, tokenURI, invalidRoyaltyPercentage)
+                ).to.be.revertedWith("Royalty percentage exceeds marketplace maximum")
+
+
+            });
+
+            it("mintPhysical() should revert if royalty percentage exceeds maximum", async function () {
+
+                // MINTER attempts to mint with royalty invalid royalty percentage
+                await expect(
+                    seenHausNFT.connect(escrowAgent).mintPhysical(supply, creator.address, tokenURI, invalidRoyaltyPercentage)
+                ).to.be.revertedWith("Royalty percentage exceeds marketplace maximum")
 
             });
 
