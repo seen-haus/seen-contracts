@@ -263,24 +263,6 @@ describe("SaleHandler", function() {
 
                 });
 
-                it("close() should require caller has ADMIN role", async function () {
-
-                   // Wait until sale starts and buy
-                    await time.increaseTo(start);
-                    await saleHandler.connect(buyer).buy(consignmentId, supply, {value: buyOutPrice});
-
-                    // non-ADMIN attempt
-                    await expect(
-                        saleHandler.connect(associate).close(consignmentId)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
-
-                    // ADMIN attempt
-                    await expect (
-                        saleHandler.connect(admin).close(consignmentId)
-                    ).to.emit(saleHandler,"SaleEnded");
-
-                });
-
                 it("cancel() should require caller has ADMIN role", async function () {
 
                     // Wait until sale starts and buy
@@ -445,9 +427,9 @@ describe("SaleHandler", function() {
 
                     it("should emit a SaleEnded event", async function () {
 
-                        // Admin closes sale
+                        // Seller closes sale
                         await expect(
-                            saleHandler.connect(admin).close(consignmentId)
+                            saleHandler.connect(seller).close(consignmentId)
                         ).to.emit(saleHandler, "SaleEnded")
                             .withArgs(
                                 consignmentId,
@@ -458,9 +440,9 @@ describe("SaleHandler", function() {
 
                     it("should trigger a SaleEnded event", async function () {
 
-                        // Admin closes sale
+                        // Seller closes sale
                         await expect(
-                            saleHandler.connect(admin).close(consignmentId)
+                            saleHandler.connect(seller).close(consignmentId)
                         ).to.emit(saleHandler, "SaleEnded")
                             .withArgs(
                                 consignmentId,
@@ -471,27 +453,27 @@ describe("SaleHandler", function() {
 
                     it("should trigger an PayoutDisbursed event", async function () {
 
-                        // Admin closes sale
+                        // Seller closes sale
                         await expect(
-                            saleHandler.connect(admin).close(consignmentId)
+                            saleHandler.connect(seller).close(consignmentId)
                         ).to.emit(saleHandler, "PayoutDisbursed");
 
                     });
 
                     it("should trigger an FeeDisbursed event", async function () {
 
-                        // Admin closes sale
+                        // Seller closes sale
                         await expect(
-                            saleHandler.connect(admin).close(consignmentId)
+                            saleHandler.connect(seller).close(consignmentId)
                         ).to.emit(saleHandler, "FeeDisbursed");
 
                     });
 
                     it("should trigger an RoyaltyDisbursed event for secondary market sales", async function () {
 
-                        // Admin closes sale
+                        // Seller closes sale
                         await expect(
-                            saleHandler.connect(admin).close(consignmentId)
+                            saleHandler.connect(seller).close(consignmentId)
                         ).to.emit(saleHandler, "RoyaltyDisbursed");
 
                     });
@@ -510,7 +492,7 @@ describe("SaleHandler", function() {
 
                     it("should emit an SaleEnded event", async function () {
 
-                        // Admin closes sale
+                        // Seller closes sale
                         await expect(
                             saleHandler.connect(admin).cancel(consignmentId)
                         ).to.emit(saleHandler, "SaleEnded")
@@ -770,7 +752,7 @@ describe("SaleHandler", function() {
 
                         // ADMIN attempts to close a nonexistent sale
                         await expect(
-                            saleHandler.connect(admin).close(consignmentId)
+                            saleHandler.connect(seller).close(consignmentId)
                         ).to.be.revertedWith("Sale does not exist");
 
                     });
@@ -782,7 +764,7 @@ describe("SaleHandler", function() {
 
                         // ADMIN attempts to close a sale that has been settled
                         await expect(
-                            saleHandler.connect(admin).close(consignmentId)
+                            saleHandler.connect(seller).close(consignmentId)
                         ).to.be.revertedWith("Sale has already been settled");
 
                     });
@@ -791,7 +773,7 @@ describe("SaleHandler", function() {
 
                         // ADMIN attempts to close a sale that hasn't even started
                         await expect(
-                            saleHandler.connect(admin).close(consignmentId)
+                            saleHandler.connect(seller).close(consignmentId)
                         ).to.be.revertedWith("Sale hasn't started");
 
                     });
@@ -872,9 +854,9 @@ describe("SaleHandler", function() {
 
                 it("multisig contract should be sent half the marketplace fee based on gross", async function () {
 
-                    // Admin closes sale
+                    // Seller closes sale
                     await expect(
-                        saleHandler.connect(admin).close(consignmentId)
+                        saleHandler.connect(seller).close(consignmentId)
                     ).to.emit(saleHandler, "FeeDisbursed")
                         .withArgs(consignmentId, multisig.address, multisigAmount);
 
@@ -882,9 +864,9 @@ describe("SaleHandler", function() {
 
                 it("staking contract should be sent half the marketplace fee based on gross", async function () {
 
-                    // Admin closes sale
+                    // Seller closes sale
                     await expect(
-                        saleHandler.connect(admin).close(consignmentId)
+                        saleHandler.connect(seller).close(consignmentId)
                     ).to.emit(saleHandler, "FeeDisbursed")
                         .withArgs(consignmentId, staking.address, stakingAmount);
 
@@ -892,9 +874,9 @@ describe("SaleHandler", function() {
 
                 it("seller should be sent remainder after marketplace fee", async function () {
 
-                    // Admin closes sale
+                    // Seller closes sale
                     await expect(
-                        saleHandler.connect(admin).close(consignmentId)
+                        saleHandler.connect(seller).close(consignmentId)
                     ).to.emit(saleHandler, "PayoutDisbursed")
                         .withArgs(consignmentId, seller.address, sellerAmount);
 
@@ -937,9 +919,9 @@ describe("SaleHandler", function() {
 
                 it("creator should receive royalty based on gross sale amount", async function () {
 
-                    // Admin closes sale
+                    // Seller closes sale
                     await expect(
-                        saleHandler.connect(admin).close(consignmentId)
+                        saleHandler.connect(seller).close(consignmentId)
                     ).to.emit(saleHandler, "RoyaltyDisbursed")
                         .withArgs(consignmentId, creator.address, royaltyAmount);
 
@@ -947,9 +929,9 @@ describe("SaleHandler", function() {
 
                 it("multisig contract should be sent half the marketplace fee based on net after royalty", async function () {
 
-                    // Admin closes sale
+                    // Seller closes sale
                     await expect(
-                        saleHandler.connect(admin).close(consignmentId)
+                        saleHandler.connect(seller).close(consignmentId)
                     ).to.emit(saleHandler, "FeeDisbursed")
                         .withArgs(consignmentId, multisig.address, multisigAmount);
 
@@ -957,9 +939,9 @@ describe("SaleHandler", function() {
 
                 it("staking contract should be sent half the marketplace fee based on net after royalty", async function () {
 
-                    // Admin closes sale
+                    // Seller closes sale
                     await expect(
-                        saleHandler.connect(admin).close(consignmentId)
+                        saleHandler.connect(seller).close(consignmentId)
                     ).to.emit(saleHandler, "FeeDisbursed")
                         .withArgs(consignmentId, staking.address, stakingAmount);
 
@@ -967,9 +949,9 @@ describe("SaleHandler", function() {
 
                 it("seller should be sent remainder after royalty and fee", async function () {
 
-                    // Admin closes sale
+                    // Seller closes sale
                     await expect(
-                        saleHandler.connect(admin).close(consignmentId)
+                        saleHandler.connect(seller).close(consignmentId)
                     ).to.emit(saleHandler, "PayoutDisbursed")
                         .withArgs(consignmentId, seller.address, sellerAmount);
 
@@ -1062,8 +1044,8 @@ describe("SaleHandler", function() {
                         // Get contract balance of token
                         contractBalance = await seenHausNFT.balanceOf(seenHausNFT.address, tokenId);
 
-                        // Admin closes sale
-                        await saleHandler.connect(admin).close(consignmentId);
+                        // Seller closes sale
+                        await saleHandler.connect(seller).close(consignmentId);
 
                         // Get contract's new balance of token
                         newBalance = await seenHausNFT.balanceOf(seenHausNFT.address, tokenId);
@@ -1083,8 +1065,8 @@ describe("SaleHandler", function() {
                         // Get contract balance of token
                         contractBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
 
-                        // Admin closes sale
-                        await saleHandler.connect(admin).close(physicalConsignmentId);
+                        // Seller closes sale
+                        await saleHandler.connect(seller).close(physicalConsignmentId);
 
                         // Get contract's new balance of token
                         newBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
@@ -1104,8 +1086,8 @@ describe("SaleHandler", function() {
                         // Get contract balance of token
                         contractBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
 
-                        // Admin closes sale
-                        await saleHandler.connect(admin).close(physicalConsignmentId);
+                        // Seller closes sale
+                        await saleHandler.connect(seller).close(physicalConsignmentId);
 
                         // Get contract's new balance of escrow ticket
                         buyerBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);

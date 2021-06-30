@@ -264,37 +264,6 @@ describe("AuctionHandler", function() {
 
                 });
 
-                it("close() should require caller has ADMIN role", async function () {
-
-                   // Wait until auction starts and bid
-                    await time.increaseTo(start);
-                    await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve});
-
-                    // Now fast-forward to end of auction...
-                    await time.increaseTo(
-                        ethers.BigNumber
-                            .from(start)
-                            .add(
-                                ethers.BigNumber.from(duration)
-                            )
-                            .add(
-                                "1000" // 1s after end of auction
-                            )
-                            .toString()
-                    );
-
-                    // non-ADMIN attempt
-                    await expect(
-                        auctionHandler.connect(associate).close(consignmentId)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
-
-                    // ADMIN attempt
-                    await expect (
-                        auctionHandler.connect(admin).close(consignmentId)
-                    ).to.emit(auctionHandler,"AuctionEnded");
-
-                });
-
                 it("pull() should require caller has ADMIN role", async function () {
 
                     // Fast-forward to end of auction, no bids...
@@ -531,9 +500,9 @@ describe("AuctionHandler", function() {
 
                     it("should emit an AuctionEnded event", async function () {
 
-                        // Admin closes auction
+                        // Bidder closes auction
                         await expect(
-                            auctionHandler.connect(admin).close(consignmentId)
+                            auctionHandler.connect(bidder).close(consignmentId)
                         ).to.emit(auctionHandler, "AuctionEnded")
                             .withArgs(
                                 consignmentId,
@@ -544,9 +513,9 @@ describe("AuctionHandler", function() {
 
                     it("should trigger an AuctionEnded event", async function () {
 
-                        // Admin closes auction
+                        // Bidder closes auction
                         await expect(
-                            auctionHandler.connect(admin).close(consignmentId)
+                            auctionHandler.connect(bidder).close(consignmentId)
                         ).to.emit(auctionHandler, "AuctionEnded")
                             .withArgs(
                                 consignmentId,
@@ -557,27 +526,27 @@ describe("AuctionHandler", function() {
 
                     it("should trigger an PayoutDisbursed event", async function () {
 
-                        // Admin closes auction
+                        // Bidder closes auction
                         await expect(
-                            auctionHandler.connect(admin).close(consignmentId)
+                            auctionHandler.connect(bidder).close(consignmentId)
                         ).to.emit(auctionHandler, "PayoutDisbursed");
 
                     });
 
                     it("should trigger an FeeDisbursed event", async function () {
 
-                        // Admin closes auction
+                        // Bidder closes auction
                         await expect(
-                            auctionHandler.connect(admin).close(consignmentId)
+                            auctionHandler.connect(bidder).close(consignmentId)
                         ).to.emit(auctionHandler, "FeeDisbursed");
 
                     });
 
                     it("should trigger an RoyaltyDisbursed event for secondary market auctions", async function () {
 
-                        // Admin closes auction
+                        // Bidder closes auction
                         await expect(
-                            auctionHandler.connect(admin).close(consignmentId)
+                            auctionHandler.connect(bidder).close(consignmentId)
                         ).to.emit(auctionHandler, "RoyaltyDisbursed");
 
                     });
@@ -640,7 +609,7 @@ describe("AuctionHandler", function() {
 
                     it("should emit an AuctionEnded event", async function () {
 
-                        // Admin closes auction
+                        // Admin cancels auction
                         await expect(
                             auctionHandler.connect(admin).cancel(consignmentId)
                         ).to.emit(auctionHandler, "AuctionEnded")
@@ -653,7 +622,7 @@ describe("AuctionHandler", function() {
 
                     it("should trigger an BidReturned event if a bid existed", async function () {
 
-                        // Admin closes auction
+                        // Admin cancels auction
                         await expect(
                             auctionHandler.connect(admin).cancel(consignmentId)
                         ).to.emit(auctionHandler, "BidReturned")
@@ -805,7 +774,7 @@ describe("AuctionHandler", function() {
                         );
 
                         // Close the auction
-                        auctionHandler.connect(admin).close(consignmentId);
+                        auctionHandler.connect(bidder).close(consignmentId);
 
                         // ADMIN attempts to set audience for closed auction
                         await expect(
@@ -969,7 +938,7 @@ describe("AuctionHandler", function() {
 
                         // ADMIN attempts close nonexistent auction
                         await expect(
-                            auctionHandler.connect(admin).close(consignmentId)
+                            auctionHandler.connect(bidder).close(consignmentId)
                         ).to.be.revertedWith("Auction does not exist");
 
                     });
@@ -978,7 +947,7 @@ describe("AuctionHandler", function() {
 
                         // ADMIN attempts close auction whose timer has not elapsed
                         await expect(
-                            auctionHandler.connect(admin).close(consignmentId)
+                            auctionHandler.connect(bidder).close(consignmentId)
                         ).to.be.revertedWith("Auction end time not yet reached");
 
                     });
@@ -1000,7 +969,7 @@ describe("AuctionHandler", function() {
 
                         // ADMIN attempts close auction whose timer has not elapsed
                         await expect(
-                            auctionHandler.connect(admin).close(consignmentId)
+                            auctionHandler.connect(bidder).close(consignmentId)
                         ).to.be.revertedWith("No bids have been placed");
 
                     });
@@ -1195,9 +1164,9 @@ describe("AuctionHandler", function() {
 
                 it("multisig contract should be sent half the marketplace fee based on gross", async function () {
 
-                    // Admin closes auction
+                    // Bidder closes auction
                     await expect(
-                        auctionHandler.connect(admin).close(consignmentId)
+                        auctionHandler.connect(bidder).close(consignmentId)
                     ).to.emit(auctionHandler, "FeeDisbursed")
                         .withArgs(consignmentId, multisig.address, multisigAmount);
 
@@ -1205,9 +1174,9 @@ describe("AuctionHandler", function() {
 
                 it("staking contract should be sent half the marketplace fee based on gross", async function () {
 
-                    // Admin closes auction
+                    // Bidder closes auction
                     await expect(
-                        auctionHandler.connect(admin).close(consignmentId)
+                        auctionHandler.connect(bidder).close(consignmentId)
                     ).to.emit(auctionHandler, "FeeDisbursed")
                         .withArgs(consignmentId, staking.address, stakingAmount);
 
@@ -1215,9 +1184,9 @@ describe("AuctionHandler", function() {
 
                 it("seller should be sent remainder after marketplace fee", async function () {
 
-                    // Admin closes auction
+                    // Bidder closes auction
                     await expect(
-                        auctionHandler.connect(admin).close(consignmentId)
+                        auctionHandler.connect(bidder).close(consignmentId)
                     ).to.emit(auctionHandler, "PayoutDisbursed")
                         .withArgs(consignmentId, seller.address, sellerAmount);
 
@@ -1273,9 +1242,9 @@ describe("AuctionHandler", function() {
 
                 it("creator should receive royalty based on gross sale amount", async function () {
 
-                    // Admin closes auction
+                    // Bidder closes auction
                     await expect(
-                        auctionHandler.connect(admin).close(consignmentId)
+                        auctionHandler.connect(bidder).close(consignmentId)
                     ).to.emit(auctionHandler, "RoyaltyDisbursed")
                         .withArgs(consignmentId, creator.address, royaltyAmount);
 
@@ -1283,9 +1252,9 @@ describe("AuctionHandler", function() {
 
                 it("multisig contract should be sent half the marketplace fee based on net after royalty", async function () {
 
-                    // Admin closes auction
+                    // Bidder closes auction
                     await expect(
-                        auctionHandler.connect(admin).close(consignmentId)
+                        auctionHandler.connect(bidder).close(consignmentId)
                     ).to.emit(auctionHandler, "FeeDisbursed")
                         .withArgs(consignmentId, multisig.address, multisigAmount);
 
@@ -1293,9 +1262,9 @@ describe("AuctionHandler", function() {
 
                 it("staking contract should be sent half the marketplace fee based on net after royalty", async function () {
 
-                    // Admin closes auction
+                    // Bidder closes auction
                     await expect(
-                        auctionHandler.connect(admin).close(consignmentId)
+                        auctionHandler.connect(bidder).close(consignmentId)
                     ).to.emit(auctionHandler, "FeeDisbursed")
                         .withArgs(consignmentId, staking.address, stakingAmount);
 
@@ -1303,9 +1272,9 @@ describe("AuctionHandler", function() {
 
                 it("seller should be sent remainder after royalty and fee", async function () {
 
-                    // Admin closes auction
+                    // Bidder closes auction
                     await expect(
-                        auctionHandler.connect(admin).close(consignmentId)
+                        auctionHandler.connect(bidder).close(consignmentId)
                     ).to.emit(auctionHandler, "PayoutDisbursed")
                         .withArgs(consignmentId, seller.address, sellerAmount);
 
@@ -1411,8 +1380,8 @@ describe("AuctionHandler", function() {
                         // Get contract balance of token
                         contractBalance = await seenHausNFT.balanceOf(seenHausNFT.address, tokenId);
 
-                        // Admin closes auction
-                        await auctionHandler.connect(admin).close(consignmentId);
+                        // Bidder closes auction
+                        await auctionHandler.connect(bidder).close(consignmentId);
 
                         // Get contract's new balance of token
                         newBalance = await seenHausNFT.balanceOf(seenHausNFT.address, tokenId);
@@ -1432,8 +1401,8 @@ describe("AuctionHandler", function() {
                         // Get contract balance of token
                         contractBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
 
-                        // Admin closes auction
-                        await auctionHandler.connect(admin).close(physicalConsignmentId);
+                        // Bidder closes auction
+                        await auctionHandler.connect(bidder).close(physicalConsignmentId);
 
                         // Get contract's new balance of token
                         newBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
@@ -1453,8 +1422,8 @@ describe("AuctionHandler", function() {
                         // Get contract balance of token
                         contractBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
 
-                        // Admin closes auction
-                        await auctionHandler.connect(admin).close(physicalConsignmentId);
+                        // Bidder closes auction
+                        await auctionHandler.connect(bidder).close(physicalConsignmentId);
 
                         // Get contract's new balance of escrow ticket
                         buyerBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);

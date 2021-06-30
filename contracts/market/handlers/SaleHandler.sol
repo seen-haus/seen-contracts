@@ -238,7 +238,6 @@ contract SaleHandler is MarketClient, ERC1155Holder {
      * Funds are disbursed as normal. See: {MarketClient.disburseFunds}
      *
      * Reverts if:
-     * - Caller doesn't have ADMIN role
      * - Sale doesn't exist or hasn't started
      * - There is remaining inventory
      *
@@ -246,7 +245,7 @@ contract SaleHandler is MarketClient, ERC1155Holder {
      *
      * @param _consignmentId - id of the consignment being sold
      */
-    function close(uint256 _consignmentId) external onlyRole(ADMIN) {
+    function close(uint256 _consignmentId) external {
 
         // Make sure the sale exists and can be closed normally
         Sale storage sale = sales[_consignmentId];

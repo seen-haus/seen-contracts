@@ -232,11 +232,9 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
     /**
      * @notice Close out a successfully completed auction.
      *
-     * Consigned inventory will be transferred back to the seller.
      * Funds are disbursed as normal. See {MarketClient.disburseFunds}
      *
      * Reverts if:
-     *  - Caller does not have ADMIN role
      *  - Auction doesn't exist
      *  - Auction timer has not yet elapsed
      *  - Auction has not yet started
@@ -247,7 +245,7 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
      *
      * @param _consignmentId - the id of the consignment being sold
      */
-    function close(uint256 _consignmentId) external onlyRole(ADMIN) {
+    function close(uint256 _consignmentId) external {
 
         // Make sure the auction exists
         Auction storage auction = auctions[_consignmentId];
