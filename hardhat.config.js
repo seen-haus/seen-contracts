@@ -26,11 +26,11 @@ module.exports = {
     apiKey: environments.etherscan.apiKey
   },
   solidity: {
-    version: "0.8.0",
+    version: "0.8.5",
     settings: {
       optimizer: {
         enabled: true,
-        runs: 2000
+        runs: 200
       }
     }
   },

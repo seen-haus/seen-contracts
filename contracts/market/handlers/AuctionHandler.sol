@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.5;
 
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
@@ -23,6 +23,9 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
 
     // TODO support and test this (probably move to MarketClient)
     event ConsignmentTransferred(uint256 indexed consignmentId, address indexed recipient, uint256 indexed amount);
+
+    /// @dev extension threshold
+    uint256 constant extensionWindow = 15 minutes;
 
     /// @dev map a consignment id to an auction
     mapping(uint256 => Auction) private auctions;
@@ -159,14 +162,11 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
     function bid(uint256 _consignmentId) external payable {
 
         // Make sure the auction exists
-        Auction storage auction = auctions[_consignmentId];
+        Auction memory auction = auctions[_consignmentId];
         require(auction.start != 0, "Auction does not exist");
 
         // Determine time after which no more bids will be accepted
         uint256 endTime = auction.start + auction.duration;
-
-        // Determine time after which a bid could possibly extend the run time
-        uint256 extendTime = (endTime - 15 minutes);
 
         // Make sure we can accept the caller's bid
         require(!Address.isContract(msg.sender), "Contracts may not bid");
@@ -197,9 +197,6 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
         auction.bid = msg.value;
         auction.buyer = payable(msg.sender);
 
-        // Get consignment
-        Consignment memory consignment = marketController.getConsignment(_consignmentId);
-
         // If this was the first successful bid...
         if (auction.state == State.Pending) {
 
@@ -208,25 +205,28 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
 
             // For auctions where clock is triggered by first bid, update start time
             if (auction.clock == Clock.Trigger) {
+
+                // Set start time
                 auction.start = block.timestamp;
-            }
+                endTime = auction.start + auction.duration;
 
-            // Notify listeners of state change
-            emit AuctionStarted(consignment.id);
-
-        // Otherwise, if auction is already underway
-        } else if (auction.state == State.Running) {
-
-            // For bids placed within the extension window, extend the run time by 15 minutes
-            if (block.timestamp <= endTime && block.timestamp >= extendTime) {
-                auction.duration += 15 minutes;
-                emit AuctionExtended(consignment.id);
+                // Notify listeners of state change
+                emit AuctionStarted(_consignmentId);
             }
 
         }
 
+        // For bids placed within the extension window, extend the duration by 15 minutes
+        if (block.timestamp + extensionWindow >= endTime) {
+            auction.duration += extensionWindow;
+            emit AuctionExtended(_consignmentId);
+        }
+
+        auctions[_consignmentId] = auction;
+
         // Announce the bid
-        emit BidAccepted(consignment.id, auction.buyer, auction.bid);
+        emit BidAccepted(_consignmentId, auction.buyer, auction.bid);
+
     }
 
     /**

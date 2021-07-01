@@ -25,7 +25,7 @@ describe("Auction", function() {
             consignmentId = "1";
             reserve = ethers.utils.parseUnits("1.5", "ether").toString();
             start = ethers.BigNumber.from(Date.now()).toString();
-            duration = '86400000'; // 24 hrs
+            duration = '86400'; // 24 hrs in seconds
             clock = Clock.TRIGGERED;
             state = State.ENDED;
             outcome = Outcome.CLOSED;
@@ -86,7 +86,7 @@ describe("Auction", function() {
             consignmentId = "1";
             reserve = ethers.utils.parseUnits("1.5", "ether").toString();
             start = ethers.BigNumber.from(Date.now()).toString();
-            duration = '86400000'; // 24 hrs
+            duration = '86400'; // 24 hrs in seconds
             clock = Clock.TRIGGERED;
             state = State.ENDED;
             outcome = Outcome.CLOSED;
@@ -336,7 +336,7 @@ describe("Auction", function() {
             consignmentId = "1";
             reserve = ethers.utils.parseUnits("1.5", "ether").toString();
             start = ethers.BigNumber.from(Date.now()).toString();
-            duration = '86400000'; // 24 hrs
+            duration = '86400'; // 24 hrs in seconds
             clock = Clock.TRIGGERED;
             state = State.ENDED;
             outcome = Outcome.CLOSED;

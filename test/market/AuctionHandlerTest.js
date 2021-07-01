@@ -28,6 +28,7 @@ describe("AuctionHandler", function() {
     let sellerBalance, contractBalance, buyerBalance, ticketerBalance, newBalance, badStartTime, signer, belowReserve, percentage, trollBid;
 
     const zeroAddress = ethers.BigNumber.from('0x0000000000000000000000000000000000000000');
+    const fifteenMinutes = "900"; // 900 seconds
 
     beforeEach( async function () {
 
@@ -160,12 +161,12 @@ describe("AuctionHandler", function() {
             // Setup values
             consignmentId = await marketController.getNextConsignment();
             tokenAddress = seenHausNFT.address;
-            start = ethers.BigNumber.from(block.timestamp).add('900000').toString(); // 15 minutes from latest block
-            duration = ethers.BigNumber.from('86400000'); // 24 hrs
+            start = ethers.BigNumber.from(block.timestamp).add('900').toString(); // 15 minutes from latest block
+            duration = ethers.BigNumber.from('86400'); // 24 hrs in seconds
             reserve = ethers.utils.parseUnits("1.5", "ether");
             audience = Audience.OPEN;
             market = Market.PRIMARY;
-            clock = Clock.TRIGGERED;
+            clock = Clock.LIVE;
 
         });
 
@@ -270,11 +271,9 @@ describe("AuctionHandler", function() {
                     await time.increaseTo(
                         ethers.BigNumber
                             .from(start)
+                            .add(duration)
                             .add(
-                                ethers.BigNumber.from(duration)
-                            )
-                            .add(
-                                "1000" // 1s after end of auction
+                                "1" // 1s after end of auction
                             )
                             .toString()
                     );
@@ -443,7 +442,7 @@ describe("AuctionHandler", function() {
 
                         // First bidder meets reserve
                         await expect(
-                            await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve})
+                            auctionHandler.connect(bidder).bid(consignmentId, {value: reserve})
                         ).to.emit(auctionHandler, "BidAccepted")
                             .withArgs(
                                 consignmentId,
@@ -463,13 +462,46 @@ describe("AuctionHandler", function() {
 
                         // First bidder meets reserve
                         await expect(
-                            await auctionHandler.connect(rival).bid(consignmentId, {value: outbid})
+                            auctionHandler.connect(rival).bid(consignmentId, {value: outbid})
                         ).to.emit(auctionHandler, "BidReturned")
                             .withArgs(
                                 consignmentId,
                                 bidder.address,
                                 reserve
                             );
+
+                    });
+
+                    it("should emit an AuctionExtended event when bid is placed in last 15 minutes", async function () {
+
+                        // Initial bid meets reserve
+                        await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve})
+
+                        let extendTime = ethers.BigNumber
+                            .from(start)
+                            .add(duration)          // end of auction
+                            .sub(fifteenMinutes)    // back up 15 minutes
+                            .toString();
+
+                        // Now fast-forward to 15 minutes before end of auction
+                        await time.increaseTo(extendTime);
+
+                        // Double previous bid
+                        outbid = ethers.BigNumber.from(reserve).mul("2");
+
+                        // Bid placed 15 minutes before end of auction
+                        await expect(
+                            auctionHandler.connect(rival).bid(consignmentId, {value: outbid})
+                        ).to.emit(auctionHandler, "AuctionExtended")
+                            .withArgs(consignmentId);
+
+                        // Check that the duration of the auction was actually extended
+                        let auction = await auctionHandler.getAuction(consignmentId);
+                        expect(
+                            auction['duration'].eq(ethers.BigNumber.from(duration).add(fifteenMinutes)),
+                            "Incorrect duration"
+                        ).is.true;
+
 
                     });
 
@@ -487,11 +519,9 @@ describe("AuctionHandler", function() {
                         await time.increaseTo(
                             ethers.BigNumber
                                 .from(start)
+                                .add(duration)
                                 .add(
-                                    ethers.BigNumber.from(duration)
-                                )
-                                .add(
-                                    "1000" // 1s after end of auction
+                                    "1" // 1s after end of auction
                                 )
                                 .toString()
                         );
@@ -561,11 +591,9 @@ describe("AuctionHandler", function() {
                         await time.increaseTo(
                             ethers.BigNumber
                                 .from(start)
+                                .add(duration)
                                 .add(
-                                    ethers.BigNumber.from(duration)
-                                )
-                                .add(
-                                    "1000" // 1s after end of auction
+                                    "1" // 1s after end of auction
                                 )
                                 .toString()
                         );
@@ -645,7 +673,7 @@ describe("AuctionHandler", function() {
                     it("should revert if start time is in the past", async function () {
 
                         // 15 minutes before latest block
-                        badStartTime = ethers.BigNumber.from(block.timestamp).sub('900000').toString();
+                        badStartTime = ethers.BigNumber.from(block.timestamp).sub('900').toString();
 
                         // Create auction, expect revert
                         await expect(
@@ -764,11 +792,9 @@ describe("AuctionHandler", function() {
                         await time.increaseTo(
                             ethers.BigNumber
                                 .from(start)
+                                .add(duration)
                                 .add(
-                                    ethers.BigNumber.from(duration)
-                                )
-                                .add(
-                                    "1000" // 1s after end of auction
+                                    "1" // 1s after end of auction
                                 )
                                 .toString()
                         );
@@ -824,11 +850,9 @@ describe("AuctionHandler", function() {
                         await time.increaseTo(
                             ethers.BigNumber
                                 .from(start)
+                                .add(duration)
                                 .add(
-                                    ethers.BigNumber.from(duration)
-                                )
-                                .add(
-                                    "1000" // 1s after end of auction
+                                    "1" // 1s after end of auction
                                 )
                                 .toString()
                         );
@@ -958,11 +982,9 @@ describe("AuctionHandler", function() {
                         await time.increaseTo(
                             ethers.BigNumber
                                 .from(start)
+                                .add(duration)
                                 .add(
-                                    ethers.BigNumber.from(duration)
-                                )
-                                .add(
-                                    "1000" // 1s after end of auction
+                                    "1" // 1s after end of auction
                                 )
                                 .toString()
                         );
@@ -1005,11 +1027,9 @@ describe("AuctionHandler", function() {
                         await time.increaseTo(
                             ethers.BigNumber
                                 .from(start)
+                                .add(duration)
                                 .add(
-                                    ethers.BigNumber.from(duration)
-                                )
-                                .add(
-                                    "1000" // 1s after end of auction
+                                    "1" // 1s after end of auction
                                 )
                                 .toString()
                         );
@@ -1034,11 +1054,9 @@ describe("AuctionHandler", function() {
                         await time.increaseTo(
                             ethers.BigNumber
                                 .from(start)
+                                .add(duration)
                                 .add(
-                                    ethers.BigNumber.from(duration)
-                                )
-                                .add(
-                                    "1000" // 1s after end of auction
+                                    "1" // 1s after end of auction
                                 )
                                 .toString()
                         );
@@ -1072,11 +1090,9 @@ describe("AuctionHandler", function() {
                         await time.increaseTo(
                             ethers.BigNumber
                                 .from(start)
+                                .add(duration)
                                 .add(
-                                    ethers.BigNumber.from(duration)
-                                )
-                                .add(
-                                    "1000" // 1s after end of auction
+                                    "1" // 1s after end of auction
                                 )
                                 .toString()
                         );
@@ -1144,11 +1160,9 @@ describe("AuctionHandler", function() {
                     await time.increaseTo(
                         ethers.BigNumber
                             .from(start)
+                            .add(duration)
                             .add(
-                                ethers.BigNumber.from(duration)
-                            )
-                            .add(
-                                "1000" // 1s after end of auction
+                                "1" // 1s after end of auction
                             )
                             .toString()
                     );
@@ -1220,11 +1234,9 @@ describe("AuctionHandler", function() {
                     await time.increaseTo(
                         ethers.BigNumber
                             .from(start)
+                            .add(duration)
                             .add(
-                                ethers.BigNumber.from(duration)
-                            )
-                            .add(
-                                "1000" // 1s after end of auction
+                                "1" // 1s after end of auction
                             )
                             .toString()
                     );
@@ -1364,11 +1376,9 @@ describe("AuctionHandler", function() {
                         await time.increaseTo(
                             ethers.BigNumber
                                 .from(start)
+                                .add(duration)
                                 .add(
-                                    ethers.BigNumber.from(duration)
-                                )
-                                .add(
-                                    "1000" // 1s after end of auction
+                                    "1" // 1s after end of auction
                                 )
                                 .toString()
                         );
@@ -1445,11 +1455,9 @@ describe("AuctionHandler", function() {
                         await time.increaseTo(
                             ethers.BigNumber
                                 .from(start)
+                                .add(duration)
                                 .add(
-                                    ethers.BigNumber.from(duration)
-                                )
-                                .add(
-                                    "1000" // 1s after end of auction
+                                    "1" // 1s after end of auction
                                 )
                                 .toString()
                         );

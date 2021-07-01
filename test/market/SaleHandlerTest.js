@@ -157,7 +157,7 @@ describe("SaleHandler", function() {
             // Setup values
             consignmentId = await marketController.getNextConsignment();
             tokenAddress = seenHausNFT.address;
-            start = ethers.BigNumber.from(block.timestamp).add('900000').toString(); // 15 minutes from latest block
+            start = ethers.BigNumber.from(block.timestamp).add('900').toString(); // 15 minutes from latest block
             price = ethers.utils.parseUnits("1", "ether");
             quantity = supply;
             perTxCap = supply; // TODO: test lower buyout price by overriding this value at sale creation
@@ -518,7 +518,7 @@ describe("SaleHandler", function() {
                     it("should revert if start time is in the past", async function () {
 
                         // 15 minutes before latest block
-                        badStartTime = ethers.BigNumber.from(block.timestamp).sub('900000').toString();
+                        badStartTime = ethers.BigNumber.from(block.timestamp).sub('900').toString();
 
                         // Create sale, expect revert
                         await expect(
