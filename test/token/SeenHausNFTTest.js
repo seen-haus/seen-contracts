@@ -227,34 +227,34 @@ describe("SeenHausNFT", function() {
 
         context("Caller Receives Token Balance", async function () {
 
-            it("mintDigital() should send token balance to MINTER-roled caller", async function () {
+            it("mintDigital() should send token balance to MarketController", async function () {
 
                 // MINTER creates token for creator
                 await seenHausNFT.connect(minter).mintDigital(supply, creator.address, tokenURI, royaltyPercentage);
 
-                // Get caller balance
-                balance = await seenHausNFT.balanceOf(minter.address, nextToken);
+                // Get MarketController balance
+                balance = await seenHausNFT.balanceOf(marketController.address, nextToken);
 
                 // Test
                 expect(
                     balance.toString() === supply,
-                    "Tokens not sent to caller"
+                    "Tokens not sent to marketplace"
                 ).is.true;
 
             });
 
-            it("mintPhysical() should send token balance to ESCROW_AGENT-roled caller", async function () {
+            it("mintPhysical() should send token balance to MarketController", async function () {
 
                 // ESCROW_AGENT creates token for creator
                 await seenHausNFT.connect(escrowAgent).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage);
 
-                // Get caller balance
-                balance = await seenHausNFT.balanceOf(escrowAgent.address, nextToken);
+                // Get MarketController balance
+                balance = await seenHausNFT.balanceOf(marketController.address, nextToken);
 
                 // Test
                 expect(
                     balance.toString() === supply,
-                    "Tokens not sent to caller"
+                    "Tokens not sent to marketplace"
                 ).is.true;
 
             });

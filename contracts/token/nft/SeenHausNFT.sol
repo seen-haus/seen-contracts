@@ -85,7 +85,7 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
     /**
      * @notice Mint a given supply of a token, optionally flagging as physical.
      *
-     * Token supply is sent to the caller.
+     * Token supply is sent to the MarketController.
      *
      * @param _supply - the supply of the token
      * @param _creator - the creator of the NFT (where the royalties will go)
@@ -95,6 +95,7 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      */
     function mint(uint256 _supply, address payable _creator, string memory _tokenURI, uint16 _royaltyPercentage, bool _isPhysical)
     internal
+    returns(Consignment memory consignment)
     {
 
         // Make sure royalty percentage is acceptable
@@ -111,8 +112,11 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
         token.isPhysical = _isPhysical;
         token.royaltyPercentage = _royaltyPercentage;
 
-        // Mint the token, sending it to the caller
-        _mint(msg.sender, tokenId, _supply, new bytes(0x0));
+        // Mint the token, sending it to the MarketController
+        _mint(address(marketController), tokenId, _supply, new bytes(0x0));
+
+        // Consign the token for the primary market
+        consignment = marketController.registerConsignment(Market.Primary, _creator, address(this), tokenId, _supply);
 
     }
 
@@ -122,7 +126,7 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      * Entire supply must be minted at once.
      * More cannot be minted later for the same token id.
      * Can only be called by an address with the ESCROW_AGENT role.
-     * Token supply is sent to the caller.
+     * Token supply is sent to the MarketController.
      *
      * @param _supply - the supply of the token
      * @param _creator - the creator of the NFT (where the royalties will go)
@@ -131,14 +135,17 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      *
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
+     *
+     * @return consignment - the registered primary market consignment of the newly minted token
      */
     function mintPhysical(uint256 _supply, address payable _creator, string memory _tokenURI, uint16 _royaltyPercentage)
     external override
     onlyRole(ESCROW_AGENT)
+    returns(Consignment memory consignment)
     {
 
-        // Mint the token, flagging it as physical, sending to caller
-        mint(_supply, _creator, _tokenURI, _royaltyPercentage, true);
+        // Mint the token, flagging it as physical, consigning to the MarketController
+        return mint(_supply, _creator, _tokenURI, _royaltyPercentage, true);
 
     }
 
@@ -157,14 +164,17 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      *
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
+     *
+     * @return consignment - the registered primary market consignment of the newly minted token
      */
     function mintDigital(uint256 _supply, address payable _creator, string memory _tokenURI, uint16 _royaltyPercentage)
     external override
     onlyRole(MINTER)
+    returns(Consignment memory consignment)
     {
 
-        // Mint the token, sending to caller
-        mint(_supply, _creator, _tokenURI, _royaltyPercentage, false);
+        // Mint the token, consigning to the MarketController
+        return mint(_supply, _creator, _tokenURI, _royaltyPercentage, false);
 
     }
 

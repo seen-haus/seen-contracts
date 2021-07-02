@@ -99,11 +99,11 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
      *
      * Reverts if token amount hasn't already been transferred to this contract
      *
-     * @param _tokenId - the token id on the Seen.Haus NFT contract
+     * @param _consignmentId - the id of the consignment being sold
      * @param _amount - the amount of the given token to escrow
      * @param _buyer - the buyer of the escrowed item(s) to whom the ticket is issued
      */
-    function issueTicket(uint256 _tokenId, uint256 _amount, address payable _buyer)
+    function issueTicket(uint256 _consignmentId, uint256 _amount, address payable _buyer)
     external
     override
     onlyRole(MARKET_HANDLER)
@@ -111,18 +111,17 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
         // Make sure amount is non-zero
         require(_amount > 0, "Token amount cannot be zero.");
 
-        // Ensure market handler has transferred the token to this contract
-        address nft = marketController.getNft();
-        require(IERC1155(nft).balanceOf(address(this), _tokenId) >= _amount, "Must transfer token amount to ticketer first.");
-
         // Create and store escrow ticket
         uint256 ticketId = nextTicket++;
         EscrowTicket storage ticket = tickets[ticketId];
-        ticket.tokenId = _tokenId;
         ticket.amount = _amount;
+        ticket.consignmentId = _consignmentId;
+        ticket.id = ticketId;
 
         // Mint escrow ticket and send to buyer
         _mint(_buyer, ticketId, _amount, new bytes(0x0));
+
+        // TODO emit TicketIssued event
     }
 
     /**
@@ -132,14 +131,16 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
      */
     function claim(uint256 _ticketId) external override
     {
+
+        // Make sure the ticket exists
+        EscrowTicket memory ticket = tickets[_ticketId];
+        require(ticket.id == _ticketId, "Ticket does not exist");
+
         uint256 amount = balanceOf(msg.sender, _ticketId);
         require(amount > 0, "Caller has no balance for this ticket");
 
         // Burn the caller's balance
         _burn(msg.sender, _ticketId, amount);
-
-        // Copy the ticket to memory
-        EscrowTicket memory ticket = tickets[_ticketId];
 
         // Reduce the ticket's amount by the claim amount
         ticket.amount -= amount;
@@ -151,15 +152,10 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
             tickets[_ticketId] = ticket;
         }
 
-        // Transfer the ERC-1155 to the caller
-        IERC1155 nft = IERC1155(marketController.getNft());
-        nft.safeTransferFrom(
-            address(this),
-            msg.sender,
-            ticket.tokenId,
-            amount,
-            new bytes(0x0)
-        );
+        // Release the consignment to claimant
+        marketController.releaseConsignment(ticket.consignmentId, amount, msg.sender);
+
+        // TODO emit TicketClaimed event
 
     }
 

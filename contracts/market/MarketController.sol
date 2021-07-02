@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.5;
 
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "../access/AccessClient.sol";
 import "../token/nft/ISeenHausNFT.sol";
@@ -12,7 +13,7 @@ import "./IMarketController.sol";
  * @author Cliff Hall
  * @notice Provides centralized management of consignments and various market-related settings.
  */
-contract MarketController is AccessClient {
+contract MarketController is AccessClient, ERC1155Holder {
 
     /// Events
     event NFTAddressChanged(address indexed nft);
@@ -28,6 +29,7 @@ contract MarketController is AccessClient {
     event DefaultTicketerTypeChanged(Ticketer indexed ticketerType);
     event ConsignmentRegistered(Consignment consignment);
     event ConsignmentTicketerChanged(uint256 consignmentId, Ticketer indexed ticketerType);
+    event ConsignmentReleased(Consignment consignment, uint256 amount, address releasedTo);
 
     /// @dev the address of the Seen.Haus NFT contract
     address internal nft;
@@ -390,10 +392,13 @@ contract MarketController is AccessClient {
      *
      * Emits a ConsignmentRegistered event.
      *
+     * Reverts if consigned token supply has not already been transferred or minted to this contract.
+     *
      * @param _market - the market for the consignment. See {SeenTypes.Market}
      * @param _seller - the current owner of the consignment
      * @param _tokenAddress - the contract address issuing the NFT behind the consignment
      * @param _tokenId - the id of the token being consigned
+     * @param _supply - the amount of the token being consigned
      *
      * @return consignment - the registered consignment
      */
@@ -401,12 +406,16 @@ contract MarketController is AccessClient {
         Market _market,
         address payable _seller,
         address _tokenAddress,
-        uint256 _tokenId
+        uint256 _tokenId,
+        uint256 _supply
     )
     external
     onlyRole(MARKET_HANDLER)
     returns (Consignment memory consignment)
     {
+        // Ensure the consigned token has been transferred to this contract
+        require(IERC1155(_tokenAddress).balanceOf(address(this), _tokenId) == _supply);
+
         // Get the id for the new consignment
         uint256 id = nextConsignment++;
 
@@ -416,12 +425,55 @@ contract MarketController is AccessClient {
             _seller,
             _tokenAddress,
             _tokenId,
+            _supply,
             id
         );
         consignments[id] = consignment;
 
         // Notify listeners of state change
         emit ConsignmentRegistered(consignment);
+
+    }
+
+    /**
+     * @notice Release an amount of the consigned token balance to a given address
+     *
+     * Emits a ConsignmentReleased event.
+     *
+     * Reverts if caller is does not have MARKET_HANDLER role.
+     *
+     * @param _consignmentId - the id of the consignment
+     * @param _amount - the amount of the consigned supply
+     * @param _releaseTo - the address to transfer the consigned token balance to
+     */
+    function releaseConsignment(uint256 _consignmentId, uint256 _amount, address _releaseTo)
+    external
+    onlyRole(MARKET_HANDLER)
+    {
+
+        // Get the consignment into memory
+        Consignment memory consignment = consignments[_consignmentId];
+
+        // Get the current supply
+        uint256 supply = IERC1155(consignment.tokenAddress).balanceOf(address(this), consignment.tokenId);
+
+        // Ensure this contract holds enough supply
+        require(supply >= _amount, "Consigned token supply less than amount");
+
+        // Remove the consignment when the entire supply has been released
+        if (supply == _amount) delete consignments[_consignmentId];
+
+        // Transfer a balance of the token from the MarketController to the recipient
+        IERC1155(consignment.tokenAddress).safeTransferFrom(
+            address(this),
+            _releaseTo,
+            consignment.tokenId,
+            _amount,
+            new bytes(0x0)
+        );
+
+        // Notify watchers about state change
+        emit ConsignmentReleased(consignment, _amount, _releaseTo);
 
     }
 

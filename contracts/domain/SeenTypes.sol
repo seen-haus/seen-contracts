@@ -66,6 +66,7 @@ contract SeenTypes {
         address payable seller;
         address tokenAddress;
         uint256 tokenId;
+        uint256 supply;
         uint256 id;
     }
 
@@ -84,7 +85,6 @@ contract SeenTypes {
     struct Sale {
         uint256 consignmentId;
         uint256 start;
-        uint256 quantity;
         uint256 price;
         uint256 perTxCap;
         State state;
@@ -92,8 +92,9 @@ contract SeenTypes {
     }
 
     struct EscrowTicket {
-        uint256 tokenId;
         uint256 amount;
+        uint256 consignmentId;
+        uint256 id;
     }
 
 }

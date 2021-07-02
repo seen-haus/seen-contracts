@@ -61,7 +61,6 @@ contract LotsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hold
         return nextTicket;
     }
 
-
     /**
      * @notice Get the token URI
      *
@@ -71,14 +70,16 @@ contract LotsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hold
      * Tickets are transient and will be burned when claimed to obtain
      * proof of ownership NFTs with their metadata on IPFS as usual.
      *
-     * TODO: Create a dynamic endpoint on the web for generating the JSON
-     * Just needs to call this contract: tickets(tokenId) and create JSON
-     * with a fixed name, description, and image, adding these fields
-     *  - tokenAddress: [SeenHausNFT contract address]
-     *  - tokenId: [the token id from EscrowTicket]
-     *  - amount: [the amount of that token this ticket can claim]
+     * TODO: metadata with fixed name, description, and image, identifying it as a Seen.Haus Escrow Ticket
+     * adding these fields, perhaps in OpenSea attributes format
+     *  - ticketId
+     *  - consignmentId
+     *  - tokenAddress
+     *  - tokenId
+     *  - amount
      *
      * @param _tokenId - the ticket's token id
+     *
      * @return tokenURI - the URI for the given token id's metadata
      */
     function tokenURI(uint256 _tokenId)
@@ -107,10 +108,11 @@ contract LotsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hold
     /**
      * Mint an escrow ticket
      *
-     * @param _tokenId - the token id on the Seen.Haus NFT contract
+     * @param _consignmentId - the id of the consignment being sold
      * @param _amount - the amount of the given token to escrow
+     * @param _buyer - the buyer of the escrowed item(s) to whom the ticket is issued
      */
-    function issueTicket(uint256 _tokenId, uint256 _amount, address payable _buyer)
+    function issueTicket(uint256 _consignmentId, uint256 _amount, address payable _buyer)
     external
     override
     onlyRole(MARKET_HANDLER)
@@ -118,18 +120,17 @@ contract LotsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hold
         // Make sure amount is non-zero
         require(_amount > 0, "Token amount cannot be zero.");
 
-        // Ensure market handler has transferred the token to this contract
-        address nft = marketController.getNft();
-        require(IERC1155(nft).balanceOf(address(this), _tokenId) >= _amount, "Must transfer token amount to ticketer first.");
-
         // Create and store escrow ticket
         uint256 ticketId = nextTicket++;
         EscrowTicket storage ticket = tickets[ticketId];
-        ticket.tokenId = _tokenId;
+        ticket.consignmentId = _consignmentId;
         ticket.amount = _amount;
+        ticket.id = ticketId;
 
         // Mint the ticket and send to the buyer
         _mint(_buyer, ticketId);
+
+        // TODO emit TicketIssued event
     }
 
     /**
@@ -150,15 +151,10 @@ contract LotsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hold
         // Burn the ticket
         _burn(_ticketId);
 
-        // Transfer the proof of ownership NFT to the caller
-        IERC1155 nft = IERC1155(marketController.getNft());
-        nft.safeTransferFrom(
-            address(this),
-            msg.sender,
-            ticket.tokenId,
-            ticket.amount,
-            new bytes(0x0)
-        );
+        // Release the consignment to claimant
+        marketController.releaseConsignment(ticket.consignmentId, ticket.amount, msg.sender);
+
+        // TODO emit TicketClaimed event
 
     }
 

@@ -45,8 +45,17 @@ interface ISeenHausNFT is IERC2981, IERC1155 {
      * @param _supply - the supply of the token
      * @param _creator - the creator of the NFT (where the royalties will go)
      * @param _tokenURI - the URI of the token metadata
+     *
+     * @return consignment - the registered primary market consignment of the newly minted token
      */
-    function mintPhysical(uint256 _supply, address payable _creator, string memory _tokenURI, uint16 _royaltyPercentage) external;
+    function mintPhysical(
+        uint256 _supply,
+        address payable _creator,
+        string memory _tokenURI,
+        uint16 _royaltyPercentage
+    )
+    external
+    returns(SeenTypes.Consignment memory consignment);
 
     /**
      * @notice Mint a given supply of a token.
@@ -59,7 +68,16 @@ interface ISeenHausNFT is IERC2981, IERC1155 {
      * @param _supply - the supply of the token
      * @param _creator - the creator of the NFT (where the royalties will go)
      * @param _tokenURI - the URI of the token metadata
+     *
+     * @return consignment - the registered primary market consignment of the newly minted token
      */
-    function mintDigital(uint256 _supply, address payable _creator, string memory _tokenURI, uint16 _royaltyPercentage) external;
+    function mintDigital(
+        uint256 _supply,
+        address payable _creator,
+        string memory _tokenURI,
+        uint16 _royaltyPercentage
+    )
+    external
+    returns(SeenTypes.Consignment memory consignment);
 
 }
