@@ -67,6 +67,9 @@ describe("SeenHausNFT", function() {
         );
         await seenHausNFT.deployed();
 
+        // Grant MARKET_HANDLER to SeenHausNFT
+        await accessController.connect(deployer).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
+
         // NFT address gets set after deployment since it requires
         // the MarketController's address in its constructor
         await marketController.setNft(seenHausNFT.address);
@@ -207,7 +210,7 @@ describe("SeenHausNFT", function() {
 
             });
 
-            it("mintPhysical() should record the physical aspect for the token", async function () {
+            it("mintPhysical() should record the URI for the token", async function () {
 
                 // ESCROW_AGENT creates token for creator
                 await seenHausNFT.connect(escrowAgent).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage);
@@ -225,7 +228,7 @@ describe("SeenHausNFT", function() {
 
         });
 
-        context("Caller Receives Token Balance", async function () {
+        context("MarketController Receives Token Balance", async function () {
 
             it("mintDigital() should send token balance to MarketController", async function () {
 
@@ -386,74 +389,6 @@ describe("SeenHausNFT", function() {
                 ).to.be.revertedWith("Royalty percentage exceeds marketplace maximum")
 
             });
-
-        });
-
-    });
-
-    context("Owning", async function () {
-
-        beforeEach( async function () {
-
-            // Prepare for roled access to privileged methods
-            await accessController.connect(deployer).grantRole(Role.MINTER, owner.address);
-
-            // Setup values
-            tokenId = await seenHausNFT.getNextToken();
-            tokenURI = "https://ipfs.io/ipfs/QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
-            supply = "100";
-            amount = "50";
-            royaltyPercentage = maxRoyaltyPercentage;
-
-            // MINTER creates token
-            await seenHausNFT.connect(owner).mintDigital(supply, creator.address, tokenURI, royaltyPercentage);
-
-        });
-
-        it("Owner should be able to transfer part of their balance if greater than 1", async function() {
-
-            // Owner transfers half of their token balance to recipient
-            await seenHausNFT.connect(owner).safeTransferFrom(owner.address, recipient.address, tokenId, amount, []);
-
-            // TEST
-            expect(
-                await seenHausNFT.balanceOf(owner.address, tokenId),
-                "Balance of owner incorrect"
-            ).to.eq(amount);
-
-            expect(
-                await seenHausNFT.balanceOf(recipient.address, tokenId),
-                "Balance of recipient incorrect"
-            ).to.eq(amount);
-
-        });
-
-        it("Owner should be able to set transfer approval to an operator", async function() {
-
-            // Set approval for operator to manage sender's NFTs
-            await seenHausNFT.connect(owner).setApprovalForAll(associate.address, true);
-
-            // Test
-            expect (
-                await seenHausNFT.isApprovedForAll(owner.address, associate.address),
-                "Operator was not approved"
-                ).is.true;
-
-        });
-
-        it("Owner should be able to remove transfer approval from an operator", async function() {
-
-            // Set approval for operator to manage sender's NFTs
-            await seenHausNFT.connect(owner).setApprovalForAll(associate.address, true);
-
-            // Remove approval for operator to manage sender's NFTs
-            await seenHausNFT.connect(owner).setApprovalForAll(associate.address, false);
-
-            // Test
-            expect (
-                await seenHausNFT.isApprovedForAll(owner.address, associate.address),
-                "Operator approval not removed"
-            ).is.false;
 
         });
 

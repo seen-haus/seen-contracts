@@ -9,11 +9,12 @@ const eip55 = require("eip55");
 
 class Consignment {
 
-    constructor (market, seller, tokenAddress, tokenId, id) {
+    constructor (market, seller, tokenAddress, tokenId, supply, id) {
         this.market = market;
         this.seller = seller;
         this.tokenAddress = tokenAddress;
         this.tokenId = tokenId;
+        this.supply = supply;
         this.id = id;
     }
 
@@ -23,8 +24,8 @@ class Consignment {
      * @returns {Consignment}
      */
     static fromObject(o) {
-        const {market, seller, tokenAddress, tokenId, id} = o;
-        return new Consignment(market, seller, tokenAddress, tokenId, id);
+        const {market, seller, tokenAddress, tokenId, supply, id} = o;
+        return new Consignment(market, seller, tokenAddress, tokenId, supply, id);
     }
 
     /**
@@ -116,6 +117,23 @@ class Consignment {
     }
 
     /**
+     * Is this Consignment instance's supply field valid?
+     * Must be a string that converts to a valid, positive BigNumber
+     * @returns {boolean}
+     */
+    supplyIsValid() {
+        let {supply} = this;
+        let valid = false;
+        try {
+            valid = (
+                typeof supply === "string" &&
+                ethers.BigNumber.from(supply).gt("0")
+            )
+        } catch(e){}
+        return valid;
+    }
+
+    /**
      * Is this Consignment instance's id field valid?
      * Must be a string that converts to a BigNumber greater than or equal to zero
      * @returns {boolean}
@@ -142,6 +160,7 @@ class Consignment {
             this.sellerIsValid() &&
             this.tokenAddressIsValid() &&
             this.tokenIdIsValid() &&
+            this.supplyIsValid() &&
             this.idIsValid()
         );
     };

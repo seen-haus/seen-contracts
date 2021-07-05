@@ -9,13 +9,14 @@ const Ticketer = require("../../domain/Ticketer");
 describe("MarketController", function() {
 
     // Common vars
-    let accounts, deployer, admin, marketHandler, associate, seller, escrowAgent;
+    let accounts, deployer, admin, marketHandler, associate, seller, escrowAgent, minter;
     let AccessController, accessController;
     let MarketController, marketController;
+    let SeenHausNFT, seenHausNFT;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
-    let lotsTicketer, itemsTicketer, nft;
+    let lotsTicketer, itemsTicketer, tokenURI, royaltyPercentage;
     let address, amount, percentage, counter, market, token, tokenId, id, consignment, nextConsignment, escrowTicketer, escrowTicketerType;
-    let replacementAmount, replacementPercentage;
+    let replacementAmount, replacementPercentage, supply;
     let replacementAddress = "0x2d36143CC2E0E74E007E7600F341dC9D37D81C07";
     let tooLittle,tooMuch, revertReason;
 
@@ -28,14 +29,13 @@ describe("MarketController", function() {
         seller = accounts[2];
         associate = accounts[3];
         escrowAgent = accounts[4];
+        minter = accounts[5]
 
-        staking = accounts[5];        // We just need addresses for these,
-        multisig = accounts[6];       // not functional contracts
-        nft = accounts[7];            // .
-        token = accounts[8];          // .
-        lotsTicketer = accounts[9];   // .
-        itemsTicketer = accounts[10]; // .
-        marketHandler = accounts[11]; // .
+        staking = accounts[6];        // We just need addresses for these,
+        multisig = accounts[7];       // not functional contracts
+        lotsTicketer = accounts[8];   // .
+        itemsTicketer = accounts[9];  // .
+        marketHandler = accounts[10]; // .
 
         // Market control values
         vipStakerAmount = "500";              // Amount of xSEEN to be VIP
@@ -63,9 +63,24 @@ describe("MarketController", function() {
         );
         await marketController.deployed();
 
+        // Deploy the SeenHausNFT contract
+        SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
+        seenHausNFT = await SeenHausNFT.deploy(
+            accessController.address,
+            marketController.address
+        );
+        await seenHausNFT.deployed();
+
+        // Grant MARKET_HANDLER to SeenHausNFT
+        await accessController.connect(deployer).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
+
+        // NFT address gets set after deployment since it requires
+        // the MarketController's address in its constructor
+        await marketController.setNft(seenHausNFT.address);
+
         // Escrow Ticketer and NFT addresses get set after deployment since
         // they require the MarketController's address in their constructors
-        await marketController.setNft(nft.address);
+        await marketController.setNft(seenHausNFT.address);
         await marketController.setLotsTicketer(lotsTicketer.address);
         await marketController.setItemsTicketer(itemsTicketer.address);
 
@@ -106,7 +121,7 @@ describe("MarketController", function() {
 
             // Test
             expect(
-                address === nft.address,
+                address === seenHausNFT.address,
                 "getNft doesn't return expected address"
             ).is.true;
 
@@ -280,7 +295,7 @@ describe("MarketController", function() {
 
             });
 
-            it("setNft() should require ADMIN to set the nft address", async function () {
+            it("setNft() should require ADMIN to set the seenHausNFT address", async function () {
 
                 // non-ADMIN attempt
                 await expect(
@@ -293,7 +308,7 @@ describe("MarketController", function() {
                 // Test
                 expect(
                     address !== replacementAddress,
-                    "non-ADMIN can set nft address"
+                    "non-ADMIN can set seenHausNFT address"
                 ).is.true;
 
                 // ADMIN attempt
@@ -305,7 +320,7 @@ describe("MarketController", function() {
                 // Test
                 expect(
                     address === replacementAddress,
-                    "ADMIN can't set nft address"
+                    "ADMIN can't set seenHausNFT address"
                 ).is.true;
 
             });
@@ -704,11 +719,18 @@ describe("MarketController", function() {
             // Prepare for roled access to privileged MarketController methods
             await accessController.connect(deployer).grantRole(Role.MARKET_HANDLER, marketHandler.address);
             await accessController.connect(deployer).grantRole(Role.ESCROW_AGENT, escrowAgent.address);
+            await accessController.connect(deployer).grantRole(Role.MINTER, minter.address);
 
             // Setup values
             market = Market.PRIMARY;
-            tokenId = "13";
+            tokenId = await seenHausNFT.getNextToken();
+            supply = "1";
+            tokenURI = "https://ipfs.io/ipfs/QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
+            royaltyPercentage = maxRoyaltyPercentage;
+            token = seenHausNFT;
 
+            // Mint token to be consigned
+            await seenHausNFT.connect(minter).mintDigital(supply, minter.address, tokenURI, royaltyPercentage);
         });
 
         context("Privileged Access", async function () {
@@ -719,7 +741,7 @@ describe("MarketController", function() {
 
                 // non-MARKET_HANDLER attempt
                 await expect(
-                    marketController.connect(associate).registerConsignment(market, seller.address, token.address, tokenId)
+                    marketController.connect(associate).registerConsignment(market, seller.address, token.address, tokenId, supply)
                 ).to.be.revertedWith("Access denied, caller doesn't have role");
 
 
@@ -733,7 +755,7 @@ describe("MarketController", function() {
                 ).is.true;
 
                 // MARKET_HANDLER attempt
-                await marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId);
+                await marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId, supply);
 
                 // Get counter
                 counter = await marketController.getNextConsignment();
@@ -752,7 +774,7 @@ describe("MarketController", function() {
                 nextConsignment = await marketController.getNextConsignment();
 
                 // Register a consignment
-                await marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId)
+                await marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId, supply)
 
                 // non-ADMIN attempt
                 await expect(
@@ -784,10 +806,10 @@ describe("MarketController", function() {
 
                 // Make change, test event
                 await expect(
-                    marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId)
+                    marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId, supply)
                 ).to.emit(marketController, 'ConsignmentRegistered')
                     .withArgs(
-                        [market, seller.address, token.address, tokenId, nextConsignment]
+                        [market, seller.address, token.address, tokenId, supply, nextConsignment]
                     );
 
             });
@@ -798,7 +820,7 @@ describe("MarketController", function() {
                 nextConsignment = await marketController.getNextConsignment();
 
                 // Register a consignment
-                await marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId)
+                await marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId, supply)
 
                 // ESCROW_AGENT sets consignment's ticketer type
                 await expect(
@@ -835,7 +857,7 @@ describe("MarketController", function() {
                 id = nextConsignment.toString();
 
                 // Register consignment
-                await marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId);
+                await marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId, supply);
 
                 // Get the consignment
                 const response = await marketController.getConsignment(nextConsignment);
@@ -846,6 +868,7 @@ describe("MarketController", function() {
                     response.seller,
                     response.tokenAddress,
                     response.tokenId.toString(),
+                    response.supply.toString(),
                     response.id.toString()
                 );
 
@@ -859,7 +882,8 @@ describe("MarketController", function() {
                 expect(consignment.market === market).is.true;
                 expect(consignment.seller === seller.address).is.true;
                 expect(consignment.tokenAddress === token.address).is.true;
-                expect(consignment.tokenId === tokenId).is.true;
+                expect(consignment.tokenId === tokenId.toString()).is.true;
+                expect(consignment.supply === supply.toString()).is.true;
                 expect(consignment.id === id).is.true;
 
             });
@@ -870,7 +894,7 @@ describe("MarketController", function() {
                 nextConsignment = await marketController.getNextConsignment();
 
                 // Register consignment
-                await marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId);
+                await marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId, supply);
 
                 // Get the ticketer for this consignment
                 escrowTicketer = await marketController.getEscrowTicketer(nextConsignment);
@@ -889,7 +913,7 @@ describe("MarketController", function() {
                 nextConsignment = await marketController.getNextConsignment();
 
                 // Register consignment
-                await marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId);
+                await marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId, supply);
 
                 // Specify an escrow ticketer for a the consignment
                 await marketController.connect(escrowAgent).setConsignmentTicketer(nextConsignment, Ticketer.ITEMS)

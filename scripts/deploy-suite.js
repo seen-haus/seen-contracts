@@ -158,10 +158,11 @@ async function main() {
     await marketController.setNft(seenHausNFT.address);
     console.log(`✅ MarketController updated with escrow ticketer and NFT addresses.`);
 
-    // Add MARKET_HANDLER role to AuctionHandler and SaleHandler
+    // Add MARKET_HANDLER role to AuctionHandler, SaleHandler, and SeenHausNFT
     await accessController.grantRole(Role.MARKET_HANDLER, auctionHandler.address);
     await accessController.grantRole(Role.MARKET_HANDLER, saleHandler.address);
-    console.log(`✅ Granted MARKET_HANDLER role to AuctionHandler and SaleHandler.`);
+    await accessController.grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
+    console.log(`✅ Granted MARKET_HANDLER role to AuctionHandler, SaleHandler, and SeenHausNFT.`);
 
     // Bail now if deploying locally
     if (hre.network.name === 'hardhat') process.exit();
@@ -170,7 +171,7 @@ async function main() {
     console.log('⏲ Pause one minute, allowing deployments to propagate to Etherscan backend...');
     await delay(60000).then(
         async () => {
-            console.log('🔍 Verifying contracts on Etherscan...');
+            console.log('🔍 Verifying contracts on Etherscant...');
             while(contracts.length) {
                 contract = contracts.shift()
                 await verifyOnEtherscan(contract);

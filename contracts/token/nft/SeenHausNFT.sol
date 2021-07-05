@@ -184,18 +184,18 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      * For a given token id and sale price, how much should be sent to whom as royalty
      *
      * @param _tokenId - the NFT asset queried for royalty information
-     * @param _value - the sale price of the NFT asset specified by _tokenId
+     * @param _salePrice - the sale price of the NFT asset specified by _tokenId
      *
      * @return _receiver - address of who should be sent the royalty payment
      * @return _royaltyAmount - the royalty payment amount for _value sale price
      */
-    function royaltyInfo(uint256 _tokenId, uint256 _value)
+    function royaltyInfo(uint256 _tokenId, uint256 _salePrice)
     external view override
     returns (address _receiver, uint256 _royaltyAmount)
     {
         Token storage token = tokens[_tokenId];
         _receiver = token.creator;
-        _royaltyAmount = getPercentageOf(_value, token.royaltyPercentage);
+        _royaltyAmount = getPercentageOf(_salePrice, token.royaltyPercentage);
     }
 
     /**
