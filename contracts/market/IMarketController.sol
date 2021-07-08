@@ -176,12 +176,30 @@ interface IMarketController is IERC1155Receiver {
     function getConsignment(uint256 _consignmentId) external view returns (SeenTypes.Consignment memory);
 
     /**
+     * @notice Get the remaining supply of the given consignment.
+     *
+     * @param _consignmentId - the id of the consignment
+     * @return uint256 - the remaining supply held by the MarketController
+     */
+    function getSupply(uint256 _consignmentId) external view returns(uint256);
+
+    /**
+     * @notice Is the caller the consignor of the given consignment?
+     *
+     * @param _account - the _account to check
+     * @param _consignmentId - the id of the consignment
+     * @return  bool - true if caller is consignor
+     */
+    function isConsignor(uint256 _consignmentId, address _account) external view returns(bool);
+
+    /**
      * @notice Registers a new consignment for sale or auction.
      *
      * Emits a ConsignmentRegistered event.
      *
      * @param _market - the market for the consignment. See {SeenTypes.Market}
-     * @param _seller - the current owner of the consignment
+     * @param _consignor - the address executing the consignment transaction
+     * @param _seller - the seller of the consignment
      * @param _tokenAddress - the contract address issuing the NFT behind the consignment
      * @param _tokenId - the id of the token being consigned
      * @param _supply - the amount of the token being consigned
@@ -190,6 +208,7 @@ interface IMarketController is IERC1155Receiver {
      */
     function registerConsignment(
         SeenTypes.Market _market,
+        address _consignor,
         address payable _seller,
         address _tokenAddress,
         uint256 _tokenId,

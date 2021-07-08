@@ -741,7 +741,7 @@ describe("MarketController", function() {
 
                 // non-MARKET_HANDLER attempt
                 await expect(
-                    marketController.connect(associate).registerConsignment(market, seller.address, token.address, tokenId, supply)
+                    marketController.connect(associate).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply)
                 ).to.be.revertedWith("Access denied, caller doesn't have role");
 
 
@@ -755,7 +755,7 @@ describe("MarketController", function() {
                 ).is.true;
 
                 // MARKET_HANDLER attempt
-                await marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId, supply);
+                await marketController.connect(marketHandler).registerConsignment(market, seller.address, seller.address, token.address, tokenId, supply);
 
                 // Get counter
                 counter = await marketController.getNextConsignment();
@@ -774,7 +774,7 @@ describe("MarketController", function() {
                 nextConsignment = await marketController.getNextConsignment();
 
                 // Register a consignment
-                await marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId, supply)
+                await marketController.connect(marketHandler).registerConsignment(market, seller.address, seller.address, token.address, tokenId, supply)
 
                 // non-ADMIN attempt
                 await expect(
@@ -806,9 +806,10 @@ describe("MarketController", function() {
 
                 // Make change, test event
                 await expect(
-                    marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId, supply)
+                    marketController.connect(marketHandler).registerConsignment(market, seller.address, seller.address, token.address, tokenId, supply)
                 ).to.emit(marketController, 'ConsignmentRegistered')
                     .withArgs(
+                        seller.address,
                         [market, seller.address, token.address, tokenId, supply, nextConsignment]
                     );
 
@@ -820,7 +821,7 @@ describe("MarketController", function() {
                 nextConsignment = await marketController.getNextConsignment();
 
                 // Register a consignment
-                await marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId, supply)
+                await marketController.connect(marketHandler).registerConsignment(market, seller.address, seller.address, token.address, tokenId, supply)
 
                 // ESCROW_AGENT sets consignment's ticketer type
                 await expect(
@@ -833,9 +834,7 @@ describe("MarketController", function() {
 
         context("Revert Reasons", async function () {
 
-            it("setConsignmentTicketer() should revert if consignment id is invalid", async function () {
-
-                revertReason = "Invalid consignment id.";
+            it("setConsignmentTicketer() should revert if consignment doesn't exist", async function () {
 
                 // Get the next consignment id
                 nextConsignment = await marketController.getNextConsignment();
@@ -843,89 +842,153 @@ describe("MarketController", function() {
                 // ESCROW_AGENT sets ticketer type for consignment not yet created
                 await expect(
                     marketController.connect(escrowAgent).setConsignmentTicketer(nextConsignment, Ticketer.ITEMS)
-                ).to.be.revertedWith(revertReason);
+                ).to.be.revertedWith("Consignment does not exist");
             });
 
         });
 
         context("Reading Consignments", async function () {
 
-            it("getConsignment() should return a valid consignment", async function () {
+            context("getConsignment()", async function() {
 
-                // Get the expected consignment id
-                nextConsignment = await marketController.getNextConsignment();
-                id = nextConsignment.toString();
+                it("should revert if consignment doesn't exist", async function () {
 
-                // Register consignment
-                await marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId, supply);
+                    // A non-existent consignment
+                    nextConsignment = await marketController.getNextConsignment();
 
-                // Get the consignment
-                const response = await marketController.getConsignment(nextConsignment);
+                    // Attempt to get non-existent consignment
+                    await expect(
+                        marketController.getConsignment(nextConsignment)
+                    ).to.be.revertedWith("Consignment does not exist");
 
-                // Convert to entity
-                consignment = new Consignment(
-                    response.market,
-                    response.seller,
-                    response.tokenAddress,
-                    response.tokenId.toString(),
-                    response.supply.toString(),
-                    response.id.toString()
-                );
+                });
 
-                // Test validity
-                expect(
-                    consignment.isValid(),
-                    "Consignment not valid"
-                ).is.true;
+                it("should return a valid consignment", async function () {
 
-                // Test expected values
-                expect(consignment.market === market).is.true;
-                expect(consignment.seller === seller.address).is.true;
-                expect(consignment.tokenAddress === token.address).is.true;
-                expect(consignment.tokenId === tokenId.toString()).is.true;
-                expect(consignment.supply === supply.toString()).is.true;
-                expect(consignment.id === id).is.true;
+                    // Get the expected consignment id
+                    nextConsignment = await marketController.getNextConsignment();
+                    id = nextConsignment.toString();
 
-            });
+                    // Register consignment
+                    await marketController.connect(marketHandler).registerConsignment(market, seller.address, seller.address, token.address, tokenId, supply);
 
-            it("getEscrowTicketer() should return the default escrow ticketer if not set for given consignment", async function () {
+                    // Get the consignment
+                    const response = await marketController.getConsignment(nextConsignment);
 
-                // Get the expected consignment id
-                nextConsignment = await marketController.getNextConsignment();
+                    // Convert to entity
+                    consignment = new Consignment(
+                        response.market,
+                        response.seller,
+                        response.tokenAddress,
+                        response.tokenId.toString(),
+                        response.supply.toString(),
+                        response.id.toString()
+                    );
 
-                // Register consignment
-                await marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId, supply);
+                    // Test validity
+                    expect(
+                        consignment.isValid(),
+                        "Consignment not valid"
+                    ).is.true;
 
-                // Get the ticketer for this consignment
-                escrowTicketer = await marketController.getEscrowTicketer(nextConsignment);
+                    // Test expected values
+                    expect(consignment.market === market).is.true;
+                    expect(consignment.seller === seller.address).is.true;
+                    expect(consignment.tokenAddress === token.address).is.true;
+                    expect(consignment.tokenId === tokenId.toString()).is.true;
+                    expect(consignment.supply === supply.toString()).is.true;
+                    expect(consignment.id === id).is.true;
 
-                // Test
-                expect(
-                    escrowTicketer === lotsTicketer.address,
-                    "getConsignmentTicketer returned the wrong ticketer"
-                ).is.true;
+                });
 
             });
 
-            it("getEscrowTicketer() should return the specified escrow ticketer for given consignment if set", async function () {
+            context("getEscrowTicketer()", async function() {
 
-                // Get the expected consignment id
-                nextConsignment = await marketController.getNextConsignment();
+                it("should revert if consignment doesn't exist", async function () {
 
-                // Register consignment
-                await marketController.connect(marketHandler).registerConsignment(market, seller.address, token.address, tokenId, supply);
+                    // A non-existent consignment
+                    nextConsignment = await marketController.getNextConsignment();
 
-                // Specify an escrow ticketer for a the consignment
-                await marketController.connect(escrowAgent).setConsignmentTicketer(nextConsignment, Ticketer.ITEMS)
+                    // Attempt to get escrow ticketer for non-existent consignment
+                    await expect(
+                        marketController.getEscrowTicketer(nextConsignment)
+                    ).to.be.revertedWith("Consignment does not exist");
 
-                // Get the ticketer for this consignment
-                escrowTicketer = await marketController.getEscrowTicketer(nextConsignment);
+                });
 
-                // Test
-                expect(
-                    escrowTicketer === itemsTicketer.address,
-                    "getConsignmentTicketer returned the wrong ticketer"
-                ).is.true;
+                it("should return the default escrow ticketer if not set for given consignment", async function () {
+
+                    // Get the expected consignment id
+                    nextConsignment = await marketController.getNextConsignment();
+
+                    // Register consignment
+                    await marketController.connect(marketHandler).registerConsignment(market, seller.address, seller.address, token.address, tokenId, supply);
+
+                    // Get the ticketer for this consignment
+                    escrowTicketer = await marketController.getEscrowTicketer(nextConsignment);
+
+                    // Test
+                    expect(
+                        escrowTicketer === lotsTicketer.address,
+                        "getConsignmentTicketer returned the wrong ticketer"
+                    ).is.true;
+
+                });
+
+                it("should return the specified escrow ticketer for given consignment if set", async function () {
+
+                    // Get the expected consignment id
+                    nextConsignment = await marketController.getNextConsignment();
+
+                    // Register consignment
+                    await marketController.connect(marketHandler).registerConsignment(market, seller.address, seller.address, token.address, tokenId, supply);
+
+                    // Specify an escrow ticketer for a the consignment
+                    await marketController.connect(escrowAgent).setConsignmentTicketer(nextConsignment, Ticketer.ITEMS)
+
+                    // Get the ticketer for this consignment
+                    escrowTicketer = await marketController.getEscrowTicketer(nextConsignment);
+
+                    // Test
+                    expect(
+                        escrowTicketer === itemsTicketer.address,
+                        "getConsignmentTicketer returned the wrong ticketer"
+                    ).is.true;
+
+                });
+
+            });
+
+            context("getSupply()", async function() {
+
+                it("should revert if consignment doesn't exist", async function () {
+
+                    // A non-existent consignment
+                    nextConsignment = await marketController.getNextConsignment();
+
+                    // Attempt to get supply for non-existent consignment
+                    await expect(
+                        marketController.getSupply(nextConsignment)
+                    ).to.be.revertedWith("Consignment does not exist");
+
+                });
+
+            });
+
+            context("isConsignor()", async function() {
+
+                it("should revert if consignment doesn't exist", async function () {
+
+                    // A non-existent consignment
+                    nextConsignment = await marketController.getNextConsignment();
+
+                    // Attempt to get supply for non-existent consignment
+                    await expect(
+                        marketController.isConsignor(nextConsignment, seller.address)
+                    ).to.be.revertedWith("Consignment does not exist");
+
+                });
 
             });
 

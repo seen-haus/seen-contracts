@@ -116,7 +116,7 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
         _mint(address(marketController), tokenId, _supply, new bytes(0x0));
 
         // Consign the token for the primary market
-        consignment = marketController.registerConsignment(Market.Primary, _creator, address(this), tokenId, _supply);
+        consignment = marketController.registerConsignment(Market.Primary, msg.sender, _creator, address(this), tokenId, _supply);
 
     }
 

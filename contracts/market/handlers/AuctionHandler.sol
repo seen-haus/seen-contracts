@@ -13,15 +13,12 @@ import "../MarketClient.sol";
 contract AuctionHandler is MarketClient {
 
     /// Events
-    event AuctionPending(Auction auction);
+    event AuctionPending(address indexed consignor, Auction auction);
     event AuctionStarted(uint256 indexed consignmentId);
     event AuctionExtended(uint256 indexed consignmentId);
     event AuctionEnded(uint256 indexed consignmentId, Outcome indexed outcome);
     event BidAccepted(uint256 indexed consignmentId, address indexed buyer, uint256 indexed bid);
     event BidReturned(uint256 indexed consignmentId, address indexed buyer, uint256 indexed bid);
-
-    // TODO support and test this (probably move to MarketClient)
-    event ConsignmentTransferred(uint256 indexed consignmentId, address indexed recipient, uint256 indexed amount);
 
     /// @dev extension threshold
     uint256 constant extensionWindow = 15 minutes;
@@ -72,13 +69,11 @@ contract AuctionHandler is MarketClient {
         Clock _clock
     )
     external
-    onlyRole(SELLER) {
-
-        // Fetch the consignment
+    onlyRole(SELLER)
+    onlyConsignor(_consignmentId)
+    {
+        // Get the consignment (reverting if consignment doesn't exist)
         Consignment memory consignment = marketController.getConsignment(_consignmentId);
-
-        // Make sure auction doesn't exist
-        require(consignment.id == _consignmentId, "Consignment doesn't exist");
 
         // Get the storage location for the auction
         Auction storage auction = auctions[_consignmentId];
@@ -100,7 +95,7 @@ contract AuctionHandler is MarketClient {
         auction.outcome = Outcome.Pending;
 
         // Notify listeners of state change
-        emit AuctionPending(auction);
+        emit AuctionPending(msg.sender, auction);
     }
 
     /**
@@ -128,7 +123,8 @@ contract AuctionHandler is MarketClient {
         Clock _clock
     )
     external
-    onlyRole(SELLER) {
+    onlyRole(SELLER)
+    {
 
         // Make sure start time isn't in the past
         require (_start >= block.timestamp, "Time runs backward?");
@@ -139,9 +135,10 @@ contract AuctionHandler is MarketClient {
         // Ensure seller a positive number of tokens
         require(IERC1155(_tokenAddress).balanceOf(_seller, _tokenId) > 0, "Seller has zero balance of consigned token");
 
+        // Supply always 1 for an auction
         uint256 supply = 1;
 
-        // Transfer a balance of one of the ERC-1155 to the MarketController
+        // To register the consignment, tokens must first be in MarketController's possession
         IERC1155(_tokenAddress).safeTransferFrom(
             _seller,
             address(marketController),
@@ -150,8 +147,8 @@ contract AuctionHandler is MarketClient {
             new bytes(0x0)
         );
 
-        // To register the consignment, tokens must be in market controller's possession
-        Consignment memory consignment = marketController.registerConsignment(Market.Secondary, _seller, _tokenAddress, _tokenId, supply);
+        // Register consignment
+        Consignment memory consignment = marketController.registerConsignment(Market.Secondary, msg.sender, _seller, _tokenAddress, _tokenId, supply);
 
         // Set up the auction
         setAudience(consignment.id, _audience);
@@ -165,7 +162,7 @@ contract AuctionHandler is MarketClient {
         auction.outcome = Outcome.Pending;
 
         // Notify listeners of state change
-        emit AuctionPending(auction);
+        emit AuctionPending(msg.sender, auction);
     }
 
     /**
@@ -180,7 +177,11 @@ contract AuctionHandler is MarketClient {
      */
     function changeAudience(uint256 _consignmentId, Audience _audience)
     external
-    onlyRole(ADMIN) {
+    onlyRole(ADMIN)
+    {
+
+        // Get consignment (reverting if not valid)
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Make sure the auction exists and hasn't been settled
         Auction storage auction = auctions[_consignmentId];
@@ -210,7 +211,12 @@ contract AuctionHandler is MarketClient {
      *
      * @param _consignmentId - the id of the consignment being sold
      */
-    function bid(uint256 _consignmentId) external payable {
+    function bid(uint256 _consignmentId)
+    external
+    payable
+    {
+        // Get the consignment (reverting if consignment doesn't exist)
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Make sure the auction exists
         Auction memory auction = auctions[_consignmentId];
@@ -296,7 +302,11 @@ contract AuctionHandler is MarketClient {
      *
      * @param _consignmentId - the id of the consignment being sold
      */
-    function close(uint256 _consignmentId) external {
+    function close(uint256 _consignmentId)
+    external
+    {
+        // Get the consignment (reverting if consignment doesn't exist)
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Make sure the auction exists
         Auction storage auction = auctions[_consignmentId];
@@ -318,9 +328,6 @@ contract AuctionHandler is MarketClient {
 
         // Distribute the funds (pay royalties, staking, multisig, and seller)
         disburseFunds(_consignmentId, auction.bid);
-
-        // Get consignment
-        Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Determine if consignment is physical
         address nft = marketController.getNft();
@@ -358,7 +365,13 @@ contract AuctionHandler is MarketClient {
      *
      * @param _consignmentId - the id of the consignment being sold
      */
-    function pull(uint256 _consignmentId) external onlyRole(ADMIN) {
+    function pull(uint256 _consignmentId)
+    external
+    onlyRole(ADMIN)
+    {
+
+        // Get the consignment (reverting if consignment doesn't exist)
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Make sure the auction exists
         Auction storage auction = auctions[_consignmentId];
@@ -375,9 +388,6 @@ contract AuctionHandler is MarketClient {
         // Mark auction as settled
         auction.state = State.Ended;
         auction.outcome = Outcome.Pulled;
-
-        // Transfer the ERC-1155 back to the seller
-        Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Release the unsold amount of the consigned token supply to buyer
         marketController.releaseConsignment(_consignmentId, 1, consignment.seller);
@@ -403,7 +413,13 @@ contract AuctionHandler is MarketClient {
      *
      * @param _consignmentId - the id of the consignment being sold
      */
-    function cancel(uint256 _consignmentId) external onlyRole(ADMIN) {
+    function cancel(uint256 _consignmentId)
+    external
+    onlyRole(ADMIN)
+    {
+
+        // Get the consignment (reverting if consignment doesn't exist)
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Make sure auction exists
         Auction storage auction = auctions[_consignmentId];
@@ -425,9 +441,6 @@ contract AuctionHandler is MarketClient {
             auction.buyer.transfer(auction.bid);
             emit BidReturned(_consignmentId, auction.buyer, auction.bid);
         }
-
-        // Transfer the ERC-1155 back to the seller
-        Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Release the consigned token supply to buyer
         marketController.releaseConsignment(_consignmentId, 1, consignment.seller);

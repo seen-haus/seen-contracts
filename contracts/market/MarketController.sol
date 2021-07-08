@@ -27,7 +27,7 @@ contract MarketController is AccessClient, ERC1155Holder {
     event MaxRoyaltyPercentageChanged(uint16 indexed maxRoyaltyPercentage);
     event OutBidPercentageChanged(uint16 indexed outBidPercentage);
     event DefaultTicketerTypeChanged(Ticketer indexed ticketerType);
-    event ConsignmentRegistered(Consignment consignment);
+    event ConsignmentRegistered(address indexed consignor, Consignment consignment);
     event ConsignmentTicketerChanged(uint256 consignmentId, Ticketer indexed ticketerType);
     event ConsignmentReleased(Consignment consignment, uint256 amount, address releasedTo);
 
@@ -67,6 +67,9 @@ contract MarketController is AccessClient, ERC1155Holder {
     /// @dev consignment id => consignment
     mapping(uint256 => Consignment) public consignments;
 
+    /// @dev consignmentId to consignor address
+    mapping(uint256 => address) public consignors;
+
     /// @dev consignment id => ticketer type
     mapping(uint256 => Ticketer) public consignmentTicketers;
 
@@ -100,6 +103,18 @@ contract MarketController is AccessClient, ERC1155Holder {
         maxRoyaltyPercentage = _maxRoyaltyPercentage;
         outBidPercentage = _outBidPercentage;
         defaultTicketerType = _defaultTicketerType;
+    }
+
+    /**
+     * @dev Modifier that checks that the consignment exists
+     *
+     * Reverts if the consignment does not exist
+     */
+    modifier consignmentExists(uint256 _consignmentId) {
+
+        // Make sure the consignment exists
+        require(_consignmentId < nextConsignment, "Consignment does not exist");
+        _;
     }
 
     /**
@@ -318,7 +333,8 @@ contract MarketController is AccessClient, ERC1155Holder {
      * @notice The outBidPercentage getter
      */
     function getOutBidPercentage()
-    external view
+    external
+    view
     returns (uint16) {
         return outBidPercentage;
     }
@@ -346,7 +362,8 @@ contract MarketController is AccessClient, ERC1155Holder {
      * @notice The defaultTicketerType getter
      */
     function getDefaultTicketerType()
-    external view
+    external
+    view
     returns (Ticketer) {
         return defaultTicketerType;
     }
@@ -357,11 +374,15 @@ contract MarketController is AccessClient, ERC1155Holder {
      * If a specific ticketer has not been set for the consignment,
      * the default escrow ticketer will be returned.
      *
+     * Reverts if consignment doesn't exist
+     *     *
      * @param _consignmentId - the id of the consignment
      * @return ticketer = the address of the escrow ticketer to use
      */
     function getEscrowTicketer(uint256 _consignmentId)
-    external view
+    external
+    view
+    consignmentExists(_consignmentId)
     returns (address) {
         Ticketer specified = consignmentTicketers[_consignmentId];
         Ticketer ticketerType = (specified == Ticketer.Default) ? defaultTicketerType : specified;
@@ -380,11 +401,54 @@ contract MarketController is AccessClient, ERC1155Holder {
 
     /**
      * @notice The consignment getter
+     *
+     * Reverts if consignment doesn't exist
+     *
+     * @param _consignmentId - the id of the consignment
+     * @return consignment - the consignment struct
      */
     function getConsignment(uint256 _consignmentId)
-    external view
-    returns (Consignment memory) {
-        return consignments[_consignmentId];
+    public
+    view
+    consignmentExists(_consignmentId)
+    returns (Consignment memory consignment) {
+        consignment = consignments[_consignmentId];
+    }
+
+    /**
+     * @notice Get the remaining supply of the given consignment.
+     *
+     * Reverts if consignment doesn't exist
+     *
+     * @param _consignmentId - the id of the consignment
+     * @return  uint256 - the remaining supply held by the MarketController
+     */
+    function getSupply(uint256 _consignmentId)
+    public
+    view
+    consignmentExists(_consignmentId)
+    returns(uint256)
+    {
+        Consignment storage consignment = consignments[_consignmentId];
+        return IERC1155(consignment.tokenAddress).balanceOf(address(this), consignment.tokenId);
+    }
+
+    /**
+     * @notice Is the caller the consignor of the given consignment?
+     *
+     * Reverts if consignment doesn't exist
+     *
+     * @param _account - the _account to check
+     * @param _consignmentId - the id of the consignment
+     * @return  bool - true if caller is consignor
+     */
+    function isConsignor(uint256 _consignmentId, address _account)
+    public
+    view
+    consignmentExists(_consignmentId)
+    returns(bool)
+    {
+        return consignors[_consignmentId] == _account;
     }
 
     /**
@@ -392,10 +456,9 @@ contract MarketController is AccessClient, ERC1155Holder {
      *
      * Emits a ConsignmentRegistered event.
      *
-     * Reverts if consigned token supply has not already been transferred or minted to this contract.
-     *
      * @param _market - the market for the consignment. See {SeenTypes.Market}
-     * @param _seller - the current owner of the consignment
+     * @param _consignor - the address executing the consignment transaction
+     * @param _seller - the seller of the consignment
      * @param _tokenAddress - the contract address issuing the NFT behind the consignment
      * @param _tokenId - the id of the token being consigned
      * @param _supply - the amount of the token being consigned
@@ -403,7 +466,8 @@ contract MarketController is AccessClient, ERC1155Holder {
      * @return consignment - the registered consignment
      */
     function registerConsignment(
-        Market _market,
+        SeenTypes.Market _market,
+        address _consignor,
         address payable _seller,
         address _tokenAddress,
         uint256 _tokenId,
@@ -430,8 +494,11 @@ contract MarketController is AccessClient, ERC1155Holder {
         );
         consignments[id] = consignment;
 
+        // Associate the consignor
+        consignors[id] = _consignor;
+
         // Notify listeners of state change
-        emit ConsignmentRegistered(consignment);
+        emit ConsignmentRegistered(_consignor, consignment);
 
     }
 
@@ -440,7 +507,8 @@ contract MarketController is AccessClient, ERC1155Holder {
      *
      * Emits a ConsignmentReleased event.
      *
-     * Reverts if caller is does not have MARKET_HANDLER role.
+     * Reverts if caller is does not have MARKET_HANDLER role.     *
+     * Reverts if consignment doesn't exist     *
      *
      * @param _consignmentId - the id of the consignment
      * @param _amount - the amount of the consigned supply
@@ -449,6 +517,7 @@ contract MarketController is AccessClient, ERC1155Holder {
     function releaseConsignment(uint256 _consignmentId, uint256 _amount, address _releaseTo)
     external
     onlyRole(MARKET_HANDLER)
+    consignmentExists(_consignmentId)
     {
 
         // Get the consignment into memory
@@ -461,7 +530,7 @@ contract MarketController is AccessClient, ERC1155Holder {
         require(supply >= _amount, "Consigned token supply less than amount");
 
         // Remove the consignment when the entire supply has been released
-        if (supply == _amount) delete consignments[_consignmentId];
+        //if (supply == _amount) delete consignments[_consignmentId];
 
         // Transfer a balance of the token from the MarketController to the recipient
         IERC1155(consignment.tokenAddress).safeTransferFrom(
@@ -484,7 +553,8 @@ contract MarketController is AccessClient, ERC1155Holder {
      * if overriding to Ticketer.Items for a given consignment.
      *
      * Emits a ConsignmentTicketerSet event.
-     * Reverts if consignment is not registered.
+     *
+     * Reverts if consignment doesn't exist     *
      *
      * @param _consignmentId - the id of the consignment
      * @param _ticketerType - the type of ticketer to use. See: {SeenTypes.Ticketer}
@@ -492,11 +562,8 @@ contract MarketController is AccessClient, ERC1155Holder {
     function setConsignmentTicketer(uint256 _consignmentId, Ticketer _ticketerType)
     external
     onlyRole(ESCROW_AGENT)
+    consignmentExists(_consignmentId)
     {
-
-        // Be sure this is an existing consignment
-        require(_consignmentId < nextConsignment, "Invalid consignment id.");
-
         // Set the ticketer for the consignment if not different
         if (_ticketerType != consignmentTicketers[_consignmentId]) {
 

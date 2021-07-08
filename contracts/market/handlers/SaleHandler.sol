@@ -15,7 +15,7 @@ import "../MarketClient.sol";
 contract SaleHandler is MarketClient {
 
     // Events
-    event SalePending(Sale indexed sale);
+    event SalePending(address indexed consignor, Sale sale);
     event SaleStarted(uint256 indexed consignmentId);
     event SaleEnded(uint256 indexed consignmentId, Outcome indexed outcome);
     event Purchase(uint256 indexed consignmentId,  uint256 indexed amount, address indexed buyer);
@@ -73,13 +73,12 @@ contract SaleHandler is MarketClient {
         Audience _audience
     )
     external
-    onlyRole(SELLER) {
+    onlyRole(SELLER)
+    onlyConsignor(_consignmentId)
+    {
 
         // Fetch the consignment
         Consignment memory consignment = marketController.getConsignment(_consignmentId);
-
-        // Make sure auction doesn't exist
-        require(consignment.id == _consignmentId, "Consignment doesn't exist");
 
         // Get the storage location for the sale
         Sale storage sale = sales[_consignmentId];
@@ -100,7 +99,7 @@ contract SaleHandler is MarketClient {
         sale.outcome = Outcome.Pending;
 
         // Notify listeners of state change
-        emit SalePending(sale);
+        emit SalePending(msg.sender, sale);
     }
 
     /**
@@ -135,11 +134,11 @@ contract SaleHandler is MarketClient {
         uint256 _supply,
         uint256 _price,
         uint256 _perTxCap,
-        Audience _audience,
-        Market _market
+        Audience _audience
     )
     external
-    onlyRole(SELLER) {
+    onlyRole(SELLER)
+    {
 
         // Make sure start time isn't in the past
         require (_start >= block.timestamp, "Time runs backward?");
@@ -150,7 +149,7 @@ contract SaleHandler is MarketClient {
         // Ensure seller owns sufficient supply of token
         require(IERC1155(_tokenAddress).balanceOf(_seller, _tokenId) >= _supply, "Seller has insufficient balance of token");
 
-        // Transfer the token supply of the ERC-1155 to the MarketController
+        // To register the consignment, tokens must first be in MarketController's possession
         IERC1155(_tokenAddress).safeTransferFrom(
             _seller,
             address(marketController),
@@ -160,7 +159,7 @@ contract SaleHandler is MarketClient {
         );
 
         // Register the consignment
-        Consignment memory consignment = marketController.registerConsignment(_market, _seller, _tokenAddress, _tokenId, _supply);
+        Consignment memory consignment = marketController.registerConsignment(Market.Secondary, msg.sender, _seller, _tokenAddress, _tokenId, _supply);
 
         // Set up the sale
         setAudience(consignment.id, _audience);
@@ -173,7 +172,7 @@ contract SaleHandler is MarketClient {
         sale.outcome = Outcome.Pending;
 
         // Notify listeners of state change
-        emit SalePending(sale);
+        emit SalePending(msg.sender, sale);
     }
 
     /**
@@ -189,6 +188,9 @@ contract SaleHandler is MarketClient {
     function changeAudience(uint256 _consignmentId, Audience _audience)
     external
     onlyRole(ADMIN) {
+
+        // Get consignment (reverting if not valid)
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Make sure the sale exists and hasn't been settled
         Sale storage sale = sales[_consignmentId];
@@ -220,6 +222,9 @@ contract SaleHandler is MarketClient {
      */
     function buy(uint256 _consignmentId, uint256 _amount) external payable {
 
+        // Get the consignment
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
+
         // Make sure the sale exists
         Sale storage sale = sales[_consignmentId];
         require(sale.start != 0, "Sale does not exist");
@@ -240,9 +245,6 @@ contract SaleHandler is MarketClient {
             }
         }
 
-        // Get the consignment
-        Consignment memory consignment = marketController.getConsignment(_consignmentId);
-
         // If this was the first successful purchase...
         if (sale.state == State.Pending) {
 
@@ -251,10 +253,12 @@ contract SaleHandler is MarketClient {
 
             // Notify listeners of state change
             emit SaleStarted(_consignmentId);
+
         }
 
         // Determine if consignment is physical
-        if (ISeenHausNFT(consignment.tokenAddress).isPhysical(consignment.tokenId)) {
+        address nft = marketController.getNft();
+        if (nft == consignment.tokenAddress && ISeenHausNFT(nft).isPhysical(consignment.tokenId)) {
 
             // Issue an escrow ticket to the buyer
             address escrowTicketer = marketController.getEscrowTicketer(_consignmentId);
@@ -286,9 +290,8 @@ contract SaleHandler is MarketClient {
      */
     function close(uint256 _consignmentId) external {
 
-        // Make sure the consignment exists
+        // Get consignment
         Consignment memory consignment = marketController.getConsignment(_consignmentId);
-        require(consignment.id == _consignmentId, "Invalid consignment id");
 
         // Make sure the sale exists and can be closed normally
         Sale storage sale = sales[_consignmentId];
@@ -324,9 +327,8 @@ contract SaleHandler is MarketClient {
      */
     function cancel(uint256 _consignmentId) external onlyRole(ADMIN) {
 
-        // Make sure the consignment exists
+        // Get the consignment
         Consignment memory consignment = marketController.getConsignment(_consignmentId);
-        require(consignment.id == _consignmentId, "Invalid consignment id");
 
         // Make sure the sale exists and can canceled
         Sale storage sale = sales[_consignmentId];
@@ -338,7 +340,7 @@ contract SaleHandler is MarketClient {
         sale.outcome = Outcome.Canceled;
 
         // Determine the amount sold and remaining
-        uint256 remaining = supply(consignment);
+        uint256 remaining = marketController.getSupply(_consignmentId);
         uint256 sold = consignment.supply - remaining;
 
         // Disburse the funds for the sold items
@@ -357,15 +359,6 @@ contract SaleHandler is MarketClient {
         // Notify listeners about state change
         emit SaleEnded(_consignmentId, sale.outcome);
 
-    }
-
-    /**
-     * @notice Get the remaining supply of the given consignment.
-     *
-     * @param _consignment - the unique consignment being sold
-     */
-    function supply(Consignment memory _consignment) public view returns(uint256) {
-        return IERC1155(_consignment.tokenAddress).balanceOf(address(this), _consignment.tokenId);
     }
 
 }

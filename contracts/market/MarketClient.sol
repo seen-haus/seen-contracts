@@ -99,6 +99,20 @@ abstract contract MarketClient is AccessClient {
     }
 
     /**
+     * @dev Modifier that checks that the caller is the consignor
+     *
+     * Reverts if caller isn't the consignor
+     *
+     * See: {MarketController.isConsignor}
+     */
+    modifier onlyConsignor(uint256 _consignmentId) {
+
+        // Make sure the caller is the consignor
+        require(marketController.isConsignor(_consignmentId, msg.sender), "Caller is not consignor");
+        _;
+    }
+
+    /**
      * @notice Get a percentage of a given amount.
      *
      * N.B. Represent ercentage values are stored
