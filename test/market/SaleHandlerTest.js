@@ -82,9 +82,6 @@ describe("SaleHandler", function() {
         );
         await seenHausNFT.deployed();
 
-        // Grant MARKET_HANDLER to SeenHausNFT
-        await accessController.connect(deployer).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
-
         // Deploy the Foreign1155 contract
         Foreign1155 = await ethers.getContractFactory("Foreign1155");
         foreign1155 = await Foreign1155.deploy();
@@ -120,12 +117,13 @@ describe("SaleHandler", function() {
         await marketController.setLotsTicketer(lotsTicketer.address);
         await marketController.setItemsTicketer(itemsTicketer.address);
 
-        // Grant SaleHandler contract the MARKET_HANDLER role
-        await accessController.grantRole(Role.MARKET_HANDLER, saleHandler.address);
-
         // Deployer grants ADMIN role to admin address and renounces admin
         await accessController.connect(deployer).grantRole(Role.ADMIN, admin.address);
         await accessController.connect(deployer).renounceRole(Role.ADMIN, deployer.address);
+
+        // Grant MARKET_HANDLER to SeenHausNFT and SaleHandler
+        await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
+        await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, saleHandler.address);
 
     });
 
@@ -148,7 +146,7 @@ describe("SaleHandler", function() {
             await foreign1155.connect(seller).setApprovalForAll(saleHandler.address, true);
 
             // Mint a balance of 50 of the token for sale
-            tokenURI = "https://ipfs.io/ipfs/QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
+            tokenURI = "ipfs://QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
             supply = "50";
             royaltyPercentage = maxRoyaltyPercentage;
 
@@ -543,7 +541,7 @@ describe("SaleHandler", function() {
 
                     });
 
-                    xit("should trigger an PayoutDisbursed event", async function () {
+                    it("should trigger an PayoutDisbursed event", async function () {
 
                         // Seller closes sale
                         await expect(
@@ -552,7 +550,7 @@ describe("SaleHandler", function() {
 
                     });
 
-                    xit("should trigger an FeeDisbursed event", async function () {
+                    it("should trigger an FeeDisbursed event", async function () {
 
                         // Seller closes sale
                         await expect(
@@ -561,7 +559,7 @@ describe("SaleHandler", function() {
 
                     });
 
-                    xit("should trigger an RoyaltyDisbursed event for secondary market sales", async function () {
+                    it("should trigger an RoyaltyDisbursed event for secondary market sales", async function () {
 
                         // Seller closes sale
                         await expect(

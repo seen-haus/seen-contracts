@@ -8,6 +8,7 @@ import "../../../access/AccessClient.sol";
 import "../../../market/MarketClient.sol";
 import "../../../util/StringUtils.sol";
 import "../IEscrowTicketer.sol";
+import "../../nft/ISeenHausNFT.sol";
 
 /**
  * @title LotsTicketer
@@ -28,10 +29,10 @@ import "../IEscrowTicketer.sol";
 contract LotsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Holder, ERC721 {
 
     // Ticket ID => Ticket
-    mapping (uint256 => EscrowTicket) tickets;
+    mapping (uint256 => EscrowTicket) internal tickets;
 
     /// @dev Next ticket number
-    uint256 public nextTicket;
+    uint256 internal nextTicket;
 
     string public constant NAME = "Seen.Haus Escrowed Lot Ticket";
     string public constant SYMBOL = "ESCROW_TICKET";
@@ -62,6 +63,19 @@ contract LotsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hold
     }
 
     /**
+     * @notice Get info about the ticket
+     */
+    function getTicketInfo(uint256 ticketId)
+    external
+    view
+    override
+    returns (EscrowTicket memory)
+    {
+        require(_exists(ticketId), "Ticket does not exist");
+        return tickets[ticketId];
+    }
+
+    /**
      * @notice Get the token URI
      *
      * This method is overrides the Open Zeppelin version, returning
@@ -88,8 +102,7 @@ contract LotsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hold
     override
     returns (string memory)
     {
-        string memory id = uintToStr(_tokenId);
-        return strConcat(ESCROW_TICKET_URI_BASE, id);
+        return _baseURI();
     }
 
     /**
@@ -102,7 +115,7 @@ contract LotsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hold
     override
     returns (string memory)
     {
-        return ESCROW_TICKET_URI_BASE;
+        return ESCROW_TICKET_URI;
     }
 
     /**
@@ -117,20 +130,28 @@ contract LotsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hold
     override
     onlyRole(MARKET_HANDLER)
     {
+        // Fetch consignment (reverting if consignment doesn't exist)
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
+
         // Make sure amount is non-zero
         require(_amount > 0, "Token amount cannot be zero.");
+
+        // Get the ticketed token
+        Token memory token = ISeenHausNFT(consignment.tokenAddress).getTokenInfo(consignment.tokenId);
 
         // Create and store escrow ticket
         uint256 ticketId = nextTicket++;
         EscrowTicket storage ticket = tickets[ticketId];
-        ticket.consignmentId = _consignmentId;
         ticket.amount = _amount;
+        ticket.consignmentId = _consignmentId;
         ticket.id = ticketId;
+        ticket.itemURI = token.uri;
 
         // Mint the ticket and send to the buyer
         _mint(_buyer, ticketId);
 
-        // TODO emit TicketIssued event
+        // Notify listeners about state change
+        emit TicketIssued(ticketId, _consignmentId, _buyer, _amount);
     }
 
     /**
@@ -154,7 +175,9 @@ contract LotsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hold
         // Release the consignment to claimant
         marketController.releaseConsignment(ticket.consignmentId, ticket.amount, msg.sender);
 
-        // TODO emit TicketClaimed event
+
+        // Notify listeners of state change
+        emit TicketClaimed(_ticketId, msg.sender, ticket.amount);
 
     }
 

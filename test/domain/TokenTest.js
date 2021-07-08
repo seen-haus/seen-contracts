@@ -5,7 +5,7 @@ describe("Token", function() {
 
     // Suite-wide scope
     let accounts, token;
-    let creator, royaltyPercentage, supply, isPhysical, uri;
+    let creator, royaltyPercentage, id, supply, isPhysical, uri;
 
     before( async function () {
 
@@ -22,17 +22,19 @@ describe("Token", function() {
             // Required constructor params
             royaltyPercentage = "1500"; // 15%
             isPhysical = true;
+            id = "0";
             supply = "25";
-            uri = "https://ipfs.io/ipfs/QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU"
+            uri = "ipfs://QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
 
         });
 
         it("Should allow creation of valid, fully populated Token instance", async function () {
 
-            token = new Token(creator, royaltyPercentage, isPhysical, supply, uri);
+            token = new Token(creator, royaltyPercentage, isPhysical, id, supply, uri);
             expect(token.creatorIsValid()).is.true;
             expect(token.royaltyPercentageIsValid()).is.true;
             expect(token.isPhysicalIsValid()).is.true;
+            expect(token.idIsValid()).is.true;
             expect(token.supplyIsValid()).is.true;
             expect(token.uriIsValid()).is.true;
             expect(token.isValid()).is.true;
@@ -48,11 +50,12 @@ describe("Token", function() {
             // Required constructor params
             royaltyPercentage = "1500"; // 15%
             isPhysical = true;
+            id = "0";
             supply = "25";
-            uri = "https://ipfs.io/ipfs/QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU"
+            uri = "ipfs://QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
 
             // Create a valid token, then set fields in tests directly
-            token = new Token(creator, royaltyPercentage, isPhysical, supply, uri);
+            token = new Token(creator, royaltyPercentage, isPhysical, id, supply, uri);
             expect(token.isValid()).is.true;
         });
 
@@ -133,6 +136,30 @@ describe("Token", function() {
 
         });
 
+        it("Always present, id must be the string representation of a BigNumber", async function() {
+
+            // Invalid field value
+            token.id = 12;
+            expect(token.idIsValid()).is.false;
+            expect(token.isValid()).is.false;
+
+            // Invalid field value
+            token.id = "zedzdeadbaby";
+            expect(token.idIsValid()).is.false;
+            expect(token.isValid()).is.false;
+
+            // Valid field value
+            token.id = "0";
+            expect(token.idIsValid()).is.true;
+            expect(token.isValid()).is.true;
+
+            // Valid field value
+            token.id = "126";
+            expect(token.idIsValid()).is.true;
+            expect(token.isValid()).is.true;
+
+        });
+
         it("Always present, supply must be the string representation of a positive BigNumber", async function() {
 
             // Invalid field value
@@ -185,11 +212,12 @@ describe("Token", function() {
             // Required constructor params
             royaltyPercentage = "1500"; // 15%
             isPhysical = true;
+            id = "0";
             supply = "25";
-            uri = "https://ipfs.io/ipfs/QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU"
+            uri = "ipfs://QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
 
             // Create a valid token, then set fields in tests directly
-            token = new Token(creator, royaltyPercentage, isPhysical, supply, uri);
+            token = new Token(creator, royaltyPercentage, isPhysical, id, supply, uri);
             expect(token.isValid()).is.true;
 
         })
@@ -198,7 +226,7 @@ describe("Token", function() {
 
             // Get plain object
             const object = {
-                creator, royaltyPercentage, isPhysical, supply, uri
+                creator, royaltyPercentage, isPhysical, id, supply, uri
             }
 
             // Promote to instance

@@ -41,10 +41,10 @@ contract MarketController is AccessClient, ERC1155Holder {
     address payable internal multisig;
 
     /// @dev address of the Seen.Haus lots-based escrow ticketing contract
-    address public lotsTicketer;
+    address internal lotsTicketer;
 
     /// @dev address of the Seen.Haus items-based escrow ticketing contract
-    address public itemsTicketer;
+    address internal itemsTicketer;
 
     /// @dev the default escrow ticketer type to use for physical consignments unless overridden with setConsignmentTicketer
     Ticketer internal defaultTicketerType;
@@ -65,13 +65,13 @@ contract MarketController is AccessClient, ERC1155Holder {
     uint256 internal nextConsignment;
 
     /// @dev consignment id => consignment
-    mapping(uint256 => Consignment) public consignments;
+    mapping(uint256 => Consignment) internal consignments;
 
     /// @dev consignmentId to consignor address
-    mapping(uint256 => address) public consignors;
+    mapping(uint256 => address) internal consignors;
 
     /// @dev consignment id => ticketer type
-    mapping(uint256 => Ticketer) public consignmentTicketers;
+    mapping(uint256 => Ticketer) internal consignmentTicketers;
 
     /**
      * @notice Constructor

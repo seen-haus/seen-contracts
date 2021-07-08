@@ -23,10 +23,10 @@ import "./ISeenHausNFT.sol";
 contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
 
     /// @dev token id => Token struct
-    mapping (uint256 => Token) public tokens;
+    mapping (uint256 => Token) internal tokens;
 
     // Next token number
-    uint256 public nextToken;
+    uint256 internal nextToken;
 
     /**
      * @notice Constructor
@@ -106,6 +106,7 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
 
         // Store the token info
         Token storage token = tokens[tokenId];
+        token.id = tokenId;
         token.uri = _tokenURI;
         token.supply = _supply;
         token.creator = _creator;

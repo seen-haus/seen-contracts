@@ -71,18 +71,18 @@ describe("MarketController", function() {
         );
         await seenHausNFT.deployed();
 
-        // Grant MARKET_HANDLER to SeenHausNFT
-        await accessController.connect(deployer).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
-
-        // NFT address gets set after deployment since it requires
-        // the MarketController's address in its constructor
-        await marketController.setNft(seenHausNFT.address);
-
-        // Escrow Ticketer and NFT addresses get set after deployment since
+        // NFT and escrow ticketer addresses get set after deployment since
         // they require the MarketController's address in their constructors
         await marketController.setNft(seenHausNFT.address);
         await marketController.setLotsTicketer(lotsTicketer.address);
         await marketController.setItemsTicketer(itemsTicketer.address);
+
+        // Deployer grants ADMIN role to admin address and renounces admin
+        await accessController.connect(deployer).grantRole(Role.ADMIN, admin.address);
+        await accessController.connect(deployer).renounceRole(Role.ADMIN, deployer.address);
+
+        // Grant MARKET_HANDLER to SeenHausNFT
+        await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
 
     });
 
@@ -225,7 +225,7 @@ describe("MarketController", function() {
         beforeEach( async function () {
 
             // Prepare for roled access to privileged methods
-            await accessController.connect(deployer).grantRole(Role.ADMIN, admin.address);
+            await accessController.connect(admin).grantRole(Role.ADMIN, admin.address);
 
             // Unique replacement values
             replacementAmount = "250";
@@ -717,15 +717,15 @@ describe("MarketController", function() {
         beforeEach( async function () {
 
             // Prepare for roled access to privileged MarketController methods
-            await accessController.connect(deployer).grantRole(Role.MARKET_HANDLER, marketHandler.address);
-            await accessController.connect(deployer).grantRole(Role.ESCROW_AGENT, escrowAgent.address);
-            await accessController.connect(deployer).grantRole(Role.MINTER, minter.address);
+            await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, marketHandler.address);
+            await accessController.connect(admin).grantRole(Role.ESCROW_AGENT, escrowAgent.address);
+            await accessController.connect(admin).grantRole(Role.MINTER, minter.address);
 
             // Setup values
             market = Market.PRIMARY;
             tokenId = await seenHausNFT.getNextToken();
             supply = "1";
-            tokenURI = "https://ipfs.io/ipfs/QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
+            tokenURI = "ipfs://QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
             royaltyPercentage = maxRoyaltyPercentage;
             token = seenHausNFT;
 

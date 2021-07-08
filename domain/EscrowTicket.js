@@ -7,9 +7,11 @@ const ethers = require("ethers");
 
 class EscrowTicket {
 
-    constructor (tokenId, amount) {
-        this.tokenId = tokenId;
+    constructor (id, consignmentId, amount, itemURI) {
+        this.id = id;
+        this.consignmentId = consignmentId;
         this.amount = amount;
+        this.itemURI = itemURI;
     }
 
     /**
@@ -18,8 +20,8 @@ class EscrowTicket {
      * @returns {EscrowTicket}
      */
     static fromObject(o) {
-        const {tokenId, amount} = o;
-        return new EscrowTicket(tokenId, amount);
+        const {id, consignmentId, amount, itemURI} = o;
+        return new EscrowTicket(id, consignmentId, amount, itemURI);
     }
 
     /**
@@ -47,17 +49,34 @@ class EscrowTicket {
     }
 
     /**
-     * Is this EscrowTicket instance's tokenId field valid?
+     * Is this EscrowTicket instance's id field valid?
      * Must be a string that converts to a BigNumber greater than or equal to zero
      * @returns {boolean}
      */
-    tokenIdIsValid() {
-        let {tokenId} = this;
+    idIsValid() {
+        let {id} = this;
         let valid = false;
         try {
             valid = (
-                typeof tokenId === "string" &&
-                ethers.BigNumber.from(tokenId).gte("0")
+                typeof id === "string" &&
+                ethers.BigNumber.from(id).gte("0")
+            )
+        } catch(e){}
+        return valid;
+    }
+
+    /**
+     * Is this EscrowTicket instance's consignmentId field valid?
+     * Must be a string that converts to a BigNumber greater than or equal to zero
+     * @returns {boolean}
+     */
+    consignmentIdIsValid() {
+        let {consignmentId} = this;
+        let valid = false;
+        try {
+            valid = (
+                typeof consignmentId === "string" &&
+                ethers.BigNumber.from(consignmentId).gte("0")
             )
         } catch(e){}
         return valid;
@@ -81,13 +100,34 @@ class EscrowTicket {
     }
 
     /**
+     * Is this EscrowTicket instance's itemURI field valid?
+     * Must be a populated string
+     * @returns {boolean}
+     */
+    itemUriIsValid() {
+        let {itemURI} = this;
+        let valid = false;
+        try {
+            valid = (
+                itemURI !== "" &&
+                itemURI !== undefined &&
+                typeof itemURI === "string"
+            )
+        } catch(e){}
+        return valid;
+    }
+
+
+    /**
      * Is this EscrowTicket instance valid?
      * @returns {boolean}
      */
     isValid() {
         return (
-            this.tokenIdIsValid() &&
-            this.amountIsValid()
+            this.idIsValid() &&
+            this.consignmentIdIsValid() &&
+            this.amountIsValid() &&
+            this.itemUriIsValid()
         );
     };
 

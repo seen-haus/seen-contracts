@@ -13,7 +13,7 @@ describe("LotsTicketer", function() {
     let SeenHausNFT, seenHausNFT;
     let LotsTicketer, lotsTicketer;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
-    let ticketId, tokenId, tokenURI, counter, supply, balance, royaltyPercentage, owner;
+    let ticketId, tokenId, tokenURI, counter, supply, balance, royaltyPercentage, owner, consignmentId;
 
     beforeEach( async function () {
 
@@ -65,10 +65,6 @@ describe("LotsTicketer", function() {
         );
         await seenHausNFT.deployed();
 
-        // NFT address gets set after deployment since it requires
-        // the MarketController's address in its constructor
-        await marketController.setNft(seenHausNFT.address);
-
         // Deploy the LotsTicketer contract
         LotsTicketer = await ethers.getContractFactory("LotsTicketer");
         lotsTicketer = await LotsTicketer.deploy(
@@ -77,6 +73,18 @@ describe("LotsTicketer", function() {
         );
         await lotsTicketer.deployed();
 
+        // NFT address gets set after deployment since it requires
+        // the MarketController's address in its constructor
+        await marketController.setNft(seenHausNFT.address);
+
+        // Deployer grants ADMIN role to admin address and renounces admin
+        await accessController.connect(deployer).grantRole(Role.ADMIN, admin.address);
+        await accessController.connect(deployer).renounceRole(Role.ADMIN, deployer.address);
+
+        // Grant MARKET_HANDLER to SeenHausNFT and LotsTicketer
+        await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
+        await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, lotsTicketer.address);
+
     });
 
     context("Ticketing", async function () {
@@ -84,12 +92,14 @@ describe("LotsTicketer", function() {
         beforeEach( async function () {
 
             // Prepare for roled access to privileged methods
-            await accessController.connect(deployer).grantRole(Role.MARKET_HANDLER, marketHandler.address);
-            await accessController.connect(deployer).grantRole(Role.ESCROW_AGENT, escrowAgent.address);
+            await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, marketHandler.address);
+            await accessController.connect(admin).grantRole(Role.ESCROW_AGENT, escrowAgent.address);
 
             // Setup values
+            consignmentId = await marketController.getNextConsignment();
+            ticketId = await lotsTicketer.getNextTicket();
             tokenId = await seenHausNFT.getNextToken();
-            tokenURI = "https://ipfs.io/ipfs/QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
+            tokenURI = "ipfs://QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
             supply = "50";
             royaltyPercentage = maxRoyaltyPercentage;
 
@@ -100,25 +110,11 @@ describe("LotsTicketer", function() {
 
         context("Privileged Access", async function () {
 
-            beforeEach(async function () {
-
-                // ESCROW_AGENT transfers tokens to ticketer
-                // N.B. in reality they would go from escrow agent to market handler to ticketer
-                await seenHausNFT.connect(escrowAgent).safeTransferFrom(
-                    escrowAgent.address,
-                    lotsTicketer.address,
-                    tokenId,
-                    supply,
-                    []
-                );
-
-            });
-
             it("issueTicket() should require MARKET_HANDLER role", async function () {
 
                 // non-MARKET_HANDLER attempt
                 await expect(
-                    lotsTicketer.connect(associate).issueTicket(tokenId, supply, buyer.address)
+                    lotsTicketer.connect(associate).issueTicket(consignmentId, supply, buyer.address)
                 ).to.be.revertedWith("Access denied, caller doesn't have role");
 
                 // Get counter
@@ -126,19 +122,19 @@ describe("LotsTicketer", function() {
 
                 // Test
                 expect(
-                    counter.eq(tokenId),
+                    counter.eq(ticketId),
                     "non-MARKET_HANDLER can issue a ticket"
                 ).is.true;
 
                 // MARKET_HANDLER attempt
-                await lotsTicketer.connect(marketHandler).issueTicket(tokenId, supply, buyer.address);
+                await lotsTicketer.connect(marketHandler).issueTicket(consignmentId, supply, buyer.address);
 
                 // Get counter
                 counter = await lotsTicketer.getNextTicket();
 
                 // Test
                 expect(
-                    counter.gt(tokenId),
+                    counter.gt(ticketId),
                     "MARKET_HANDLER can't issue a ticket"
                 ).is.true;
 
@@ -149,19 +145,9 @@ describe("LotsTicketer", function() {
         context("Issuing Tickets", async function () {
 
             it("should transfer escrow ticket to buyer", async function () {
-
-                // ESCROW_AGENT transfers tokens to ticketer
-                // N.B. in reality they would go from escrow agent to market handler to ticketer
-                await seenHausNFT.connect(escrowAgent).safeTransferFrom(
-                    escrowAgent.address,
-                    lotsTicketer.address,
-                    tokenId,
-                    supply,
-                    []
-                );
-
+                
                 // MARKET_HANDLER issues ticket
-                await lotsTicketer.connect(marketHandler).issueTicket(tokenId, supply, buyer.address);
+                await lotsTicketer.connect(marketHandler).issueTicket(consignmentId, supply, buyer.address);
 
                 // Get owner of ticket
                 owner = await lotsTicketer.ownerOf(tokenId);
@@ -174,24 +160,26 @@ describe("LotsTicketer", function() {
 
             });
 
-            context("should revert if", async function () {
+            context("Revert Reasons", async function () {
 
-                it("token amount is zero", async function () {
+                it("should revert if consignment doesn't exist", async function () {
 
-                    // MARKET_HANDLER attempts to issues ticket without transferring tokens first
+                    // A non-existent consignment
+                    consignmentId = marketController.getNextConsignment();
+
+                    // MARKET_HANDLER attempts to issue ticket with invalid consignment id
                     await expect(
-                        lotsTicketer.connect(marketHandler).issueTicket(tokenId, "0", buyer.address)
-                    ).revertedWith("Token amount cannot be zero.")
+                        lotsTicketer.connect(marketHandler).issueTicket(consignmentId, "0", buyer.address)
+                    ).revertedWith("Consignment does not exist")
 
                 });
 
-                it("token amount hasn't been transferred to this contract", async function () {
+                it("should revert if token amount is zero", async function () {
 
                     // MARKET_HANDLER attempts to issues ticket without transferring tokens first
                     await expect(
-                        lotsTicketer.connect(marketHandler).issueTicket(tokenId, supply, buyer.address)
-                    ).revertedWith("Must transfer token amount to ticketer first.")
-
+                        lotsTicketer.connect(marketHandler).issueTicket(consignmentId, "0", buyer.address)
+                    ).revertedWith("Token amount cannot be zero.")
 
                 });
 
@@ -203,29 +191,19 @@ describe("LotsTicketer", function() {
 
             beforeEach(async function () {
 
-                // ESCROW_AGENT transfers tokens to ticketer
-                // N.B. in reality they would go from escrow agent to market handler to ticketer
-                await seenHausNFT.connect(escrowAgent).safeTransferFrom(
-                    escrowAgent.address,
-                    lotsTicketer.address,
-                    tokenId,
-                    supply,
-                    []
-                );
-
                 // MARKET_HANDLER issues ticket
                 ticketId = await lotsTicketer.getNextTicket();
-                await lotsTicketer.connect(marketHandler).issueTicket(tokenId, supply, buyer.address);
+                await lotsTicketer.connect(marketHandler).issueTicket(consignmentId, supply, buyer.address);
 
             });
 
-            it("should allow buyer to transfer their ticket to another address", async function () {
+            it("should allow buyer to transfer their indivisible ticket to another address", async function () {
 
                 // Buyer transfers their ticket to associate
                 await lotsTicketer.connect(buyer).transferFrom(
                     buyer.address,
                     associate.address,
-                    tokenId
+                    ticketId
                 );
 
                 // Get owner of ticket
@@ -245,19 +223,9 @@ describe("LotsTicketer", function() {
 
             beforeEach(async function () {
 
-                // ESCROW_AGENT transfers tokens to ticketer
-                // N.B. in reality they would go from escrow agent to market handler to ticketer
-                await seenHausNFT.connect(escrowAgent).safeTransferFrom(
-                    escrowAgent.address,
-                    lotsTicketer.address,
-                    tokenId,
-                    supply,
-                    []
-                );
-
                 // MARKET_HANDLER issues ticket
                 ticketId = await lotsTicketer.getNextTicket();
-                await lotsTicketer.connect(marketHandler).issueTicket(tokenId, supply, buyer.address);
+                await lotsTicketer.connect(marketHandler).issueTicket(consignmentId, supply, buyer.address);
 
             });
 
@@ -277,7 +245,7 @@ describe("LotsTicketer", function() {
 
             });
 
-            context("should revert if", async function () {
+            context("Revert Reasons", async function () {
 
                 it("caller is not holder of the ticket", async function () {
 

@@ -86,9 +86,6 @@ describe("AuctionHandler", function() {
         );
         await seenHausNFT.deployed();
 
-        // Grant MARKET_HANDLER to SeenHausNFT
-        await accessController.connect(deployer).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
-
         // Deploy the Foreign1155 contract
         Foreign1155 = await ethers.getContractFactory("Foreign1155");
         foreign1155 = await Foreign1155.deploy();
@@ -118,18 +115,19 @@ describe("AuctionHandler", function() {
         );
         await lotsTicketer.deployed();
 
-        // Escrow Ticketer and NFT addresses get set after deployment since
+        // NFT and escrow ticketer addresses get set after deployment since
         // they require the MarketController's address in their constructors
         await marketController.setNft(seenHausNFT.address);
         await marketController.setLotsTicketer(lotsTicketer.address);
         await marketController.setItemsTicketer(itemsTicketer.address);
 
-        // Grant AuctionHandler contract the MARKET_HANDLER role
-        await accessController.grantRole(Role.MARKET_HANDLER, auctionHandler.address);
-
         // Deployer grants ADMIN role to admin address and renounces admin
         await accessController.connect(deployer).grantRole(Role.ADMIN, admin.address);
         await accessController.connect(deployer).renounceRole(Role.ADMIN, deployer.address);
+
+        // Grant MARKET_HANDLER to SeenHausNFT and AuctionHandler
+        await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
+        await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, auctionHandler.address);
 
     });
 
@@ -152,7 +150,7 @@ describe("AuctionHandler", function() {
             await foreign1155.connect(seller).setApprovalForAll(auctionHandler.address, true);
 
             // Mint a balance of one token for auctioning
-            tokenURI = "ipfs://ipfs/QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
+            tokenURI = "ipfs://QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
             supply = "1";
             royaltyPercentage = maxRoyaltyPercentage;
 

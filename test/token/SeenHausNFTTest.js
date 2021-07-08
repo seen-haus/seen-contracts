@@ -13,8 +13,8 @@ describe("SeenHausNFT", function() {
     let MarketController, marketController;
     let SeenHausNFT, seenHausNFT;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
-    let counter, tokenURI, nextToken, supply, salePrice, royaltyAmount, expectedRoyalty, percentage, royaltyPercentage;
-    let token, isPhysical, balance, amount, tokenId, uri, invalidRoyaltyPercentage;
+    let counter, tokenURI, tokenId, supply, salePrice, royaltyAmount, expectedRoyalty, percentage, royaltyPercentage;
+    let token, isPhysical, balance, uri, invalidRoyaltyPercentage;
 
     beforeEach( async function () {
 
@@ -67,12 +67,16 @@ describe("SeenHausNFT", function() {
         );
         await seenHausNFT.deployed();
 
-        // Grant MARKET_HANDLER to SeenHausNFT
-        await accessController.connect(deployer).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
-
         // NFT address gets set after deployment since it requires
         // the MarketController's address in its constructor
         await marketController.setNft(seenHausNFT.address);
+
+        // Deployer grants ADMIN role to admin address and renounces admin
+        await accessController.connect(deployer).grantRole(Role.ADMIN, admin.address);
+        await accessController.connect(deployer).renounceRole(Role.ADMIN, deployer.address);
+
+        // Grant MARKET_HANDLER to SeenHausNFT
+        await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
 
     });
 
@@ -81,12 +85,12 @@ describe("SeenHausNFT", function() {
         beforeEach( async function () {
 
             // Prepare for roled access to privileged methods
-            await accessController.connect(deployer).grantRole(Role.ESCROW_AGENT, escrowAgent.address);
-            await accessController.connect(deployer).grantRole(Role.MINTER, minter.address);
+            await accessController.connect(admin).grantRole(Role.ESCROW_AGENT, escrowAgent.address);
+            await accessController.connect(admin).grantRole(Role.MINTER, minter.address);
 
             // Setup values
-            nextToken = await seenHausNFT.getNextToken();
-            tokenURI = "https://ipfs.io/ipfs/QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
+            tokenId = await seenHausNFT.getNextToken();
+            tokenURI = "ipfs://QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
             supply = "1";
             royaltyPercentage = maxRoyaltyPercentage;
 
@@ -106,7 +110,7 @@ describe("SeenHausNFT", function() {
 
                 // Test
                 expect(
-                    counter.eq(nextToken),
+                    counter.eq(tokenId),
                     "non-MINTER can mint a digital token"
                 ).is.true;
 
@@ -118,7 +122,7 @@ describe("SeenHausNFT", function() {
 
                 // Test
                 expect(
-                    counter.gt(nextToken),
+                    counter.gt(tokenId),
                     "MINTER can't mint a digital token"
                 ).is.true;
 
@@ -136,7 +140,7 @@ describe("SeenHausNFT", function() {
 
                 // Test
                 expect(
-                    counter.eq(nextToken),
+                    counter.eq(tokenId),
                     "non-ESCROW_AGENT can mint a physical token"
                 ).is.true;
 
@@ -148,7 +152,7 @@ describe("SeenHausNFT", function() {
 
                 // Test
                 expect(
-                    counter.gt(nextToken),
+                    counter.gt(tokenId),
                     "ESCROW_AGENT can't mint a digital token"
                 ).is.true;
 
@@ -164,7 +168,7 @@ describe("SeenHausNFT", function() {
                 await seenHausNFT.connect(minter).mintDigital(supply, creator.address, tokenURI, royaltyPercentage);
 
                 // Get physical status
-                isPhysical = await seenHausNFT.isPhysical(nextToken);
+                isPhysical = await seenHausNFT.isPhysical(tokenId);
 
                 // Test
                 expect(
@@ -180,7 +184,7 @@ describe("SeenHausNFT", function() {
                 await seenHausNFT.connect(escrowAgent).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage);
 
                 // Get physical status
-                isPhysical = await seenHausNFT.isPhysical(nextToken);
+                isPhysical = await seenHausNFT.isPhysical(tokenId);
 
                 // Test
                 expect(
@@ -200,7 +204,7 @@ describe("SeenHausNFT", function() {
                 await seenHausNFT.connect(minter).mintDigital(supply, creator.address, tokenURI, royaltyPercentage);
 
                 // Get token URI
-                uri = await seenHausNFT.uri(nextToken);
+                uri = await seenHausNFT.uri(tokenId);
 
                 // Test
                 expect(
@@ -216,7 +220,7 @@ describe("SeenHausNFT", function() {
                 await seenHausNFT.connect(escrowAgent).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage);
 
                 // Get physical status
-                uri = await seenHausNFT.uri(nextToken);
+                uri = await seenHausNFT.uri(tokenId);
 
                 // Test
                 expect(
@@ -236,7 +240,7 @@ describe("SeenHausNFT", function() {
                 await seenHausNFT.connect(minter).mintDigital(supply, creator.address, tokenURI, royaltyPercentage);
 
                 // Get MarketController balance
-                balance = await seenHausNFT.balanceOf(marketController.address, nextToken);
+                balance = await seenHausNFT.balanceOf(marketController.address, tokenId);
 
                 // Test
                 expect(
@@ -252,7 +256,7 @@ describe("SeenHausNFT", function() {
                 await seenHausNFT.connect(escrowAgent).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage);
 
                 // Get MarketController balance
-                balance = await seenHausNFT.balanceOf(marketController.address, nextToken);
+                balance = await seenHausNFT.balanceOf(marketController.address, tokenId);
 
                 // Test
                 expect(
@@ -272,13 +276,14 @@ describe("SeenHausNFT", function() {
                 await seenHausNFT.connect(minter).mintDigital(supply, creator.address, tokenURI, royaltyPercentage);
 
                 // Get token info
-                const response = await seenHausNFT.getTokenInfo(nextToken);
+                const response = await seenHausNFT.getTokenInfo(tokenId);
 
                 // Convert to entity
                 token = new Token(
                     response.creator,
                     response.royaltyPercentage.toString(),
                     response.isPhysical,
+                    response.id.toString(),
                     response.supply.toString(),
                     response.uri
                 );
@@ -293,6 +298,7 @@ describe("SeenHausNFT", function() {
                 expect(token.creator === creator.address).is.true;
                 expect(token.royaltyPercentage === royaltyPercentage).is.true;
                 expect(token.isPhysical === false).is.true;
+                expect(token.id === tokenId.toString()).is.true;
                 expect(token.supply === supply).is.true;
                 expect(token.uri === tokenURI).is.true;
 
@@ -304,13 +310,14 @@ describe("SeenHausNFT", function() {
                 await seenHausNFT.connect(escrowAgent).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage);
 
                 // Get token info
-                const response = await seenHausNFT.getTokenInfo(nextToken);
+                const response = await seenHausNFT.getTokenInfo(tokenId);
 
                 // Convert to entity
                 token = new Token(
                     response.creator,
                     response.royaltyPercentage.toString(),
                     response.isPhysical,
+                    response.id.toString(),
                     response.supply.toString(),
                     response.uri
                 );
@@ -325,6 +332,7 @@ describe("SeenHausNFT", function() {
                 expect(token.creator === creator.address).is.true;
                 expect(token.royaltyPercentage === royaltyPercentage).is.true;
                 expect(token.isPhysical === true).is.true;
+                expect(token.id === tokenId.toString()).is.true;
                 expect(token.supply === supply).is.true;
                 expect(token.uri === tokenURI).is.true;
 
@@ -346,7 +354,7 @@ describe("SeenHausNFT", function() {
                 await seenHausNFT.connect(minter).mintDigital(supply, creator.address, tokenURI, royaltyPercentage);
 
                 // Get royalty info
-                [recipient, royaltyAmount] = await seenHausNFT.royaltyInfo(nextToken, salePrice);
+                [recipient, royaltyAmount] = await seenHausNFT.royaltyInfo(tokenId, salePrice);
 
                 // Test
                 expect(

@@ -5,7 +5,7 @@ describe("EscrowTicket", function() {
 
     // Suite-wide scope
     let accounts, escrowTicket;
-    let tokenId, amount;
+    let id, consignmentId, amount, itemURI;
 
     before( async function () {
 
@@ -19,16 +19,20 @@ describe("EscrowTicket", function() {
         beforeEach( async function () {
 
             // Required constructor params
-            tokenId = "100";
+            id = "0";
+            consignmentId = "100";
             amount = ethers.utils.parseUnits("1.5", "ether").toString();
+            itemURI = "ipfs://QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
 
         });
 
         it("Should allow creation of valid, fully populated EscrowTicket instance", async function () {
 
-            escrowTicket = new EscrowTicket(tokenId, amount);
-            expect(escrowTicket.tokenIdIsValid()).is.true;
+            escrowTicket = new EscrowTicket(id, consignmentId, amount, itemURI);
+            expect(escrowTicket.idIsValid()).is.true;
+            expect(escrowTicket.consignmentIdIsValid()).is.true;
             expect(escrowTicket.amountIsValid()).is.true;
+            expect(escrowTicket.itemUriIsValid()).is.true;
             expect(escrowTicket.isValid()).is.true;
 
         });
@@ -40,34 +44,58 @@ describe("EscrowTicket", function() {
         beforeEach( async function () {
 
             // Set params to a fully valid EscrowTicket
-            tokenId = "100";
+            consignmentId = "100";
             amount = ethers.utils.parseUnits("1.5", "ether").toString();
 
             // Create a valid escrowTicket, then set fields in tests directly
-            escrowTicket = new EscrowTicket(tokenId, amount);
+            escrowTicket = new EscrowTicket(id, consignmentId, amount, itemURI);
             expect(escrowTicket.isValid()).is.true;
         });
 
-        it("Always present, tokenId must be the string representation of a BigNumber", async function() {
+        it("Always present, id must be the string representation of a BigNumber", async function() {
 
             // Invalid field value
-            escrowTicket.tokenId = 12;
-            expect(escrowTicket.tokenIdIsValid()).is.false;
+            escrowTicket.id = 12;
+            expect(escrowTicket.idIsValid()).is.false;
             expect(escrowTicket.isValid()).is.false;
 
             // Invalid field value
-            escrowTicket.tokenId = "zedzdeadbaby";
-            expect(escrowTicket.tokenIdIsValid()).is.false;
+            escrowTicket.id = "zedzdeadbaby";
+            expect(escrowTicket.idIsValid()).is.false;
             expect(escrowTicket.isValid()).is.false;
 
             // Valid field value
-            escrowTicket.tokenId = "0";
-            expect(escrowTicket.tokenIdIsValid()).is.true;
+            escrowTicket.id = "0";
+            expect(escrowTicket.idIsValid()).is.true;
             expect(escrowTicket.isValid()).is.true;
 
             // Valid field value
-            escrowTicket.tokenId = "126";
-            expect(escrowTicket.tokenIdIsValid()).is.true;
+            escrowTicket.id = "126";
+            expect(escrowTicket.idIsValid()).is.true;
+            expect(escrowTicket.isValid()).is.true;
+
+        });
+
+        it("Always present, consignmentId must be the string representation of a BigNumber", async function() {
+
+            // Invalid field value
+            escrowTicket.consignmentId = 12;
+            expect(escrowTicket.consignmentIdIsValid()).is.false;
+            expect(escrowTicket.isValid()).is.false;
+
+            // Invalid field value
+            escrowTicket.consignmentId = "zedzdeadbaby";
+            expect(escrowTicket.consignmentIdIsValid()).is.false;
+            expect(escrowTicket.isValid()).is.false;
+
+            // Valid field value
+            escrowTicket.consignmentId = "0";
+            expect(escrowTicket.consignmentIdIsValid()).is.true;
+            expect(escrowTicket.isValid()).is.true;
+
+            // Valid field value
+            escrowTicket.consignmentId = "126";
+            expect(escrowTicket.consignmentIdIsValid()).is.true;
             expect(escrowTicket.isValid()).is.true;
 
         });
@@ -96,6 +124,25 @@ describe("EscrowTicket", function() {
 
         });
 
+        it("Always present, itemURI must be a non-empty string", async function() {
+
+            // Invalid field value
+            escrowTicket.itemURI = 12;
+            expect(escrowTicket.itemUriIsValid()).is.false;
+            expect(escrowTicket.isValid()).is.false;
+
+            // Valid field value
+            escrowTicket.itemURI = "zedzdeadbaby";
+            expect(escrowTicket.itemUriIsValid()).is.true;
+            expect(escrowTicket.isValid()).is.true;
+
+            // Valid field value
+            escrowTicket.itemURI = "https://ipfs.io/ipfs/QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
+            expect(escrowTicket.itemUriIsValid()).is.true;
+            expect(escrowTicket.isValid()).is.true;
+
+        });
+
     })
 
     context("Utility functions", async function () {
@@ -103,11 +150,11 @@ describe("EscrowTicket", function() {
         beforeEach( async function () {
 
             // Set params to a fully valid EscrowTicket
-            tokenId = "100";
+            consignmentId = "100";
             amount = ethers.utils.parseUnits("1.5", "ether").toString();
 
             // Create a valid EscrowTicket instance, then operate on its methods in the tests
-            escrowTicket = new EscrowTicket(tokenId, amount);
+            escrowTicket = new EscrowTicket(id, consignmentId, amount, itemURI);
             expect(escrowTicket.isValid()).is.true;
 
         })
@@ -116,7 +163,7 @@ describe("EscrowTicket", function() {
 
             // Get plain object
             const object = {
-                tokenId, amount
+                id, consignmentId, amount, itemURI
             }
 
             // Promote to instance

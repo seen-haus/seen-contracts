@@ -8,7 +8,8 @@ pragma solidity ^0.8.5;
  */
 contract SeenTypes {
 
-    string public constant ESCROW_TICKET_URI_BASE = "https://seen.haus/escrowticket/";
+    // TODO: Create metadata for Escrow Ticket and get ipfs address
+    string public constant ESCROW_TICKET_URI = "ipfs://QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
 
     bytes4 public constant INTERFACE_ID_2981 = bytes4(keccak256("royaltyInfo(uint256,uint256)"));
 
@@ -57,6 +58,7 @@ contract SeenTypes {
         address payable creator;
         uint16 royaltyPercentage;
         bool isPhysical;
+        uint256 id;
         uint256 supply;
         string uri;
     }
@@ -95,6 +97,7 @@ contract SeenTypes {
         uint256 amount;
         uint256 consignmentId;
         uint256 id;
+        string itemURI;
     }
 
 }

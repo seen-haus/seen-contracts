@@ -28,10 +28,10 @@ import "../IEscrowTicketer.sol";
 contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Holder, ERC1155 {
 
     // Ticket ID => Ticket
-    mapping (uint256 => EscrowTicket) tickets;
+    mapping (uint256 => EscrowTicket) internal tickets;
 
     /// @dev Next ticket number
-    uint256 public nextTicket;
+    uint256 internal nextTicket;
 
     /**
      * @notice Constructor
@@ -42,7 +42,7 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
     constructor(address _accessController, address _marketController)
     AccessClient(_accessController)
     MarketClient(_marketController)
-    ERC1155(ESCROW_TICKET_URI_BASE)
+    ERC1155(ESCROW_TICKET_URI)
     {}
 
     /**
@@ -59,20 +59,22 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
     }
 
     /**
+ * @notice Get info about the ticket
+ */
+    function getTicketInfo(uint256 ticketId)
+    external
+    view
+    override
+    returns (EscrowTicket memory)
+    {
+        require(ticketId < nextTicket, "Ticket does not exist");
+        return tickets[ticketId];
+    }
+
+    /**
      * @notice Get the token URI
      *
-     * This method is overrides the Open Zeppelin version, returning
-     * a unique endpoint address on the seen.haus site for each token id.
-     *
-     * Tickets are transient and will be burned when claimed to obtain
-     * proof of ownership NFTs with their metadata on IPFS as usual.
-     *
-     * TODO: Create a dynamic endpoint on the web for generating the JSON
-     * Just needs to call this contract: tickets(tokenId) and create JSON
-     * with a fixed name, description, and image, adding these fields
-     *  - tokenAddress: [SeenHausNFT contract address]
-     *  - tokenId: [the token id from EscrowTicket]
-     *  - amount: [the amount of that token this ticket can claim]
+     * Same for all tickets, since they are dynamically created.
      *
      * @param _tokenId - the ticket's token id
      * @return tokenURI - the URI for the given token id's metadata
@@ -83,8 +85,7 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
     override
     returns (string memory)
     {
-        string memory id = uintToStr(_tokenId);
-        return strConcat(ESCROW_TICKET_URI_BASE, id);
+        return ESCROW_TICKET_URI;
     }
 
     /**
@@ -108,8 +109,14 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
     override
     onlyRole(MARKET_HANDLER)
     {
+        // Fetch consignment (reverting if consignment doesn't exist)
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
+
         // Make sure amount is non-zero
         require(_amount > 0, "Token amount cannot be zero.");
+
+        // Get the ticketed token
+        Token memory token = ISeenHausNFT(consignment.tokenAddress).getTokenInfo(consignment.tokenId);
 
         // Create and store escrow ticket
         uint256 ticketId = nextTicket++;
@@ -117,11 +124,14 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
         ticket.amount = _amount;
         ticket.consignmentId = _consignmentId;
         ticket.id = ticketId;
+        ticket.itemURI = token.uri;
 
         // Mint escrow ticket and send to buyer
         _mint(_buyer, ticketId, _amount, new bytes(0x0));
 
-        // TODO emit TicketIssued event
+        // Notify listeners about state change
+        emit TicketIssued(ticketId, _consignmentId, _buyer, _amount);
+
     }
 
     /**
@@ -131,7 +141,6 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
      */
     function claim(uint256 _ticketId) external override
     {
-
         // Make sure the ticket exists
         EscrowTicket memory ticket = tickets[_ticketId];
         require(ticket.id == _ticketId, "Ticket does not exist");
@@ -155,7 +164,8 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
         // Release the consignment to claimant
         marketController.releaseConsignment(ticket.consignmentId, amount, msg.sender);
 
-        // TODO emit TicketClaimed event
+        // Notify listeners of state change
+        emit TicketClaimed(_ticketId, msg.sender, amount);
 
     }
 

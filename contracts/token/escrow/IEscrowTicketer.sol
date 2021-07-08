@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.5;
 
+import "../../domain/SeenTypes.sol";
+
 /**
  * @title IEscrowTicketer
  * @author Cliff Hall
@@ -8,10 +10,18 @@ pragma solidity ^0.8.5;
  */
 interface IEscrowTicketer {
 
+    event TicketIssued(uint256 ticketId, uint256 indexed consignmentId, address indexed buyer, uint256 amount);
+    event TicketClaimed(uint256 ticketId, address indexed claimant, uint256 amount);
+
     /**
      * @notice The nextTicket getter
      */
     function getNextTicket() external view returns (uint256);
+
+    /**
+     * @notice Get info about the ticket
+     */
+    function getTicketInfo(uint256 ticketId) external view returns (SeenTypes.EscrowTicket memory);
 
     /**
      * Issue an escrow ticket to the buyer
