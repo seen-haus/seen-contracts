@@ -6,7 +6,7 @@ describe("Consignment", function() {
 
     // Suite-wide scope
     let accounts, consignment;
-    let market, seller, tokenAddress, tokenId, id;
+    let market, seller, tokenAddress, tokenId, supply, id;
 
     before( async function () {
 
@@ -24,13 +24,14 @@ describe("Consignment", function() {
             seller = accounts[0].address;
             tokenAddress = "0x7777788200B672A42421017F65EDE4Fc759564C8";
             tokenId = "100";
+            supply = "50";
             id = "1";
             
         });
 
         it("Should allow creation of valid, fully populated Consignment instance", async function () {
 
-            consignment = new Consignment(market, seller, tokenAddress, tokenId, id);
+            consignment = new Consignment(market, seller, tokenAddress, tokenId, supply, id);
             expect(consignment.marketIsValid()).is.true;
             expect(consignment.sellerIsValid()).is.true;
             expect(consignment.tokenAddressIsValid()).is.true;
@@ -51,10 +52,11 @@ describe("Consignment", function() {
             seller = accounts[0].address;
             tokenAddress = "0x7777788200B672A42421017F65EDE4Fc759564C8";
             tokenId = "100";
+            supply = "50";
             id = "1";
 
             // Create a valid consignment, then set fields in tests directly
-            consignment = new Consignment(market, seller, tokenAddress, tokenId, id);
+            consignment = new Consignment(market, seller, tokenAddress, tokenId, supply, id);
             expect(consignment.isValid()).is.true;
         });
 
@@ -149,6 +151,36 @@ describe("Consignment", function() {
 
         });
 
+        it("Always present, supply must be the string representation of a positive BigNumber", async function() {
+
+            // Invalid field value
+            consignment.supply = 20;
+            expect(consignment.supplyIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Invalid field value
+            consignment.supply = "0";
+            expect(consignment.supplyIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Invalid field value
+            consignment.supply = "zedzdeadbaby";
+            expect(consignment.supplyIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Valid field value
+            consignment.supply = "1";
+            expect(consignment.supplyIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+            // Valid field value
+            consignment.supply = "500";
+            expect(consignment.supplyIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+        });
+
+
         it("Always present, id must be the string representation of a BigNumber", async function() {
 
             // Invalid field value
@@ -184,10 +216,11 @@ describe("Consignment", function() {
             seller = accounts[0].address;
             tokenAddress = "0x7777788200B672A42421017F65EDE4Fc759564C8";
             tokenId = "100";
+            supply = "50";
             id = "1";
 
             // Create a valid Consignment instance, then operate on its methods in the tests
-            consignment = new Consignment(market, seller, tokenAddress, tokenId, id);
+            consignment = new Consignment(market, seller, tokenAddress, tokenId, supply, id);
             expect(consignment.isValid()).is.true;
 
         })
@@ -196,7 +229,7 @@ describe("Consignment", function() {
 
             // Get plain object
             const object = {
-                market, seller, tokenAddress: tokenAddress, tokenId, id
+                market, seller, tokenAddress: tokenAddress, tokenId, supply, id
             }
 
             // Promote to instance

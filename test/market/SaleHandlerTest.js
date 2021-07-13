@@ -21,6 +21,7 @@ describe("SaleHandler", function() {
     let LotsTicketer, lotsTicketer;
     let ItemsTicketer, itemsTicketer;
     let SeenHausNFT, seenHausNFT;
+    let Foreign1155, foreign1155;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let market, tokenAddress, tokenId, tokenURI, sale, physicalTokenId, physicalConsignmentId, consignmentId, nextConsignment, block, blockNumber;
     let royaltyPercentage, supply, start, quantity, price, perTxCap, audience, escrowTicketer;
@@ -45,7 +46,7 @@ describe("SaleHandler", function() {
         escrowAgent = accounts[7];
 
         staking = accounts[8];         // We just need addresses for these,
-        multisig = accounts[9];       // not functional contracts
+        multisig = accounts[9];        // not functional contracts
 
         // Market control values
         vipStakerAmount = "500";              // Amount of xSEEN to be VIP
@@ -81,6 +82,11 @@ describe("SaleHandler", function() {
         );
         await seenHausNFT.deployed();
 
+        // Deploy the Foreign1155 contract
+        Foreign1155 = await ethers.getContractFactory("Foreign1155");
+        foreign1155 = await Foreign1155.deploy();
+        await foreign1155.deployed();
+
         // Deploy the SaleHandler contract
         SaleHandler = await ethers.getContractFactory("SaleHandler");
         saleHandler = await SaleHandler.deploy(
@@ -111,12 +117,13 @@ describe("SaleHandler", function() {
         await marketController.setLotsTicketer(lotsTicketer.address);
         await marketController.setItemsTicketer(itemsTicketer.address);
 
-        // Grant SaleHandler contract the MARKET_HANDLER role
-        await accessController.grantRole(Role.MARKET_HANDLER, saleHandler.address);
-
         // Deployer grants ADMIN role to admin address and renounces admin
         await accessController.connect(deployer).grantRole(Role.ADMIN, admin.address);
         await accessController.connect(deployer).renounceRole(Role.ADMIN, deployer.address);
+
+        // Grant MARKET_HANDLER to SeenHausNFT and SaleHandler
+        await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
+        await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, saleHandler.address);
 
     });
 
@@ -130,39 +137,39 @@ describe("SaleHandler", function() {
             await accessController.connect(admin).grantRole(Role.SELLER, seller.address);
             await accessController.connect(admin).grantRole(Role.MINTER, seller.address);
 
-            // Escrow Agent needed to create sales of escrowed items
+            // Escrow Agent needs to mint and market escrowed physical items
+            await accessController.connect(admin).grantRole(Role.SELLER, escrowAgent.address);
             await accessController.connect(admin).grantRole(Role.ESCROW_AGENT, escrowAgent.address);
 
             // Seller approves SaleHandler contract to transfer their tokens
             await seenHausNFT.connect(seller).setApprovalForAll(saleHandler.address, true);
+            await foreign1155.connect(seller).setApprovalForAll(saleHandler.address, true);
 
             // Mint a balance of 50 of the token for sale
+            tokenURI = "ipfs://QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
             supply = "50";
-            tokenId = await seenHausNFT.getNextToken();
-            tokenURI = "https://ipfs.io/ipfs/QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
             royaltyPercentage = maxRoyaltyPercentage;
 
             // Seller creates digital token
-            await seenHausNFT.connect(seller).mintDigital(supply, creator.address, tokenURI, royaltyPercentage);
+            consignmentId = await marketController.getNextConsignment();
+            tokenId = await seenHausNFT.getNextToken();
+            await seenHausNFT.connect(seller).mintDigital(supply, seller.address, tokenURI, royaltyPercentage);
 
-            // Physical token id
+            // Escrow agent creates physical token on our contract
+            physicalConsignmentId = await marketController.getNextConsignment();
             physicalTokenId = await seenHausNFT.getNextToken();
+            await seenHausNFT.connect(escrowAgent).mintPhysical(supply, seller.address, tokenURI, royaltyPercentage);
 
-            // Escrow agent creates physical token to seller
-            await seenHausNFT.connect(escrowAgent).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage);
-
-            // Escrow agent transfers token balance to seller
-            await seenHausNFT.connect(escrowAgent).safeTransferFrom(escrowAgent.address, seller.address, physicalTokenId, supply, []);
+            // Create foreign token for secondary market sales
+            await foreign1155.connect(seller).mint(creator.address, tokenId, supply, royaltyPercentage);
 
             // Setup values
-            consignmentId = await marketController.getNextConsignment();
             tokenAddress = seenHausNFT.address;
             start = ethers.BigNumber.from(block.timestamp).add('900').toString(); // 15 minutes from latest block
             price = ethers.utils.parseUnits("1", "ether");
             quantity = supply;
             perTxCap = supply; // TODO: test lower buyout price by overriding this value at sale creation
             audience = Audience.OPEN;
-            market = Market.PRIMARY;
             buyOutPrice = price.mul(ethers.BigNumber.from(quantity)).toString();
             single = "1";
 
@@ -172,53 +179,100 @@ describe("SaleHandler", function() {
 
             context("New Sales", async function () {
 
-                it("createSale() should require caller has SELLER role", async function () {
+                context("createPrimarySale()", async function () {
 
-                    // non-SELLER attempt
-                    await expect(
-                        saleHandler.connect(associate).createSale(
-                            seller.address,
-                            tokenAddress,
-                            tokenId,
+                    it("should require caller has SELLER role", async function () {
+
+                        // Get next consignment
+                        nextConsignment = await marketController.getNextConsignment();
+
+                        // non-SELLER attempt
+                        await expect(
+                            saleHandler.connect(associate).createPrimarySale(
+                                consignmentId,
+                                start,
+                                price,
+                                perTxCap,
+                                audience
+                            )
+                        ).to.be.revertedWith("Access denied, caller doesn't have role");
+
+                        // Test
+                        expect(
+                            (await marketController.getNextConsignment()).eq(nextConsignment),
+                            "non-SELLER can create an sale"
+                        ).is.true;
+
+                        // SELLER attempt
+                        await saleHandler.connect(seller).createPrimarySale(
+                            consignmentId,
                             start,
-                            quantity,
                             price,
                             perTxCap,
-                            audience,
-                            market
-                        )
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                            audience
+                        );
 
-                    // Get next consignment
-                    nextConsignment = await marketController.getNextConsignment();
+                        // Get next consignment
+                        nextConsignment = await marketController.getNextConsignment();
 
-                    // Test
-                    expect(
-                        nextConsignment.eq(consignmentId),
-                        "non-SELLER can create an sale"
-                    ).is.true;
+                        // Test
+                        expect(
+                            nextConsignment.gt(consignmentId),
+                            "SELLER can't create an sale"
+                        ).is.true;
 
-                    // SELLER attempt
-                    await saleHandler.connect(seller).createSale(
-                        seller.address,
-                        tokenAddress,
-                        tokenId,
-                        start,
-                        quantity,
-                        price,
-                        perTxCap,
-                        audience,
-                        market
-                    );
+                    });
 
-                    // Get next consignment
-                    nextConsignment = await marketController.getNextConsignment();
+                    it("should require caller is the original asset consignor", async function () {
 
-                    // Test
-                    expect(
-                        nextConsignment.gt(consignmentId),
-                        "SELLER can't create an sale"
-                    ).is.true;
+                        // Creator transfers all their tokens to seller
+                        await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
+
+                        // Token is on a foreign contract
+                        tokenAddress = foreign1155.address;
+
+                        // Get next consignment
+                        nextConsignment = await marketController.getNextConsignment();
+
+                        // Grant SELLER role to address that is not consignor
+                        await accessController.connect(admin).grantRole(Role.SELLER, associate.address);
+
+                        // SELLER who is not original consignor attempts to create primary sale
+                        await expect(
+                            saleHandler.connect(associate).createPrimarySale(
+                                consignmentId,
+                                start,
+                                price,
+                                perTxCap,
+                                audience
+                            )
+                        ).to.be.revertedWith("Caller is not consignor");
+
+                        // Test
+                        expect(
+                            (await marketController.getNextConsignment()).eq(nextConsignment),
+                            "SELLER who is not consignor can create a sale"
+                        ).is.true;
+
+                        // SELLER attempt
+                        await saleHandler.connect(seller).createPrimarySale(
+                            consignmentId,
+                            start,
+                            price,
+                            perTxCap,
+                            audience
+                        );
+
+                        // Get next consignment
+                        nextConsignment = await marketController.getNextConsignment();
+
+                        // Test
+                        expect(
+                            nextConsignment.gt(consignmentId),
+                            "Original consignor can't create a sale"
+                        ).is.true;
+
+                    });
 
                 });
 
@@ -229,16 +283,12 @@ describe("SaleHandler", function() {
                 beforeEach(async function() {
 
                     // SELLER creates sale
-                    await saleHandler.connect(seller).createSale(
-                        seller.address,
-                        tokenAddress,
-                        tokenId,
+                    await saleHandler.connect(seller).createPrimarySale(
+                        consignmentId,
                         start,
-                        quantity,
                         price,
                         perTxCap,
-                        audience,
-                        market
+                        audience
                     );
 
                 });
@@ -274,7 +324,7 @@ describe("SaleHandler", function() {
                         saleHandler.connect(associate).cancel(consignmentId)
                     ).to.be.revertedWith("Access denied, caller doesn't have role");
 
-                    // ADMIN attempt
+                    // ADMIN attempt // TODO: Why does this crash now
                     await expect (
                         saleHandler.connect(admin).cancel(consignmentId)
                     ).to.emit(saleHandler,"SaleEnded");
@@ -289,30 +339,69 @@ describe("SaleHandler", function() {
 
             context("New Sales", async function () {
 
-                context("createSale()", async function () {
+                context("createPrimarySale()", async function () {
+
+                    it("should emit a SalePending event", async function () {
+
+                        // Make change, test event
+                        await expect(
+                            saleHandler.connect(seller).createPrimarySale(
+                                consignmentId,
+                                start,
+                                price,
+                                perTxCap,
+                                audience
+                            )
+                        ).to.emit(saleHandler, 'SalePending')
+                            .withArgs(
+                                seller.address,
+                                [ // Sale
+                                    consignmentId,
+                                    start,
+                                    price,
+                                    perTxCap,
+                                    ethers.BigNumber.from(State.PENDING),
+                                    ethers.BigNumber.from(Outcome.PENDING)
+                                ]
+                            );
+                    });
+
+                });
+
+                context("createSecondarySale()", async function () {
 
                     it("should trigger a ConsignmentRegistered event on MarketController", async function () {
 
+                        // Creator transfers all their tokens to seller
+                        await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
+
+                        // Get the next consignment id
+                        consignmentId = await marketController.getNextConsignment();
+
+                        // Token is on a foreign contract
+                        tokenAddress = foreign1155.address;
+
                         // Create sale, test event
                         await expect(
-                            saleHandler.connect(seller).createSale(
+                            saleHandler.connect(seller).createSecondarySale(
                                 seller.address,
                                 tokenAddress,
                                 tokenId,
                                 start,
-                                quantity,
+                                supply,
                                 price,
                                 perTxCap,
-                                audience,
-                                market
+                                audience
                             )
                         ).emit(marketController, 'ConsignmentRegistered')
                             .withArgs(
+                                seller.address,
                                 [ // Consignment
-                                    market,
+                                    Market.SECONDARY,
                                     seller.address,
                                     tokenAddress,
                                     tokenId,
+                                    supply,
                                     consignmentId
                                 ]
                             )
@@ -321,9 +410,18 @@ describe("SaleHandler", function() {
 
                     it("should emit a SalePending event", async function () {
 
+                        // Creator transfers all their tokens to seller
+                        await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
+
+                        // Get the next consignment id
+                        consignmentId = await marketController.getNextConsignment();
+
+                        // Token is on a foreign contract
+                        tokenAddress = foreign1155.address;
+
                         // Make change, test event
                         await expect(
-                            saleHandler.connect(seller).createSale(
+                            saleHandler.connect(seller).createSecondarySale(
                                 seller.address,
                                 tokenAddress,
                                 tokenId,
@@ -331,14 +429,14 @@ describe("SaleHandler", function() {
                                 quantity,
                                 price,
                                 perTxCap,
-                                audience,
-                                market
+                                audience
                             )
                         ).to.emit(saleHandler, 'SalePending')
-                            .withArgs([ // Sale
+                            .withArgs(
+                                seller.address,
+                                [ // Sale
                                     consignmentId,
                                     start,
-                                    quantity,
                                     price,
                                     perTxCap,
                                     ethers.BigNumber.from(State.PENDING),
@@ -355,11 +453,17 @@ describe("SaleHandler", function() {
 
                 beforeEach(async function() {
 
-                    // Lets use secondary market to trigger royalties
-                    market = Market.SECONDARY;
+                    // Creator transfers all their tokens to seller
+                    await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
+
+                    // Get the next consignment id
+                    consignmentId = await marketController.getNextConsignment();
+
+                    // Token is on a foreign contract
+                    tokenAddress = foreign1155.address;
 
                     // SELLER creates secondary market sale
-                    await saleHandler.connect(seller).createSale(
+                    await saleHandler.connect(seller).createSecondarySale(
                         seller.address,
                         tokenAddress,
                         tokenId,
@@ -367,8 +471,7 @@ describe("SaleHandler", function() {
                         quantity,
                         price,
                         perTxCap,
-                        audience,
-                        market
+                        audience
                     );
 
                 });
@@ -407,8 +510,8 @@ describe("SaleHandler", function() {
                         ).to.emit(saleHandler, "Purchase")
                             .withArgs(
                                 consignmentId,
-                                buyer.address,
-                                single
+                                single,
+                                buyer.address
                             );
 
                     });
@@ -426,19 +529,6 @@ describe("SaleHandler", function() {
                     });
 
                     it("should emit a SaleEnded event", async function () {
-
-                        // Seller closes sale
-                        await expect(
-                            saleHandler.connect(seller).close(consignmentId)
-                        ).to.emit(saleHandler, "SaleEnded")
-                            .withArgs(
-                                consignmentId,
-                                Outcome.CLOSED
-                            );
-
-                    });
-
-                    it("should trigger a SaleEnded event", async function () {
 
                         // Seller closes sale
                         await expect(
@@ -490,7 +580,7 @@ describe("SaleHandler", function() {
 
                     });
 
-                    it("should emit an SaleEnded event", async function () {
+                    it("should emit a SaleEnded event", async function () {
 
                         // Seller closes sale
                         await expect(
@@ -513,7 +603,75 @@ describe("SaleHandler", function() {
 
             context("New Sales", async function () {
 
-                context("createSale()", async function () {
+                context("createPrimarySale()", async function () {
+
+                    it("should revert if caller isn't the asset consignor", async function () {
+
+                        // Grant SELLER role to associate, who did not mint the original token
+                        await accessController.connect(admin).grantRole(Role.SELLER, associate.address);
+
+                        // Associate attempts to create primary auction, expect revert
+                        await expect(
+                            saleHandler.connect(associate).createPrimarySale(
+                                consignmentId,
+                                start,
+                                price,
+                                perTxCap,
+                                audience
+                            )
+                        ).to.be.revertedWith("Caller is not consignor");
+
+                    });
+
+                    it("should revert if consignment does not exist", async function () {
+
+                        // A non-existent consignment
+                        consignmentId = marketController.getNextConsignment();
+
+                        // Create auction, expect revert
+                        await expect(
+                            saleHandler.connect(seller).createPrimarySale(
+                                consignmentId,
+                                start,
+                                price,
+                                perTxCap,
+                                audience
+                            )
+                        ).to.be.revertedWith("Consignment does not exist");
+
+                    });
+
+                    it("should revert if start time is in the past", async function () {
+
+                        // 15 minutes before latest block
+                        badStartTime = ethers.BigNumber.from(block.timestamp).sub('900').toString();
+
+                        // Create auction, expect revert
+                        await expect(
+                            saleHandler.connect(seller).createPrimarySale(
+                                consignmentId,
+                                badStartTime,
+                                price,
+                                perTxCap,
+                                audience
+                            )
+                        ).to.be.revertedWith('Time runs backward?');
+
+                    });
+
+                });
+
+                context("createSecondarySale()", async function () {
+
+                    beforeEach(async function () {
+
+                        // Creator transfers all their tokens to seller
+                        await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
+
+                        // Token is on a foreign contract
+                        tokenAddress = foreign1155.address;
+
+                    });
 
                     it("should revert if start time is in the past", async function () {
 
@@ -522,7 +680,7 @@ describe("SaleHandler", function() {
 
                         // Create sale, expect revert
                         await expect(
-                            saleHandler.connect(seller).createSale(
+                            saleHandler.connect(seller).createSecondarySale(
                                 seller.address,
                                 tokenAddress,
                                 tokenId,
@@ -530,8 +688,7 @@ describe("SaleHandler", function() {
                                 quantity,
                                 price,
                                 perTxCap,
-                                audience,
-                                market
+                                audience
                             )
                         ).to.be.revertedWith('Time runs backward?');
 
@@ -540,11 +697,11 @@ describe("SaleHandler", function() {
                     it("should revert if contract doesn't have approval to transfer seller's tokens", async function () {
 
                         // Seller un-approves AuctionHandler contract to transfer their tokens
-                        await seenHausNFT.connect(seller).setApprovalForAll(saleHandler.address, false);
+                        await foreign1155.connect(seller).setApprovalForAll(saleHandler.address, false);
 
                         // Create sale, expect revert
                         await expect(
-                            saleHandler.connect(seller).createSale(
+                            saleHandler.connect(seller).createSecondarySale(
                                 seller.address,
                                 tokenAddress,
                                 tokenId,
@@ -552,8 +709,7 @@ describe("SaleHandler", function() {
                                 quantity,
                                 price,
                                 perTxCap,
-                                audience,
-                                market
+                                audience
                             )
                         ).to.be.revertedWith("Not approved to transfer seller's tokens");
 
@@ -564,11 +720,11 @@ describe("SaleHandler", function() {
                         halfSupply = ethers.BigNumber.from(supply).div("2");
 
                         // Seller transfers half their tokens to associate
-                        await seenHausNFT.connect(seller).safeTransferFrom(seller.address, associate.address, tokenId, halfSupply, []);
+                        await foreign1155.connect(seller).safeTransferFrom(seller.address, associate.address, tokenId, halfSupply, []);
 
                         // Create sale, expect revert
                         await expect(
-                            saleHandler.connect(seller).createSale(
+                            saleHandler.connect(seller).createSecondarySale(
                                 seller.address,
                                 tokenAddress,
                                 tokenId,
@@ -576,8 +732,7 @@ describe("SaleHandler", function() {
                                 quantity,
                                 price,
                                 perTxCap,
-                                audience,
-                                market
+                                audience
                             )
                         ).to.be.revertedWith("Seller has insufficient balance of token");
 
@@ -598,26 +753,39 @@ describe("SaleHandler", function() {
                     perTxCap = "5";
 
                     // SELLER creates secondary market sale
-                    await saleHandler.connect(seller).createSale(
-                        seller.address,
-                        tokenAddress,
-                        tokenId,
+                    await saleHandler.connect(seller).createPrimarySale(
+                        consignmentId,
                         start,
-                        quantity,
                         price,
                         perTxCap,
-                        audience,
-                        market
+                        audience
                     );
 
                 });
 
                 context("changeAudience()", async function () {
 
-                    it("should revert if sale doesn't exist", async function () {
+                    it("should revert if consignment does not exist", async function () {
 
                         // get next consignment id
                         consignmentId = await marketController.getNextConsignment();
+
+                        // ADMIN attempts to set audience for nonexistent consignment
+                        await expect(
+                            saleHandler.connect(admin).changeAudience(
+                                consignmentId,
+                                Audience.OPEN
+                            )
+                        ).to.be.revertedWith("Consignment does not exist");
+
+                    });
+
+                    it("should revert if sale doesn't exist", async function () {
+
+                        // Seller creates digital token
+                        consignmentId = await marketController.getNextConsignment();
+                        tokenId = await seenHausNFT.getNextToken();
+                        await seenHausNFT.connect(seller).mintDigital(supply, seller.address, tokenURI, royaltyPercentage);
 
                         // ADMIN attempts to set audience for nonexistent sale
                         await expect(
@@ -637,7 +805,7 @@ describe("SaleHandler", function() {
                         // Cancel the sale
                         saleHandler.connect(admin).cancel(consignmentId);
 
-                        // ADMIN attempts to set audience for nonexistent sale
+                        // ADMIN attempts to set audience for already settled sale
                         await expect(
                             saleHandler.connect(admin).changeAudience(
                                 consignmentId,
@@ -658,12 +826,26 @@ describe("SaleHandler", function() {
 
                     });
 
-                    it("should revert if sale doesn't exist", async function () {
+                    it("should revert if consignment does not exist", async function () {
 
                         // get next consignment id
                         consignmentId = await marketController.getNextConsignment();
 
-                        // ADMIN attempts to set audience for nonexistent sale
+                        // ADMIN attempts to set audience for nonexistent sale of consignment
+                        await expect(
+                            saleHandler.connect(buyer).buy(consignmentId, single, {value: price})
+                        ).to.be.revertedWith("Consignment does not exist");
+
+                    });
+
+                    it("should revert if sale doesn't exist", async function () {
+
+                        // Seller creates digital token
+                        consignmentId = await marketController.getNextConsignment();
+                        tokenId = await seenHausNFT.getNextToken();
+                        await seenHausNFT.connect(seller).mintDigital(supply, seller.address, tokenURI, royaltyPercentage);
+
+                        // ADMIN attempts to set cancel when sale doesn't exist
                         await expect(
                             saleHandler.connect(buyer).buy(consignmentId, single, {value: price})
                         ).to.be.revertedWith("Sale does not exist");
@@ -745,14 +927,28 @@ describe("SaleHandler", function() {
 
                     });
 
-                    it("should revert if sale doesn't exist", async function () {
+                    it("should revert if consignment does not exist", async function () {
 
                         // get next consignment id
                         consignmentId = await marketController.getNextConsignment();
 
-                        // ADMIN attempts to close a nonexistent sale
+                        // ADMIN attempts to close a nonexistent consignment
                         await expect(
                             saleHandler.connect(seller).close(consignmentId)
+                        ).to.be.revertedWith("Consignment does not exist");
+
+                    });
+
+                    it("should revert if sale doesn't exist", async function () {
+
+                        // Seller creates digital token
+                        consignmentId = await marketController.getNextConsignment();
+                        tokenId = await seenHausNFT.getNextToken();
+                        await seenHausNFT.connect(seller).mintDigital(supply, seller.address, tokenURI, royaltyPercentage);
+
+                        // ADMIN attempts to set cancel when sale doesn't exist
+                        await expect(
+                            saleHandler.connect(admin).close(consignmentId)
                         ).to.be.revertedWith("Sale does not exist");
 
                     });
@@ -789,12 +985,26 @@ describe("SaleHandler", function() {
 
                     });
 
-                    it("should revert if sale doesn't exist", async function () {
+                    it("should revert if consignment doesn't exist", async function () {
 
                         // get next consignment id
                         consignmentId = await marketController.getNextConsignment();
 
-                        // ADMIN attempts to set audience for nonexistent sale
+                        // ADMIN attempts to set audience for nonexistent consignment
+                        await expect(
+                            saleHandler.connect(admin).cancel(consignmentId)
+                        ).to.be.revertedWith("Consignment does not exist");
+
+                    });
+
+                    it("should revert if sale doesn't exist", async function () {
+
+                        // Seller creates digital token
+                        consignmentId = await marketController.getNextConsignment();
+                        tokenId = await seenHausNFT.getNextToken();
+                        await seenHausNFT.connect(seller).mintDigital(supply, seller.address, tokenURI, royaltyPercentage);
+
+                        // ADMIN attempts to set cancel when sale doesn't exist
                         await expect(
                             saleHandler.connect(admin).cancel(consignmentId)
                         ).to.be.revertedWith("Sale does not exist");
@@ -827,16 +1037,12 @@ describe("SaleHandler", function() {
 
                     // SELLER creates primary market sale
                     market = Market.PRIMARY;
-                    await saleHandler.connect(seller).createSale(
-                        seller.address,
-                        tokenAddress,
-                        tokenId,
+                    await saleHandler.connect(seller).createPrimarySale(
+                        consignmentId,
                         start,
-                        quantity,
                         price,
                         perTxCap,
-                        audience,
-                        market
+                        audience
                     );
 
                     // Wait until sale starts and bid
@@ -888,9 +1094,17 @@ describe("SaleHandler", function() {
 
                 beforeEach(async function () {
 
+                    // Get the next consignment id
+                    consignmentId = await marketController.getNextConsignment();
+
+                    // Token is on a foreign contract
+                    tokenAddress = foreign1155.address;
+
+                    // Creator transfers all their tokens to seller
+                    await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
+
                     // SELLER creates secondary market sale
-                    market = Market.SECONDARY;
-                    await saleHandler.connect(seller).createSale(
+                    saleHandler.connect(seller).createSecondarySale(
                         seller.address,
                         tokenAddress,
                         tokenId,
@@ -898,9 +1112,8 @@ describe("SaleHandler", function() {
                         quantity,
                         price,
                         perTxCap,
-                        audience,
-                        market
-                    );
+                        audience
+                    )
 
                     // Wait until sale starts and bid
                     await time.increaseTo(start);
@@ -971,16 +1184,12 @@ describe("SaleHandler", function() {
                     sellerBalance = await seenHausNFT.balanceOf(seller.address, tokenId);
 
                     // SELLER creates sale
-                    await saleHandler.connect(seller).createSale(
-                        seller.address,
-                        tokenAddress,
-                        tokenId,
+                    await saleHandler.connect(seller).createPrimarySale(
+                        consignmentId,
                         start,
-                        quantity,
                         price,
                         perTxCap,
-                        audience,
-                        market
+                        audience
                     );
 
                     // Contract should now own the balance of the token
@@ -1000,30 +1209,21 @@ describe("SaleHandler", function() {
                 beforeEach(async function() {
 
                     // SELLER creates sale for digital
-                    await saleHandler.connect(seller).createSale(
-                        seller.address,
-                        tokenAddress,
-                        tokenId,
+                    await saleHandler.connect(seller).createPrimarySale(
+                        consignmentId,
                         start,
-                        quantity,
                         price,
                         perTxCap,
-                        audience,
-                        market
+                        audience
                     );
 
-                    // SELLER creates sale for physical
-                    physicalConsignmentId = await marketController.getNextConsignment();
-                    await saleHandler.connect(seller).createSale(
-                        seller.address,
-                        tokenAddress,
-                        physicalTokenId,
+                    // ESCROW_AGENT creates sale for physical
+                    await saleHandler.connect(escrowAgent).createPrimarySale(
+                        physicalConsignmentId,
                         start,
-                        quantity,
                         price,
                         perTxCap,
-                        audience,
-                        market
+                        audience
                     );
 
                 });
@@ -1042,13 +1242,13 @@ describe("SaleHandler", function() {
                     it("should transfer consigned balance of token to buyer if digital", async function () {
 
                         // Get contract balance of token
-                        contractBalance = await seenHausNFT.balanceOf(seenHausNFT.address, tokenId);
+                        contractBalance = await marketController.getSupply(tokenId);
 
                         // Seller closes sale
                         await saleHandler.connect(seller).close(consignmentId);
 
                         // Get contract's new balance of token
-                        newBalance = await seenHausNFT.balanceOf(seenHausNFT.address, tokenId);
+                        newBalance = await marketController.getSupply(tokenId);
                         expect(contractBalance.sub(supply).eq(newBalance));
 
                         // Get buyer's new balance of token
@@ -1117,7 +1317,7 @@ describe("SaleHandler", function() {
                         await saleHandler.connect(admin).cancel(consignmentId);
 
                         // Get contract's new balance of token
-                        newBalance = await seenHausNFT.balanceOf(seenHausNFT.address, tokenId);
+                        newBalance = await marketController.getSupply(tokenId);
                         expect(contractBalance.sub(supply).eq(newBalance));
 
                         // Get seller's new balance of token
@@ -1132,11 +1332,11 @@ describe("SaleHandler", function() {
                         await saleHandler.connect(admin).cancel(physicalConsignmentId);
 
                         // Get contract's new balance of token
-                        newBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
+                        newBalance = await marketController.getSupply(physicalTokenId);
                         expect(contractBalance.sub(supply).eq(newBalance));
 
                         // Get seller's new balance of token
-                        sellerBalance = await seenHausNFT.balanceOf(seller.address, physicalTokenId);
+                        sellerBalance = await marketController.getSupply(physicalTokenId);
                         expect(buyerBalance.eq(contractBalance));
 
                     });
@@ -1151,19 +1351,14 @@ describe("SaleHandler", function() {
 
             beforeEach(async function () {
 
-                // Seller creates sale
-                await saleHandler.connect(seller).createSale(
-                    seller.address,
-                    tokenAddress,
-                    tokenId,
+                // SELLER creates sale for digital
+                await saleHandler.connect(seller).createPrimarySale(
+                    consignmentId,
                     start,
-                    quantity,
                     price,
                     perTxCap,
-                    audience,
-                    market
+                    audience
                 );
-
             })
 
             it("getSale() should return a valid Sale struct", async function () {
@@ -1175,7 +1370,6 @@ describe("SaleHandler", function() {
                 sale = new Sale(
                     response.consignmentId.toString(),
                     response.start.toString(),
-                    response.quantity.toString(),
                     response.price.toString(),
                     response.perTxCap.toString(),
                     response.state,
@@ -1195,8 +1389,8 @@ describe("SaleHandler", function() {
                 // Create consignment
                 consignment = new Consignment(market, seller.address, tokenAddress, tokenId, consignmentId);
 
-                // Get the supply from the sale contract
-                let result = await saleHandler.supply(consignment);
+                // Get the supply from the MarketController
+                let result = await marketController.getSupply(consignmentId);
 
                 // Test result
                 expect(
@@ -1211,7 +1405,7 @@ describe("SaleHandler", function() {
                 await saleHandler.connect(buyer).buy(consignmentId, single, {value: price})
 
                 // Check supply again
-                result = await saleHandler.supply(consignment);
+                result = await marketController.getSupply(consignmentId);
 
                 // Test result
                 expect(

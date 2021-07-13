@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.5;
 
-import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "../MarketClient.sol";
@@ -11,18 +10,15 @@ import "../MarketClient.sol";
  * @author Cliff Hall
  * @notice Handles the creation, running, and disposition of Seen.Haus auctions.
  */
-contract AuctionHandler is MarketClient, ERC1155Holder {
+contract AuctionHandler is MarketClient {
 
     /// Events
-    event AuctionPending(Auction auction);
+    event AuctionPending(address indexed consignor, Auction auction);
     event AuctionStarted(uint256 indexed consignmentId);
     event AuctionExtended(uint256 indexed consignmentId);
     event AuctionEnded(uint256 indexed consignmentId, Outcome indexed outcome);
     event BidAccepted(uint256 indexed consignmentId, address indexed buyer, uint256 indexed bid);
     event BidReturned(uint256 indexed consignmentId, address indexed buyer, uint256 indexed bid);
-
-    // TODO support and test this (probably move to MarketClient)
-    event ConsignmentTransferred(uint256 indexed consignmentId, address indexed recipient, uint256 indexed amount);
 
     /// @dev extension threshold
     uint256 constant extensionWindow = 15 minutes;
@@ -53,6 +49,56 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
     }
 
     /**
+     * @notice Create a new primary market auction. (English style)
+     *
+     * Requires a consignment
+     *
+     * @param _consignmentId - the id of the consignment being sold
+     * @param _start - the scheduled start time of the auction
+     * @param _duration - the scheduled duration of the auction
+     * @param _reserve - the reserve price of the auction
+     * @param _audience - the initial audience that can participate. See {SeenTypes.Audience}
+     * @param _clock - the type of clock used for the auction. See {SeenTypes.Clock}
+     */
+    function createPrimaryAuction (
+        uint256 _consignmentId,
+        uint256 _start,
+        uint256 _duration,
+        uint256 _reserve,
+        Audience _audience,
+        Clock _clock
+    )
+    external
+    onlyRole(SELLER)
+    onlyConsignor(_consignmentId)
+    {
+        // Get the consignment (reverting if consignment doesn't exist)
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
+
+        // Get the storage location for the auction
+        Auction storage auction = auctions[consignment.id];
+
+        // Make sure auction doesn't exist
+        require(auction.consignmentId == 0, "Auction exists");
+
+        // Make sure start time isn't in the past
+        require(_start >= block.timestamp, "Time runs backward?");
+
+        // Set up the auction
+        setAudience(_consignmentId, _audience);
+        auction.consignmentId = consignment.id;
+        auction.start = _start;
+        auction.duration = _duration;
+        auction.reserve = _reserve;
+        auction.clock = _clock;
+        auction.state = State.Pending;
+        auction.outcome = Outcome.Pending;
+
+        // Notify listeners of state change
+        emit AuctionPending(msg.sender, auction);
+    }
+
+    /**
      * @notice Create a new auction. (English style)
      *
      * For a single edition of one ERC-1155 token.
@@ -64,10 +110,9 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
      * @param _duration - the scheduled duration of the auction
      * @param _reserve - the reserve price of the auction
      * @param _audience - the initial audience that can participate. See {SeenTypes.Audience}
-     * @param _market - the market for the consignment. See {SeenTypes.Market}
      * @param _clock - the type of clock used for the auction. See {SeenTypes.Clock}
      */
-    function createAuction (
+    function createSecondaryAuction (
         address payable _seller,
         address _tokenAddress,
         uint256 _tokenId,
@@ -75,11 +120,11 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
         uint256 _duration,
         uint256 _reserve,
         Audience _audience,
-        Market _market,
         Clock _clock
     )
     external
-    onlyRole(SELLER) {
+    onlyRole(SELLER)
+    {
 
         // Make sure start time isn't in the past
         require (_start >= block.timestamp, "Time runs backward?");
@@ -90,8 +135,20 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
         // Ensure seller a positive number of tokens
         require(IERC1155(_tokenAddress).balanceOf(_seller, _tokenId) > 0, "Seller has zero balance of consigned token");
 
-        // Register the consignment
-        Consignment memory consignment = marketController.registerConsignment(_market, _seller, _tokenAddress, _tokenId);
+        // Supply always 1 for an auction
+        uint256 supply = 1;
+
+        // To register the consignment, tokens must first be in MarketController's possession
+        IERC1155(_tokenAddress).safeTransferFrom(
+            _seller,
+            address(marketController),
+            _tokenId,
+            supply,
+            new bytes(0x0)
+        );
+
+        // Register consignment
+        Consignment memory consignment = marketController.registerConsignment(Market.Secondary, msg.sender, _seller, _tokenAddress, _tokenId, supply);
 
         // Set up the auction
         setAudience(consignment.id, _audience);
@@ -104,17 +161,8 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
         auction.state = State.Pending;
         auction.outcome = Outcome.Pending;
 
-        // Transfer a balance of one of the ERC-1155 to this auction contract
-        IERC1155(_tokenAddress).safeTransferFrom(
-            _seller,
-            address(this),
-            _tokenId,
-            1,
-            new bytes(0x0)
-        );
-
         // Notify listeners of state change
-        emit AuctionPending(auction);
+        emit AuctionPending(msg.sender, auction);
     }
 
     /**
@@ -129,15 +177,19 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
      */
     function changeAudience(uint256 _consignmentId, Audience _audience)
     external
-    onlyRole(ADMIN) {
+    onlyRole(ADMIN)
+    {
+
+        // Get consignment (reverting if not valid)
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Make sure the auction exists and hasn't been settled
-        Auction storage auction = auctions[_consignmentId];
+        Auction storage auction = auctions[consignment.id];
         require(auction.start != 0, "Auction does not exist");
         require(auction.state != State.Ended, "Auction has already been settled");
 
         // Set the new audience for the consignment
-        setAudience(_consignmentId, _audience);
+        setAudience(consignment.id, _audience);
 
     }
 
@@ -159,10 +211,15 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
      *
      * @param _consignmentId - the id of the consignment being sold
      */
-    function bid(uint256 _consignmentId) external payable {
+    function bid(uint256 _consignmentId)
+    external
+    payable
+    {
+        // Get the consignment (reverting if consignment doesn't exist)
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Make sure the auction exists
-        Auction memory auction = auctions[_consignmentId];
+        Auction memory auction = auctions[consignment.id];
         require(auction.start != 0, "Auction does not exist");
 
         // Determine time after which no more bids will be accepted
@@ -175,7 +232,7 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
         require(msg.value >= auction.reserve, "Bid below reserve price");
 
         // Unless auction is for an open audience, check buyer's staking status
-        Audience audience = audiences[_consignmentId];
+        Audience audience = audiences[consignment.id];
         if (audience != Audience.Open) {
             if (audience == Audience.Staker) {
                 require(isStaker() == true, "Buyer is not a staker");
@@ -190,7 +247,7 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
         if (auction.bid > 0) {
             require(msg.value >= (auction.bid + getPercentageOf(auction.bid, marketController.getOutBidPercentage())), "Bid too small");
             auction.buyer.transfer(auction.bid);
-            emit BidReturned(_consignmentId, auction.buyer, auction.bid);
+            emit BidReturned(consignment.id, auction.buyer, auction.bid);
         }
 
         // Record the new bid
@@ -210,9 +267,10 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
                 auction.start = block.timestamp;
                 endTime = auction.start + auction.duration;
 
-                // Notify listeners of state change
-                emit AuctionStarted(_consignmentId);
             }
+
+            // Notify listeners of state change
+            emit AuctionStarted(consignment.id);
 
         }
 
@@ -245,7 +303,11 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
      *
      * @param _consignmentId - the id of the consignment being sold
      */
-    function close(uint256 _consignmentId) external {
+    function close(uint256 _consignmentId)
+    external
+    {
+        // Get the consignment (reverting if consignment doesn't exist)
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Make sure the auction exists
         Auction storage auction = auctions[_consignmentId];
@@ -268,36 +330,18 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
         // Distribute the funds (pay royalties, staking, multisig, and seller)
         disburseFunds(_consignmentId, auction.bid);
 
-        // Get consignment
-        Consignment memory consignment = marketController.getConsignment(_consignmentId);
-
         // Determine if consignment is physical
         address nft = marketController.getNft();
         if (nft == consignment.tokenAddress && ISeenHausNFT(nft).isPhysical(consignment.tokenId)) {
 
-            // Transfer the ERC-1155 to escrow contract
-            address escrowTicketer = marketController.getEscrowTicketer(_consignmentId);
-            IERC1155(consignment.tokenAddress).safeTransferFrom(
-                address(this),
-                escrowTicketer,
-                consignment.tokenId,
-                1,
-                new bytes(0x0)
-            );
-
             // For physicals, issue an escrow ticket to the buyer
-            IEscrowTicketer(escrowTicketer).issueTicket(consignment.tokenId, 1, auction.buyer);
+            address escrowTicketer = marketController.getEscrowTicketer(_consignmentId);
+            IEscrowTicketer(escrowTicketer).issueTicket(_consignmentId, 1, auction.buyer);
 
         } else {
 
-            // Transfer the ERC-1155 to winner
-            IERC1155(consignment.tokenAddress).safeTransferFrom(
-                address(this),
-                auction.buyer,
-                consignment.tokenId,
-                1,
-                new bytes(0x0)
-            );
+            // Release the purchased amount of the consigned token supply to buyer
+            marketController.releaseConsignment(_consignmentId, 1, auction.buyer);
 
         }
 
@@ -322,7 +366,13 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
      *
      * @param _consignmentId - the id of the consignment being sold
      */
-    function pull(uint256 _consignmentId) external onlyRole(ADMIN) {
+    function pull(uint256 _consignmentId)
+    external
+    onlyRole(ADMIN)
+    {
+
+        // Get the consignment (reverting if consignment doesn't exist)
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Make sure the auction exists
         Auction storage auction = auctions[_consignmentId];
@@ -340,15 +390,8 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
         auction.state = State.Ended;
         auction.outcome = Outcome.Pulled;
 
-        // Transfer the ERC-1155 back to the seller
-        Consignment memory consignment = marketController.getConsignment(_consignmentId);
-        IERC1155(consignment.tokenAddress).safeTransferFrom(
-            address(this),
-            consignment.seller,
-            consignment.tokenId,
-            1,
-            new bytes(0x0)
-        );
+        // Release the unsold amount of the consigned token supply to buyer
+        marketController.releaseConsignment(_consignmentId, 1, consignment.seller);
 
         // Notify listeners about state change
         emit AuctionEnded(consignment.id, auction.outcome);
@@ -371,7 +414,13 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
      *
      * @param _consignmentId - the id of the consignment being sold
      */
-    function cancel(uint256 _consignmentId) external onlyRole(ADMIN) {
+    function cancel(uint256 _consignmentId)
+    external
+    onlyRole(ADMIN)
+    {
+
+        // Get the consignment (reverting if consignment doesn't exist)
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Make sure auction exists
         Auction storage auction = auctions[_consignmentId];
@@ -394,18 +443,11 @@ contract AuctionHandler is MarketClient, ERC1155Holder {
             emit BidReturned(_consignmentId, auction.buyer, auction.bid);
         }
 
-        // Transfer the ERC-1155 back to the seller
-        Consignment memory consignment = marketController.getConsignment(_consignmentId);
-        IERC1155(consignment.tokenAddress).safeTransferFrom(
-            address(this),
-            consignment.seller,
-            consignment.tokenId,
-            1,
-            new bytes(0x0)
-        );
+        // Release the consigned token supply to buyer
+        marketController.releaseConsignment(_consignmentId, 1, consignment.seller);
 
         // Notify listeners about state change
-        emit AuctionEnded(consignment.id, auction.outcome);
+        emit AuctionEnded(_consignmentId, auction.outcome);
 
     }
 

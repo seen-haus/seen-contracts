@@ -153,15 +153,18 @@ async function main() {
     ]);
 
     // Add Escrow Ticketer and NFT addresses to MarketController
+    await marketController.setNft(seenHausNFT.address);
     await marketController.setLotsTicketer(lotsTicketer.address);
     await marketController.setItemsTicketer(itemsTicketer.address);
-    await marketController.setNft(seenHausNFT.address);
     console.log(`✅ MarketController updated with escrow ticketer and NFT addresses.`);
 
-    // Add MARKET_HANDLER role to AuctionHandler and SaleHandler
+    // Add MARKET_HANDLER role to contracts that need it
     await accessController.grantRole(Role.MARKET_HANDLER, auctionHandler.address);
     await accessController.grantRole(Role.MARKET_HANDLER, saleHandler.address);
-    console.log(`✅ Granted MARKET_HANDLER role to AuctionHandler and SaleHandler.`);
+    await accessController.grantRole(Role.MARKET_HANDLER, itemsTicketer.address);
+    await accessController.grantRole(Role.MARKET_HANDLER, lotsTicketer.address);
+    await accessController.grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
+    console.log(`✅ Granted MARKET_HANDLER role to AuctionHandler, SaleHandler, ItemsTicketer, LotsTicketer, & SeenHausNFT.`);
 
     // Bail now if deploying locally
     if (hre.network.name === 'hardhat') process.exit();

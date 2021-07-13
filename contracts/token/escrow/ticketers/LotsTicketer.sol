@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.5;
 
-import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "../../../access/AccessClient.sol";
 import "../../../market/MarketClient.sol";
-import "../../../util/StringUtils.sol";
 import "../IEscrowTicketer.sol";
+import "../../nft/ISeenHausNFT.sol";
 
 /**
  * @title LotsTicketer
@@ -25,13 +24,13 @@ import "../IEscrowTicketer.sol";
  * scooping up a bunch of the available items in a multi-edition
  * sale must flip or claim them all at once, not individually.
  */
-contract LotsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Holder, ERC721 {
+contract LotsTicketer is IEscrowTicketer, MarketClient, ERC721 {
 
     // Ticket ID => Ticket
-    mapping (uint256 => EscrowTicket) tickets;
+    mapping (uint256 => EscrowTicket) internal tickets;
 
     /// @dev Next ticket number
-    uint256 public nextTicket;
+    uint256 internal nextTicket;
 
     string public constant NAME = "Seen.Haus Escrowed Lot Ticket";
     string public constant SYMBOL = "ESCROW_TICKET";
@@ -61,6 +60,18 @@ contract LotsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hold
         return nextTicket;
     }
 
+    /**
+     * @notice Get info about the ticket
+     */
+    function getTicketInfo(uint256 ticketId)
+    external
+    view
+    override
+    returns (EscrowTicket memory)
+    {
+        require(_exists(ticketId), "Ticket does not exist");
+        return tickets[ticketId];
+    }
 
     /**
      * @notice Get the token URI
@@ -71,14 +82,16 @@ contract LotsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hold
      * Tickets are transient and will be burned when claimed to obtain
      * proof of ownership NFTs with their metadata on IPFS as usual.
      *
-     * TODO: Create a dynamic endpoint on the web for generating the JSON
-     * Just needs to call this contract: tickets(tokenId) and create JSON
-     * with a fixed name, description, and image, adding these fields
-     *  - tokenAddress: [SeenHausNFT contract address]
-     *  - tokenId: [the token id from EscrowTicket]
-     *  - amount: [the amount of that token this ticket can claim]
+     * TODO: metadata with fixed name, description, and image, identifying it as a Seen.Haus Escrow Ticket
+     * adding these fields, perhaps in OpenSea attributes format
+     *  - ticketId
+     *  - consignmentId
+     *  - tokenAddress
+     *  - tokenId
+     *  - amount
      *
      * @param _tokenId - the ticket's token id
+     *
      * @return tokenURI - the URI for the given token id's metadata
      */
     function tokenURI(uint256 _tokenId)
@@ -87,8 +100,7 @@ contract LotsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hold
     override
     returns (string memory)
     {
-        string memory id = uintToStr(_tokenId);
-        return strConcat(ESCROW_TICKET_URI_BASE, id);
+        return _baseURI();
     }
 
     /**
@@ -101,35 +113,43 @@ contract LotsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hold
     override
     returns (string memory)
     {
-        return ESCROW_TICKET_URI_BASE;
+        return ESCROW_TICKET_URI;
     }
 
     /**
      * Mint an escrow ticket
      *
-     * @param _tokenId - the token id on the Seen.Haus NFT contract
+     * @param _consignmentId - the id of the consignment being sold
      * @param _amount - the amount of the given token to escrow
+     * @param _buyer - the buyer of the escrowed item(s) to whom the ticket is issued
      */
-    function issueTicket(uint256 _tokenId, uint256 _amount, address payable _buyer)
+    function issueTicket(uint256 _consignmentId, uint256 _amount, address payable _buyer)
     external
     override
     onlyRole(MARKET_HANDLER)
     {
+        // Fetch consignment (reverting if consignment doesn't exist)
+        Consignment memory consignment = marketController.getConsignment(_consignmentId);
+
         // Make sure amount is non-zero
         require(_amount > 0, "Token amount cannot be zero.");
 
-        // Ensure market handler has transferred the token to this contract
-        address nft = marketController.getNft();
-        require(IERC1155(nft).balanceOf(address(this), _tokenId) >= _amount, "Must transfer token amount to ticketer first.");
+        // Get the ticketed token
+        Token memory token = ISeenHausNFT(consignment.tokenAddress).getTokenInfo(consignment.tokenId);
 
         // Create and store escrow ticket
         uint256 ticketId = nextTicket++;
         EscrowTicket storage ticket = tickets[ticketId];
-        ticket.tokenId = _tokenId;
         ticket.amount = _amount;
+        ticket.consignmentId = _consignmentId;
+        ticket.id = ticketId;
+        ticket.itemURI = token.uri;
 
         // Mint the ticket and send to the buyer
         _mint(_buyer, ticketId);
+
+        // Notify listeners about state change
+        emit TicketIssued(ticketId, _consignmentId, _buyer, _amount);
     }
 
     /**
@@ -150,15 +170,12 @@ contract LotsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hold
         // Burn the ticket
         _burn(_ticketId);
 
-        // Transfer the proof of ownership NFT to the caller
-        IERC1155 nft = IERC1155(marketController.getNft());
-        nft.safeTransferFrom(
-            address(this),
-            msg.sender,
-            ticket.tokenId,
-            ticket.amount,
-            new bytes(0x0)
-        );
+        // Release the consignment to claimant
+        marketController.releaseConsignment(ticket.consignmentId, ticket.amount, msg.sender);
+
+
+        // Notify listeners of state change
+        emit TicketClaimed(_ticketId, msg.sender, ticket.amount);
 
     }
 
@@ -178,12 +195,13 @@ contract LotsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hold
     function supportsInterface(bytes4 interfaceId)
     public
     view
-    override(ERC721, ERC1155Receiver)
+    override(ERC721)
     returns (bool)
     {
         return (
-            ERC721.supportsInterface(interfaceId) ||
-            ERC1155Receiver.supportsInterface(interfaceId)
+            interfaceId == type(IERC165).interfaceId ||
+            interfaceId == type(IERC721).interfaceId ||
+            interfaceId == type(IEscrowTicketer).interfaceId
         );
     }
 

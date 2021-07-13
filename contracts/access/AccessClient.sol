@@ -17,7 +17,7 @@ abstract contract AccessClient is SeenTypes  {
     event AccessControllerAddressChanged(address indexed accessController);
 
     /// @notice the Seen.Haus AccessController
-    IAccessControl public accessController;
+    IAccessControl internal accessController;
 
     /**
      * @notice Constructor
@@ -52,6 +52,18 @@ abstract contract AccessClient is SeenTypes  {
     onlyRole(ADMIN) {
         accessController = IAccessControl(_accessController);
         emit AccessControllerAddressChanged(_accessController);
+    }
+
+    /**
+     * @notice Gets the address of the Seen.Haus AccessController contract.
+     *
+     * @return the address of the AccessController contract
+     */
+    function getAccessController()
+    public
+    view
+    returns(address) {
+        return address(accessController);
     }
 
 }

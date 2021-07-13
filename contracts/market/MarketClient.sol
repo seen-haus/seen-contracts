@@ -24,7 +24,7 @@ abstract contract MarketClient is AccessClient {
     event MarketControllerAddressChanged(address indexed marketController);
 
     /// @notice the Seen.Haus MarketController
-    IMarketController public marketController;
+    IMarketController internal marketController;
 
     /// @notice map a consignment id to an audience
     mapping(uint256 => Audience) public audiences;
@@ -50,6 +50,18 @@ abstract contract MarketClient is AccessClient {
     {
         marketController = IMarketController(_marketController);
         emit MarketControllerAddressChanged(_marketController);
+    }
+
+    /**
+     * @notice Gets the address of the Seen.Haus MarketController contract.
+     *
+     * @return the address of the MarketController contract
+     */
+    function getMarketController()
+    public
+    view
+    returns(address) {
+        return address(marketController);
     }
 
     /**
@@ -96,6 +108,20 @@ abstract contract MarketClient is AccessClient {
     returns (bool status)
     {
         status = IERC20(marketController.getStaking()).balanceOf(msg.sender) >= marketController.getVipStakerAmount();
+    }
+
+    /**
+     * @dev Modifier that checks that the caller is the consignor
+     *
+     * Reverts if caller isn't the consignor
+     *
+     * See: {MarketController.isConsignor}
+     */
+    modifier onlyConsignor(uint256 _consignmentId) {
+
+        // Make sure the caller is the consignor
+        require(marketController.isConsignor(_consignmentId, msg.sender), "Caller is not consignor");
+        _;
     }
 
     /**
@@ -146,7 +172,7 @@ abstract contract MarketClient is AccessClient {
         if (_consignment.market == Market.Secondary) {
 
             // Determine if NFT contract supports NFT Royalty Standard EIP-2981
-            try IERC165(_consignment.tokenAddress).supportsInterface(INTERFACE_ID_2981) returns (bool supported) {
+            try IERC165(_consignment.tokenAddress).supportsInterface(type(IERC2981).interfaceId) returns (bool supported) {
 
                 // If so, find out the who to pay and how much
                 if (supported == true) {

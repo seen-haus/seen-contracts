@@ -10,10 +10,9 @@ const Outcome = require("./Outcome");
 
 class Sale {
 
-    constructor (consignmentId, start, quantity, price, perTxCap, state, outcome) {
+    constructor (consignmentId, start, price, perTxCap, state, outcome) {
         this.consignmentId = consignmentId;
         this.start = start;
-        this.quantity = quantity;
         this.price = price;
         this.perTxCap = perTxCap;
         this.state = state;
@@ -26,8 +25,8 @@ class Sale {
      * @returns {Sale}
      */
     static fromObject(o) {
-        const {consignmentId, start, quantity, price, perTxCap, state, outcome} = o;
-        return new Sale(consignmentId, start, quantity, price, perTxCap, state, outcome);
+        const {consignmentId, start, price, perTxCap, state, outcome} = o;
+        return new Sale(consignmentId, start, price, perTxCap, state, outcome);
     }
 
     /**
@@ -83,23 +82,6 @@ class Sale {
             valid = (
                 typeof start === "string" &&
                 ethers.BigNumber.from(start).gt("0")
-            )
-        } catch(e){}
-        return valid;
-    }
-
-    /**
-     * Is this Sale instance's quantity field valid?
-     * Must be a string that converts to a valid, positive BigNumber
-     * @returns {boolean}
-     */
-    quantityIsValid() {
-        let {quantity} = this;
-        let valid = false;
-        try {
-            valid = (
-                typeof quantity === "string" &&
-                ethers.BigNumber.from(quantity).gt("0")
             )
         } catch(e){}
         return valid;
@@ -181,7 +163,6 @@ class Sale {
         return (
             this.consignmentIdIsValid() &&
             this.startIsValid() &&
-            this.quantityIsValid() &&
             this.priceIsValid() &&
             this.perTxCapIsValid() &&
             this.stateIsValid() &&

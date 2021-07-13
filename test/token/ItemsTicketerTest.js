@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 const Role = require("../../domain/Role");
+const EscrowTicket = require("../../domain/EscrowTicket");
 const Ticketer = require("../../domain/Ticketer");
 
 describe("ItemsTicketer", function() {
@@ -13,7 +14,7 @@ describe("ItemsTicketer", function() {
     let SeenHausNFT, seenHausNFT;
     let ItemsTicketer, itemsTicketer;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
-    let ticketId, tokenId, tokenURI, counter, supply, half, balance, royaltyPercentage;
+    let ticketId, tokenId, tokenURI, counter, supply, half, balance, royaltyPercentage, consignmentId, support;
 
     beforeEach( async function () {
 
@@ -24,12 +25,11 @@ describe("ItemsTicketer", function() {
         escrowAgent = accounts[2];
         creator = accounts[3];
         associate = accounts[4];
-        escrowAgent = accounts[5]
-        buyer = accounts[6];
+        buyer = accounts[5];
 
-        staking = accounts[7];        // We just need addresses for these,
-        multisig = accounts[8];       // not functional contracts
-        marketHandler = accounts[9];
+        staking = accounts[6];        // We just need addresses for these,
+        multisig = accounts[7];       // not functional contracts
+        marketHandler = accounts[8];  // .
 
         // Market control values
         vipStakerAmount = "500";              // Amount of xSEEN to be VIP
@@ -65,10 +65,6 @@ describe("ItemsTicketer", function() {
         );
         await seenHausNFT.deployed();
 
-        // NFT address gets set after deployment since it requires
-        // the MarketController's address in its constructor
-        await marketController.setNft(seenHausNFT.address);
-
         // Deploy the ItemsTicketer contract
         ItemsTicketer = await ethers.getContractFactory("ItemsTicketer");
         itemsTicketer = await ItemsTicketer.deploy(
@@ -77,6 +73,18 @@ describe("ItemsTicketer", function() {
         );
         await itemsTicketer.deployed();
 
+        // NFT address gets set after deployment since it requires
+        // the MarketController's address in its constructor
+        await marketController.setNft(seenHausNFT.address);
+
+        // Deployer grants ADMIN role to admin address and renounces admin
+        await accessController.connect(deployer).grantRole(Role.ADMIN, admin.address);
+        await accessController.connect(deployer).renounceRole(Role.ADMIN, deployer.address);
+
+        // Grant MARKET_HANDLER to SeenHausNFT and ItemsTicketer
+        await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
+        await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, itemsTicketer.address);
+
     });
 
     context("Ticketing", async function () {
@@ -84,12 +92,14 @@ describe("ItemsTicketer", function() {
         beforeEach( async function () {
 
             // Prepare for roled access to privileged methods
-            await accessController.connect(deployer).grantRole(Role.MARKET_HANDLER, marketHandler.address);
-            await accessController.connect(deployer).grantRole(Role.ESCROW_AGENT, escrowAgent.address);
+            await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, marketHandler.address);
+            await accessController.connect(admin).grantRole(Role.ESCROW_AGENT, escrowAgent.address);
 
             // Setup values
+            consignmentId = await marketController.getNextConsignment();
+            ticketId = await itemsTicketer.getNextTicket();
             tokenId = await seenHausNFT.getNextToken();
-            tokenURI = "https://ipfs.io/ipfs/QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
+            tokenURI = "ipfs://QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
             supply = "50";
             half = "25";
             royaltyPercentage = maxRoyaltyPercentage;
@@ -101,25 +111,11 @@ describe("ItemsTicketer", function() {
 
         context("Privileged Access", async function () {
 
-            beforeEach(async function () {
-
-                // ESCROW_AGENT transfers tokens to ticketer
-                // N.B. in reality they would go from escrow agent to market handler to ticketer
-                await seenHausNFT.connect(escrowAgent).safeTransferFrom(
-                    escrowAgent.address,
-                    itemsTicketer.address,
-                    tokenId,
-                    supply,
-                    []
-                );
-
-            });
-
             it("issueTicket() should require MARKET_HANDLER role", async function () {
 
                 // non-MARKET_HANDLER attempt
                 await expect(
-                    itemsTicketer.connect(associate).issueTicket(tokenId, supply, buyer.address)
+                    itemsTicketer.connect(associate).issueTicket(consignmentId, supply, buyer.address)
                 ).to.be.revertedWith("Access denied, caller doesn't have role");
 
                 // Get counter
@@ -127,19 +123,19 @@ describe("ItemsTicketer", function() {
 
                 // Test
                 expect(
-                    counter.eq(tokenId),
+                    counter.eq(ticketId),
                     "non-MARKET_HANDLER can issue a ticket"
                 ).is.true;
 
                 // MARKET_HANDLER attempt
-                await itemsTicketer.connect(marketHandler).issueTicket(tokenId, supply, buyer.address);
+                await itemsTicketer.connect(marketHandler).issueTicket(consignmentId, supply, buyer.address);
 
                 // Get counter
                 counter = await itemsTicketer.getNextTicket();
 
                 // Test
                 expect(
-                    counter.gt(tokenId),
+                    counter.gt(ticketId),
                     "MARKET_HANDLER can't issue a ticket"
                 ).is.true;
 
@@ -151,18 +147,8 @@ describe("ItemsTicketer", function() {
 
             it("should transfer full supply of escrow ticket to buyer", async function () {
 
-                // ESCROW_AGENT transfers tokens to ticketer
-                // N.B. in reality they would go from escrow agent to market handler to ticketer
-                await seenHausNFT.connect(escrowAgent).safeTransferFrom(
-                    escrowAgent.address,
-                    itemsTicketer.address,
-                    tokenId,
-                    supply,
-                    []
-                );
-
                 // MARKET_HANDLER issues ticket
-                await itemsTicketer.connect(marketHandler).issueTicket(tokenId, supply, buyer.address);
+                await itemsTicketer.connect(marketHandler).issueTicket(consignmentId, supply, buyer.address);
 
                 // Get buyer's balance of ticket items
                 balance = await itemsTicketer.balanceOf(buyer.address, tokenId);
@@ -175,24 +161,26 @@ describe("ItemsTicketer", function() {
 
             });
 
-            context("should revert if", async function () {
+            context("Revert Reasons", async function () {
+
+                it("consignment doesn't exist", async function () {
+
+                    // A non-existent consignment
+                    consignmentId = marketController.getNextConsignment();
+
+                    // MARKET_HANDLER attempts to issue ticket with invalid consignment id
+                    await expect(
+                        itemsTicketer.connect(marketHandler).issueTicket(consignmentId, "0", buyer.address)
+                    ).revertedWith("Consignment does not exist")
+
+                });
 
                 it("token amount is zero", async function () {
 
                     // MARKET_HANDLER attempts to issues ticket without transferring tokens first
                     await expect(
-                        itemsTicketer.connect(marketHandler).issueTicket(tokenId, "0", buyer.address)
+                        itemsTicketer.connect(marketHandler).issueTicket(consignmentId, "0", buyer.address)
                     ).revertedWith("Token amount cannot be zero.")
-
-                });
-
-                it("token amount hasn't been transferred to this contract", async function () {
-
-                    // MARKET_HANDLER attempts to issues ticket without transferring tokens first
-                    await expect(
-                        itemsTicketer.connect(marketHandler).issueTicket(tokenId, supply, buyer.address)
-                    ).revertedWith("Must transfer token amount to ticketer first.")
-
 
                 });
 
@@ -204,19 +192,9 @@ describe("ItemsTicketer", function() {
 
             beforeEach(async function () {
 
-                // ESCROW_AGENT transfers tokens to ticketer
-                // N.B. in reality they would go from escrow agent to market handler to ticketer
-                await seenHausNFT.connect(escrowAgent).safeTransferFrom(
-                    escrowAgent.address,
-                    itemsTicketer.address,
-                    tokenId,
-                    supply,
-                    []
-                );
-
                 // MARKET_HANDLER issues ticket
                 ticketId = await itemsTicketer.getNextTicket();
-                await itemsTicketer.connect(marketHandler).issueTicket(tokenId, supply, buyer.address);
+                await itemsTicketer.connect(marketHandler).issueTicket(consignmentId, supply, buyer.address);
 
             });
 
@@ -226,7 +204,7 @@ describe("ItemsTicketer", function() {
                 await itemsTicketer.connect(buyer).safeTransferFrom(
                     buyer.address,
                     associate.address,
-                    tokenId,
+                    ticketId,
                     supply,
                     []
                 );
@@ -256,7 +234,7 @@ describe("ItemsTicketer", function() {
                 await itemsTicketer.connect(buyer).safeTransferFrom(
                     buyer.address,
                     associate.address,
-                    tokenId,
+                    ticketId,
                     half,
                     []
                 );
@@ -286,19 +264,9 @@ describe("ItemsTicketer", function() {
 
             beforeEach(async function () {
 
-                // ESCROW_AGENT transfers tokens to ticketer
-                // N.B. in reality they would go from escrow agent to market handler to ticketer
-                await seenHausNFT.connect(escrowAgent).safeTransferFrom(
-                    escrowAgent.address,
-                    itemsTicketer.address,
-                    tokenId,
-                    supply,
-                    []
-                );
-
                 // MARKET_HANDLER issues ticket
                 ticketId = await itemsTicketer.getNextTicket();
-                await itemsTicketer.connect(marketHandler).issueTicket(tokenId, supply, buyer.address);
+                await itemsTicketer.connect(marketHandler).issueTicket(consignmentId, supply, buyer.address);
 
             });
 
@@ -324,7 +292,7 @@ describe("ItemsTicketer", function() {
                 await itemsTicketer.connect(buyer).safeTransferFrom(
                     buyer.address,
                     associate.address,
-                    tokenId,
+                    ticketId,
                     half,
                     []
                 );
@@ -355,7 +323,7 @@ describe("ItemsTicketer", function() {
 
             });
 
-            context("should revert if", async function () {
+            context("Revert Reasons", async function () {
 
                 it("caller never held a balance of the ticket's supply", async function () {
 
@@ -377,6 +345,106 @@ describe("ItemsTicketer", function() {
                     ).revertedWith("Caller has no balance for this ticket");
 
                 });
+
+            });
+
+        });
+
+        context("Reading Ticket Information", async function () {
+
+            beforeEach(async function () {
+
+                // MARKET_HANDLER issues ticket
+                ticketId = await itemsTicketer.getNextTicket();
+                await itemsTicketer.connect(marketHandler).issueTicket(consignmentId, supply, buyer.address);
+
+            });
+
+            context("getTicketInfo()", async function () {
+
+                it("should return a valid EscrowTicket struct", async function () {
+
+                    // Get ticket
+                    const response = await itemsTicketer.getTicketInfo(ticketId);
+
+                    // Convert to entity
+                    ticket = new EscrowTicket(
+                        response.id.toString(),
+                        response.consignmentId.toString(),
+                        response.amount.toString(),
+                        response.itemURI
+                    );
+
+                    // Test validity
+                    expect(
+                        ticket.isValid(),
+                        "EscrowTicket not valid"
+                    ).is.true;
+
+                });
+
+                context("Revert Reasons", async function () {
+
+                    it("ticket does not exist", async function () {
+
+                        // A non-existent ticket id
+                        ticketId = itemsTicketer.getNextTicket();
+
+                        // buyer claims their ticket balance
+                        await expect(
+                            itemsTicketer.getTicketInfo(ticketId)
+                        ).revertedWith("Ticket does not exist");
+
+                    });
+
+                });
+
+            });
+
+        });
+
+    });
+
+    context("Interfaces", async function () {
+
+        context("supportsInterface()", async function () {
+
+            it("should indicate support for ERC-165 interface", async function () {
+
+                // See https://eips.ethereum.org/EIPS/eip-165#how-a-contract-will-publish-the-interfaces-it-implements
+                support = await itemsTicketer.supportsInterface("0x01ffc9a7");
+
+                // Test
+                await expect(
+                    support,
+                    "ERC-165 interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for ERC-1155 interface", async function () {
+
+                // See https://eips.ethereum.org/EIPS/eip-1155#specification
+                support = await itemsTicketer.supportsInterface("0xd9b67a26");
+
+                // Test
+                await expect(
+                    support,
+                    "ERC-1155 interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for IEscrowTicketer interface", async function () {
+
+                // Current interfaceId for IEscrowTicketer
+                support = await itemsTicketer.supportsInterface("0x8ebda1da");
+
+                // Test
+                await expect(
+                    support,
+                    "IEscrowTicketer interface not supported"
+                ).is.true;
 
             });
 

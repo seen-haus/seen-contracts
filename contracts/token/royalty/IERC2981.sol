@@ -12,11 +12,11 @@ interface IERC2981 is IERC165 {
     /**
      * @notice Determine how much royalty is owed (if any) and to whom.
      * @param _tokenId - the NFT asset queried for royalty information
-     * @param _value - the sale price of the NFT asset specified by _tokenId
+     * @param _salePrice - the sale price of the NFT asset specified by _tokenId
      * @return _receiver - address of who should be sent the royalty payment
      * @return _royaltyAmount - the royalty payment amount for _value sale price
      */
-    function royaltyInfo(uint256 _tokenId, uint256 _value)
+    function royaltyInfo(uint256 _tokenId, uint256 _salePrice)
     external
     view
     returns (

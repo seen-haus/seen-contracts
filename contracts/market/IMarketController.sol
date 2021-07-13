@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.5;
 
+import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import "../domain/SeenTypes.sol";
 
 /**
@@ -8,7 +9,7 @@ import "../domain/SeenTypes.sol";
  * @author Cliff Hall
  * @notice Declared as abstract contract rather than interface as it must inherit for enum types.
  */
-interface IMarketController {
+interface IMarketController is IERC1155Receiver {
 
     /**
      * @notice Sets the address of the xSEEN ERC-20 staking contract.
@@ -175,25 +176,59 @@ interface IMarketController {
     function getConsignment(uint256 _consignmentId) external view returns (SeenTypes.Consignment memory);
 
     /**
+     * @notice Get the remaining supply of the given consignment.
+     *
+     * @param _consignmentId - the id of the consignment
+     * @return uint256 - the remaining supply held by the MarketController
+     */
+    function getSupply(uint256 _consignmentId) external view returns(uint256);
+
+    /**
+     * @notice Is the caller the consignor of the given consignment?
+     *
+     * @param _account - the _account to check
+     * @param _consignmentId - the id of the consignment
+     * @return  bool - true if caller is consignor
+     */
+    function isConsignor(uint256 _consignmentId, address _account) external view returns(bool);
+
+    /**
      * @notice Registers a new consignment for sale or auction.
      *
      * Emits a ConsignmentRegistered event.
      *
      * @param _market - the market for the consignment. See {SeenTypes.Market}
-     * @param _seller - the current owner of the consignment
+     * @param _consignor - the address executing the consignment transaction
+     * @param _seller - the seller of the consignment
      * @param _tokenAddress - the contract address issuing the NFT behind the consignment
      * @param _tokenId - the id of the token being consigned
+     * @param _supply - the amount of the token being consigned
      *
      * @return Consignment - the registered consignment
      */
     function registerConsignment(
         SeenTypes.Market _market,
+        address _consignor,
         address payable _seller,
         address _tokenAddress,
-        uint256 _tokenId
+        uint256 _tokenId,
+        uint256 _supply
     )
     external
     returns(SeenTypes.Consignment memory);
+
+    /**
+     * @notice Release the consigned item to a given address
+     *
+     * Emits a ConsignmentTicketerSet event.
+     *
+     * Reverts if caller is does not have MARKET_HANDLER role.
+     *
+     * @param _consignmentId - the id of the consignment
+     * @param _amount - the amount of the consigned supply to release
+     * @param _releaseTo - the address to transfer the consigned token balance to
+     */
+    function releaseConsignment(uint256 _consignmentId, uint256 _amount, address _releaseTo) external;
 
     /**
      * @notice Set the type of Escrow Ticketer to be used for a consignment

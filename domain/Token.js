@@ -8,10 +8,11 @@ const eip55 = require("eip55");
 
 class Token {
 
-    constructor (creator, royaltyPercentage, isPhysical, supply, uri) {
+    constructor (creator, royaltyPercentage, isPhysical, id, supply, uri) {
         this.creator = creator;
         this.royaltyPercentage = royaltyPercentage;
         this.isPhysical = isPhysical;
+        this.id = id;
         this.supply = supply;
         this.uri = uri;
     }
@@ -22,8 +23,8 @@ class Token {
      * @returns {Token}
      */
     static fromObject(o) {
-        const {creator, royaltyPercentage, isPhysical, supply, uri} = o;
-        return new Token(creator, royaltyPercentage, isPhysical, supply, uri);
+        const {creator, royaltyPercentage, isPhysical, id, supply, uri} = o;
+        return new Token(creator, royaltyPercentage, isPhysical, id, supply, uri);
     }
 
     /**
@@ -106,6 +107,23 @@ class Token {
     }
 
     /**
+     * Is this Token instance's id field valid?
+     * Must be a string that converts to a BigNumber
+     * @returns {boolean}
+     */
+    idIsValid() {
+        let {id} = this;
+        let valid = false;
+        try {
+            valid = (
+                typeof id === "string" &&
+                ethers.BigNumber.from(id).gte("0")
+            )
+        } catch(e){}
+        return valid;
+    }
+
+    /**
      * Is this Token instance's supply field valid?
      * Must be a string that converts to a positive BigNumber
      * @returns {boolean}
@@ -149,6 +167,7 @@ class Token {
             this.creatorIsValid() &&
             this.royaltyPercentageIsValid() &&
             this.isPhysicalIsValid() &&
+            this.idIsValid() &&
             this.supplyIsValid() &&
             this.uriIsValid()
         );

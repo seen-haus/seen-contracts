@@ -8,9 +8,8 @@ pragma solidity ^0.8.5;
  */
 contract SeenTypes {
 
-    string public constant ESCROW_TICKET_URI_BASE = "https://seen.haus/escrowticket/";
-
-    bytes4 public constant INTERFACE_ID_2981 = bytes4(keccak256("royaltyInfo(uint256,uint256)"));
+    // TODO: Create metadata for Escrow Ticket and get ipfs address
+    string public constant ESCROW_TICKET_URI = "ipfs://QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
 
     bytes32 public constant ADMIN = keccak256("ADMIN");                   // Deployer and any other admins as needed
     bytes32 public constant SELLER = keccak256("SELLER");                 // Whitelisted sellers amd Seen.Haus reps
@@ -57,6 +56,7 @@ contract SeenTypes {
         address payable creator;
         uint16 royaltyPercentage;
         bool isPhysical;
+        uint256 id;
         uint256 supply;
         string uri;
     }
@@ -66,6 +66,7 @@ contract SeenTypes {
         address payable seller;
         address tokenAddress;
         uint256 tokenId;
+        uint256 supply;
         uint256 id;
     }
 
@@ -84,7 +85,6 @@ contract SeenTypes {
     struct Sale {
         uint256 consignmentId;
         uint256 start;
-        uint256 quantity;
         uint256 price;
         uint256 perTxCap;
         State state;
@@ -92,8 +92,10 @@ contract SeenTypes {
     }
 
     struct EscrowTicket {
-        uint256 tokenId;
         uint256 amount;
+        uint256 consignmentId;
+        uint256 id;
+        string itemURI;
     }
 
 }

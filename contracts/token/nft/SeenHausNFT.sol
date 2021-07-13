@@ -23,10 +23,10 @@ import "./ISeenHausNFT.sol";
 contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
 
     /// @dev token id => Token struct
-    mapping (uint256 => Token) public tokens;
+    mapping (uint256 => Token) internal tokens;
 
     // Next token number
-    uint256 public nextToken;
+    uint256 internal nextToken;
 
     /**
      * @notice Constructor
@@ -39,8 +39,8 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
     MarketClient(_marketController)
     ERC1155("")
     {
-        _registerInterface(INTERFACE_ID_2981);
         _registerInterface(type(ISeenHausNFT).interfaceId);
+        _registerInterface(type(IERC2981).interfaceId);
         _registerInterface(type(IERC165).interfaceId);
         _registerInterface(type(IERC1155).interfaceId);
         _registerInterface(type(IERC1155MetadataURI).interfaceId);
@@ -85,7 +85,7 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
     /**
      * @notice Mint a given supply of a token, optionally flagging as physical.
      *
-     * Token supply is sent to the caller.
+     * Token supply is sent to the MarketController.
      *
      * @param _supply - the supply of the token
      * @param _creator - the creator of the NFT (where the royalties will go)
@@ -95,6 +95,7 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      */
     function mint(uint256 _supply, address payable _creator, string memory _tokenURI, uint16 _royaltyPercentage, bool _isPhysical)
     internal
+    returns(Consignment memory consignment)
     {
 
         // Make sure royalty percentage is acceptable
@@ -105,14 +106,18 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
 
         // Store the token info
         Token storage token = tokens[tokenId];
+        token.id = tokenId;
         token.uri = _tokenURI;
         token.supply = _supply;
         token.creator = _creator;
         token.isPhysical = _isPhysical;
         token.royaltyPercentage = _royaltyPercentage;
 
-        // Mint the token, sending it to the caller
-        _mint(msg.sender, tokenId, _supply, new bytes(0x0));
+        // Mint the token, sending it to the MarketController
+        _mint(address(marketController), tokenId, _supply, new bytes(0x0));
+
+        // Consign the token for the primary market
+        consignment = marketController.registerConsignment(Market.Primary, msg.sender, _creator, address(this), tokenId, _supply);
 
     }
 
@@ -122,7 +127,7 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      * Entire supply must be minted at once.
      * More cannot be minted later for the same token id.
      * Can only be called by an address with the ESCROW_AGENT role.
-     * Token supply is sent to the caller.
+     * Token supply is sent to the MarketController.
      *
      * @param _supply - the supply of the token
      * @param _creator - the creator of the NFT (where the royalties will go)
@@ -131,14 +136,17 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      *
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
+     *
+     * @return consignment - the registered primary market consignment of the newly minted token
      */
     function mintPhysical(uint256 _supply, address payable _creator, string memory _tokenURI, uint16 _royaltyPercentage)
     external override
     onlyRole(ESCROW_AGENT)
+    returns(Consignment memory consignment)
     {
 
-        // Mint the token, flagging it as physical, sending to caller
-        mint(_supply, _creator, _tokenURI, _royaltyPercentage, true);
+        // Mint the token, flagging it as physical, consigning to the MarketController
+        return mint(_supply, _creator, _tokenURI, _royaltyPercentage, true);
 
     }
 
@@ -157,14 +165,17 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      *
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
+     *
+     * @return consignment - the registered primary market consignment of the newly minted token
      */
     function mintDigital(uint256 _supply, address payable _creator, string memory _tokenURI, uint16 _royaltyPercentage)
     external override
     onlyRole(MINTER)
+    returns(Consignment memory consignment)
     {
 
-        // Mint the token, sending to caller
-        mint(_supply, _creator, _tokenURI, _royaltyPercentage, false);
+        // Mint the token, consigning to the MarketController
+        return mint(_supply, _creator, _tokenURI, _royaltyPercentage, false);
 
     }
 
@@ -174,18 +185,18 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      * For a given token id and sale price, how much should be sent to whom as royalty
      *
      * @param _tokenId - the NFT asset queried for royalty information
-     * @param _value - the sale price of the NFT asset specified by _tokenId
+     * @param _salePrice - the sale price of the NFT asset specified by _tokenId
      *
      * @return _receiver - address of who should be sent the royalty payment
      * @return _royaltyAmount - the royalty payment amount for _value sale price
      */
-    function royaltyInfo(uint256 _tokenId, uint256 _value)
+    function royaltyInfo(uint256 _tokenId, uint256 _salePrice)
     external view override
     returns (address _receiver, uint256 _royaltyAmount)
     {
         Token storage token = tokens[_tokenId];
         _receiver = token.creator;
-        _royaltyAmount = getPercentageOf(_value, token.royaltyPercentage);
+        _royaltyAmount = getPercentageOf(_salePrice, token.royaltyPercentage);
     }
 
     /**
@@ -205,10 +216,7 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
     public view override(IERC165, ERC1155, ERC165Storage)
     returns (bool)
     {
-        return (
-            ERC1155.supportsInterface(interfaceId) ||
-            ERC165Storage.supportsInterface(interfaceId)
-        );
+        return ERC165Storage.supportsInterface(interfaceId);
     }
 
     /**

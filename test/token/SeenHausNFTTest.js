@@ -13,8 +13,9 @@ describe("SeenHausNFT", function() {
     let MarketController, marketController;
     let SeenHausNFT, seenHausNFT;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
-    let counter, tokenURI, nextToken, supply, salePrice, royaltyAmount, expectedRoyalty, percentage, royaltyPercentage;
-    let token, isPhysical, balance, amount, tokenId, uri, invalidRoyaltyPercentage;
+    let counter, tokenURI, tokenId, supply, salePrice, royaltyAmount, expectedRoyalty, percentage, royaltyPercentage;
+    let token, isPhysical, balance, uri, invalidRoyaltyPercentage, address, support;
+    let replacementAddress = "0x2d36143CC2E0E74E007E7600F341dC9D37D81C07";
 
     beforeEach( async function () {
 
@@ -71,6 +72,13 @@ describe("SeenHausNFT", function() {
         // the MarketController's address in its constructor
         await marketController.setNft(seenHausNFT.address);
 
+        // Deployer grants ADMIN role to admin address and renounces admin
+        await accessController.connect(deployer).grantRole(Role.ADMIN, admin.address);
+        await accessController.connect(deployer).renounceRole(Role.ADMIN, deployer.address);
+
+        // Grant MARKET_HANDLER to SeenHausNFT
+        await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
+
     });
 
     context("Minting", async function () {
@@ -78,18 +86,51 @@ describe("SeenHausNFT", function() {
         beforeEach( async function () {
 
             // Prepare for roled access to privileged methods
-            await accessController.connect(deployer).grantRole(Role.ESCROW_AGENT, escrowAgent.address);
-            await accessController.connect(deployer).grantRole(Role.MINTER, minter.address);
+            await accessController.connect(admin).grantRole(Role.ESCROW_AGENT, escrowAgent.address);
+            await accessController.connect(admin).grantRole(Role.MINTER, minter.address);
 
             // Setup values
-            nextToken = await seenHausNFT.getNextToken();
-            tokenURI = "https://ipfs.io/ipfs/QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
+            tokenId = await seenHausNFT.getNextToken();
+            tokenURI = "ipfs://QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
             supply = "1";
             royaltyPercentage = maxRoyaltyPercentage;
 
         });
 
         context("Privileged Access", async function () {
+
+            it("setMarketController() should require ADMIN to set the marketController address", async function () {
+
+                // N.B. There is no separate test suite for MarketClient.sol, which is an abstract contract.
+                //      Functionality not covered elsewhere will be tested here in the SeenHausNFT test suite.
+
+                // non-ADMIN attempt
+                await expect(
+                    seenHausNFT.connect(associate).setMarketController(replacementAddress)
+                ).to.be.revertedWith("Access denied, caller doesn't have role");
+
+                // Get address
+                address = await seenHausNFT.getMarketController();
+
+                // Test
+                expect(
+                    address !== replacementAddress,
+                    "non-ADMIN can set marketController address"
+                ).is.true;
+
+                // ADMIN attempt
+                await seenHausNFT.connect(admin).setMarketController(replacementAddress);
+
+                // Get address
+                address = await seenHausNFT.getMarketController();
+
+                // Test
+                expect(
+                    address === replacementAddress,
+                    "ADMIN can't set marketController address"
+                ).is.true;
+
+            });
 
             it("mintDigital() should require MINTER to mint a digital token", async function () {
 
@@ -103,7 +144,7 @@ describe("SeenHausNFT", function() {
 
                 // Test
                 expect(
-                    counter.eq(nextToken),
+                    counter.eq(tokenId),
                     "non-MINTER can mint a digital token"
                 ).is.true;
 
@@ -115,7 +156,7 @@ describe("SeenHausNFT", function() {
 
                 // Test
                 expect(
-                    counter.gt(nextToken),
+                    counter.gt(tokenId),
                     "MINTER can't mint a digital token"
                 ).is.true;
 
@@ -133,7 +174,7 @@ describe("SeenHausNFT", function() {
 
                 // Test
                 expect(
-                    counter.eq(nextToken),
+                    counter.eq(tokenId),
                     "non-ESCROW_AGENT can mint a physical token"
                 ).is.true;
 
@@ -145,7 +186,7 @@ describe("SeenHausNFT", function() {
 
                 // Test
                 expect(
-                    counter.gt(nextToken),
+                    counter.gt(tokenId),
                     "ESCROW_AGENT can't mint a digital token"
                 ).is.true;
 
@@ -161,7 +202,7 @@ describe("SeenHausNFT", function() {
                 await seenHausNFT.connect(minter).mintDigital(supply, creator.address, tokenURI, royaltyPercentage);
 
                 // Get physical status
-                isPhysical = await seenHausNFT.isPhysical(nextToken);
+                isPhysical = await seenHausNFT.isPhysical(tokenId);
 
                 // Test
                 expect(
@@ -177,7 +218,7 @@ describe("SeenHausNFT", function() {
                 await seenHausNFT.connect(escrowAgent).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage);
 
                 // Get physical status
-                isPhysical = await seenHausNFT.isPhysical(nextToken);
+                isPhysical = await seenHausNFT.isPhysical(tokenId);
 
                 // Test
                 expect(
@@ -197,7 +238,7 @@ describe("SeenHausNFT", function() {
                 await seenHausNFT.connect(minter).mintDigital(supply, creator.address, tokenURI, royaltyPercentage);
 
                 // Get token URI
-                uri = await seenHausNFT.uri(nextToken);
+                uri = await seenHausNFT.uri(tokenId);
 
                 // Test
                 expect(
@@ -207,13 +248,13 @@ describe("SeenHausNFT", function() {
 
             });
 
-            it("mintPhysical() should record the physical aspect for the token", async function () {
+            it("mintPhysical() should record the URI for the token", async function () {
 
                 // ESCROW_AGENT creates token for creator
                 await seenHausNFT.connect(escrowAgent).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage);
 
                 // Get physical status
-                uri = await seenHausNFT.uri(nextToken);
+                uri = await seenHausNFT.uri(tokenId);
 
                 // Test
                 expect(
@@ -225,36 +266,36 @@ describe("SeenHausNFT", function() {
 
         });
 
-        context("Caller Receives Token Balance", async function () {
+        context("MarketController Receives Token Balance", async function () {
 
-            it("mintDigital() should send token balance to MINTER-roled caller", async function () {
+            it("mintDigital() should send token balance to MarketController", async function () {
 
                 // MINTER creates token for creator
                 await seenHausNFT.connect(minter).mintDigital(supply, creator.address, tokenURI, royaltyPercentage);
 
-                // Get caller balance
-                balance = await seenHausNFT.balanceOf(minter.address, nextToken);
+                // Get MarketController balance
+                balance = await seenHausNFT.balanceOf(marketController.address, tokenId);
 
                 // Test
                 expect(
                     balance.toString() === supply,
-                    "Tokens not sent to caller"
+                    "Tokens not sent to marketplace"
                 ).is.true;
 
             });
 
-            it("mintPhysical() should send token balance to ESCROW_AGENT-roled caller", async function () {
+            it("mintPhysical() should send token balance to MarketController", async function () {
 
                 // ESCROW_AGENT creates token for creator
                 await seenHausNFT.connect(escrowAgent).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage);
 
-                // Get caller balance
-                balance = await seenHausNFT.balanceOf(escrowAgent.address, nextToken);
+                // Get MarketController balance
+                balance = await seenHausNFT.balanceOf(marketController.address, tokenId);
 
                 // Test
                 expect(
                     balance.toString() === supply,
-                    "Tokens not sent to caller"
+                    "Tokens not sent to marketplace"
                 ).is.true;
 
             });
@@ -269,13 +310,14 @@ describe("SeenHausNFT", function() {
                 await seenHausNFT.connect(minter).mintDigital(supply, creator.address, tokenURI, royaltyPercentage);
 
                 // Get token info
-                const response = await seenHausNFT.getTokenInfo(nextToken);
+                const response = await seenHausNFT.getTokenInfo(tokenId);
 
                 // Convert to entity
                 token = new Token(
                     response.creator,
                     response.royaltyPercentage.toString(),
                     response.isPhysical,
+                    response.id.toString(),
                     response.supply.toString(),
                     response.uri
                 );
@@ -290,6 +332,7 @@ describe("SeenHausNFT", function() {
                 expect(token.creator === creator.address).is.true;
                 expect(token.royaltyPercentage === royaltyPercentage).is.true;
                 expect(token.isPhysical === false).is.true;
+                expect(token.id === tokenId.toString()).is.true;
                 expect(token.supply === supply).is.true;
                 expect(token.uri === tokenURI).is.true;
 
@@ -301,13 +344,14 @@ describe("SeenHausNFT", function() {
                 await seenHausNFT.connect(escrowAgent).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage);
 
                 // Get token info
-                const response = await seenHausNFT.getTokenInfo(nextToken);
+                const response = await seenHausNFT.getTokenInfo(tokenId);
 
                 // Convert to entity
                 token = new Token(
                     response.creator,
                     response.royaltyPercentage.toString(),
                     response.isPhysical,
+                    response.id.toString(),
                     response.supply.toString(),
                     response.uri
                 );
@@ -322,6 +366,7 @@ describe("SeenHausNFT", function() {
                 expect(token.creator === creator.address).is.true;
                 expect(token.royaltyPercentage === royaltyPercentage).is.true;
                 expect(token.isPhysical === true).is.true;
+                expect(token.id === tokenId.toString()).is.true;
                 expect(token.supply === supply).is.true;
                 expect(token.uri === tokenURI).is.true;
 
@@ -343,7 +388,7 @@ describe("SeenHausNFT", function() {
                 await seenHausNFT.connect(minter).mintDigital(supply, creator.address, tokenURI, royaltyPercentage);
 
                 // Get royalty info
-                [recipient, royaltyAmount] = await seenHausNFT.royaltyInfo(nextToken, salePrice);
+                [recipient, royaltyAmount] = await seenHausNFT.royaltyInfo(tokenId, salePrice);
 
                 // Test
                 expect(
@@ -391,69 +436,61 @@ describe("SeenHausNFT", function() {
 
     });
 
-    context("Owning", async function () {
+    context("Interfaces", async function () {
 
-        beforeEach( async function () {
+        context("supportsInterface()", async function () {
 
-            // Prepare for roled access to privileged methods
-            await accessController.connect(deployer).grantRole(Role.MINTER, owner.address);
+            it("should indicate support for ERC-165 interface", async function () {
 
-            // Setup values
-            tokenId = await seenHausNFT.getNextToken();
-            tokenURI = "https://ipfs.io/ipfs/QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
-            supply = "100";
-            amount = "50";
-            royaltyPercentage = maxRoyaltyPercentage;
+                // See https://eips.ethereum.org/EIPS/eip-165#how-a-contract-will-publish-the-interfaces-it-implements
+                support = await seenHausNFT.supportsInterface("0x01ffc9a7");
 
-            // MINTER creates token
-            await seenHausNFT.connect(owner).mintDigital(supply, creator.address, tokenURI, royaltyPercentage);
-
-        });
-
-        it("Owner should be able to transfer part of their balance if greater than 1", async function() {
-
-            // Owner transfers half of their token balance to recipient
-            await seenHausNFT.connect(owner).safeTransferFrom(owner.address, recipient.address, tokenId, amount, []);
-
-            // TEST
-            expect(
-                await seenHausNFT.balanceOf(owner.address, tokenId),
-                "Balance of owner incorrect"
-            ).to.eq(amount);
-
-            expect(
-                await seenHausNFT.balanceOf(recipient.address, tokenId),
-                "Balance of recipient incorrect"
-            ).to.eq(amount);
-
-        });
-
-        it("Owner should be able to set transfer approval to an operator", async function() {
-
-            // Set approval for operator to manage sender's NFTs
-            await seenHausNFT.connect(owner).setApprovalForAll(associate.address, true);
-
-            // Test
-            expect (
-                await seenHausNFT.isApprovedForAll(owner.address, associate.address),
-                "Operator was not approved"
+                // Test
+                await expect(
+                    support,
+                    "ERC-165 interface not supported"
                 ).is.true;
 
-        });
+            });
 
-        it("Owner should be able to remove transfer approval from an operator", async function() {
+            it("should indicate support for ERC-1155 interface", async function () {
 
-            // Set approval for operator to manage sender's NFTs
-            await seenHausNFT.connect(owner).setApprovalForAll(associate.address, true);
+                // See https://eips.ethereum.org/EIPS/eip-1155#specification
+                support = await seenHausNFT.supportsInterface("0xd9b67a26");
 
-            // Remove approval for operator to manage sender's NFTs
-            await seenHausNFT.connect(owner).setApprovalForAll(associate.address, false);
+                // Test
+                await expect(
+                    support,
+                    "ERC-1155 interface not supported"
+                ).is.true;
 
-            // Test
-            expect (
-                await seenHausNFT.isApprovedForAll(owner.address, associate.address),
-                "Operator approval not removed"
-            ).is.false;
+            });
+
+            it("should indicate support for ERC-2981 interface", async function () {
+
+                // See https://eips.ethereum.org/EIPS/eip-2981#specification
+                support = await seenHausNFT.supportsInterface("0x2a55205a");
+
+                // Test
+                await expect(
+                    support,
+                    "ERC-2981 interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for ISeenHausNFT interface", async function () {
+
+                // Current ISeenHausNFT interfaceId
+                support = await seenHausNFT.supportsInterface("0x3ade32fd");
+
+                // Test
+                await expect(
+                    support,
+                    "ISeenHausNFT interface not supported"
+                ).is.true;
+
+            });
 
         });
 

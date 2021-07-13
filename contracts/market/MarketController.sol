@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.5;
 
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "../access/AccessClient.sol";
 import "../token/nft/ISeenHausNFT.sol";
@@ -12,7 +14,7 @@ import "./IMarketController.sol";
  * @author Cliff Hall
  * @notice Provides centralized management of consignments and various market-related settings.
  */
-contract MarketController is AccessClient {
+contract MarketController is AccessClient, ERC1155Holder, IMarketController {
 
     /// Events
     event NFTAddressChanged(address indexed nft);
@@ -26,8 +28,9 @@ contract MarketController is AccessClient {
     event MaxRoyaltyPercentageChanged(uint16 indexed maxRoyaltyPercentage);
     event OutBidPercentageChanged(uint16 indexed outBidPercentage);
     event DefaultTicketerTypeChanged(Ticketer indexed ticketerType);
-    event ConsignmentRegistered(Consignment consignment);
+    event ConsignmentRegistered(address indexed consignor, Consignment consignment);
     event ConsignmentTicketerChanged(uint256 consignmentId, Ticketer indexed ticketerType);
+    event ConsignmentReleased(Consignment consignment, uint256 amount, address releasedTo);
 
     /// @dev the address of the Seen.Haus NFT contract
     address internal nft;
@@ -39,10 +42,10 @@ contract MarketController is AccessClient {
     address payable internal multisig;
 
     /// @dev address of the Seen.Haus lots-based escrow ticketing contract
-    address public lotsTicketer;
+    address internal lotsTicketer;
 
     /// @dev address of the Seen.Haus items-based escrow ticketing contract
-    address public itemsTicketer;
+    address internal itemsTicketer;
 
     /// @dev the default escrow ticketer type to use for physical consignments unless overridden with setConsignmentTicketer
     Ticketer internal defaultTicketerType;
@@ -63,10 +66,13 @@ contract MarketController is AccessClient {
     uint256 internal nextConsignment;
 
     /// @dev consignment id => consignment
-    mapping(uint256 => Consignment) public consignments;
+    mapping(uint256 => Consignment) internal consignments;
+
+    /// @dev consignmentId to consignor address
+    mapping(uint256 => address) internal consignors;
 
     /// @dev consignment id => ticketer type
-    mapping(uint256 => Ticketer) public consignmentTicketers;
+    mapping(uint256 => Ticketer) internal consignmentTicketers;
 
     /**
      * @notice Constructor
@@ -101,6 +107,18 @@ contract MarketController is AccessClient {
     }
 
     /**
+     * @dev Modifier that checks that the consignment exists
+     *
+     * Reverts if the consignment does not exist
+     */
+    modifier consignmentExists(uint256 _consignmentId) {
+
+        // Make sure the consignment exists
+        require(_consignmentId < nextConsignment, "Consignment does not exist");
+        _;
+    }
+
+    /**
      * @notice Sets the address of the xSEEN ERC-20 staking contract.
      *
      * Emits a NFTAddressChanged event.
@@ -109,6 +127,7 @@ contract MarketController is AccessClient {
      */
     function setNft(address _nft)
     external
+    override
     onlyRole(ADMIN) {
         nft = _nft;
         emit NFTAddressChanged(nft);
@@ -118,7 +137,9 @@ contract MarketController is AccessClient {
      * @notice The nft getter
      */
     function getNft()
-    external view
+    external
+    view
+    override
     returns (address) {
         return nft;
     }
@@ -132,6 +153,7 @@ contract MarketController is AccessClient {
      */
     function setLotsTicketer(address _lotsTicketer)
     external
+    override
     onlyRole(ADMIN) {
         lotsTicketer = _lotsTicketer;
         emit EscrowTicketerAddressChanged(lotsTicketer, Ticketer.Lots);
@@ -141,7 +163,9 @@ contract MarketController is AccessClient {
      * @notice The lots-based escrow ticketer getter
      */
     function getLotsTicketer()
-    external view
+    external
+    view
+    override
     returns (address) {
         return lotsTicketer;
     }
@@ -155,6 +179,7 @@ contract MarketController is AccessClient {
      */
     function setItemsTicketer(address _itemsTicketer)
     external
+    override
     onlyRole(ADMIN) {
         itemsTicketer = _itemsTicketer;
         emit EscrowTicketerAddressChanged(itemsTicketer, Ticketer.Items);
@@ -164,7 +189,9 @@ contract MarketController is AccessClient {
      * @notice The items-based ticketer getter
      */
     function getItemsTicketer()
-    external view
+    external
+    view
+    override
     returns (address) {
         return itemsTicketer;
     }
@@ -178,6 +205,7 @@ contract MarketController is AccessClient {
      */
     function setStaking(address payable _staking)
     external
+    override
     onlyRole(ADMIN) {
         staking = _staking;
         emit StakingAddressChanged(staking);
@@ -187,7 +215,9 @@ contract MarketController is AccessClient {
      * @notice The staking getter
      */
     function getStaking()
-    external view
+    external
+    view
+    override
     returns (address payable) {
         return staking;
     }
@@ -201,6 +231,7 @@ contract MarketController is AccessClient {
      */
     function setMultisig(address payable _multisig)
     external
+    override
     onlyRole(ADMIN) {
         multisig = _multisig;
         emit MultisigAddressChanged(multisig);
@@ -210,7 +241,9 @@ contract MarketController is AccessClient {
      * @notice The multisig getter
      */
     function getMultisig()
-    external view
+    external
+    view
+    override
     returns (address payable) {
         return multisig;
     }
@@ -224,6 +257,7 @@ contract MarketController is AccessClient {
      */
     function setVipStakerAmount(uint256 _vipStakerAmount)
     external
+    override
     onlyRole(ADMIN) {
         vipStakerAmount = _vipStakerAmount;
         emit VipStakerAmountChanged(vipStakerAmount);
@@ -233,7 +267,9 @@ contract MarketController is AccessClient {
      * @notice The vipStakerAmount getter
      */
     function getVipStakerAmount()
-    external view
+    external
+    view
+    override
     returns (uint256) {
         return vipStakerAmount;
     }
@@ -249,6 +285,7 @@ contract MarketController is AccessClient {
      */
     function setFeePercentage(uint16 _feePercentage)
     external
+    override
     onlyRole(ADMIN) {
         require(_feePercentage > 0 && _feePercentage <= 10000,
             "Percentage representation must be between 1 and 10000");
@@ -260,7 +297,9 @@ contract MarketController is AccessClient {
      * @notice The feePercentage getter
      */
     function getFeePercentage()
-    external view
+    external
+    view
+    override
     returns (uint16) {
         return feePercentage;
     }
@@ -277,6 +316,7 @@ contract MarketController is AccessClient {
      */
     function setMaxRoyaltyPercentage(uint16 _maxRoyaltyPercentage)
     external
+    override
     onlyRole(ADMIN) {
         require(_maxRoyaltyPercentage > 0 && _maxRoyaltyPercentage <= 10000,
             "Percentage representation must be between 1 and 10000");
@@ -288,7 +328,9 @@ contract MarketController is AccessClient {
      * @notice The maxRoyaltyPercentage getter
      */
     function getMaxRoyaltyPercentage()
-    external view
+    external
+    view
+    override
     returns (uint16) {
         return maxRoyaltyPercentage;
     }
@@ -305,6 +347,7 @@ contract MarketController is AccessClient {
      */
     function setOutBidPercentage(uint16 _outBidPercentage)
     external
+    override
     onlyRole(ADMIN) {
         require(_outBidPercentage > 0 && _outBidPercentage <= 10000,
             "Percentage representation must be between 1 and 10000");
@@ -316,7 +359,9 @@ contract MarketController is AccessClient {
      * @notice The outBidPercentage getter
      */
     function getOutBidPercentage()
-    external view
+    external
+    view
+    override
     returns (uint16) {
         return outBidPercentage;
     }
@@ -333,6 +378,7 @@ contract MarketController is AccessClient {
      */
     function setDefaultTicketerType(Ticketer _ticketerType)
     external
+    override
     onlyRole(ADMIN) {
         require(_ticketerType != Ticketer.Default, "Invalid ticketer type.");
         require(_ticketerType != defaultTicketerType, "Type is already default.");
@@ -344,7 +390,9 @@ contract MarketController is AccessClient {
      * @notice The defaultTicketerType getter
      */
     function getDefaultTicketerType()
-    external view
+    external
+    view
+    override
     returns (Ticketer) {
         return defaultTicketerType;
     }
@@ -355,11 +403,16 @@ contract MarketController is AccessClient {
      * If a specific ticketer has not been set for the consignment,
      * the default escrow ticketer will be returned.
      *
+     * Reverts if consignment doesn't exist
+     *     *
      * @param _consignmentId - the id of the consignment
      * @return ticketer = the address of the escrow ticketer to use
      */
     function getEscrowTicketer(uint256 _consignmentId)
-    external view
+    external
+    view
+    override
+    consignmentExists(_consignmentId)
     returns (address) {
         Ticketer specified = consignmentTicketers[_consignmentId];
         Ticketer ticketerType = (specified == Ticketer.Default) ? defaultTicketerType : specified;
@@ -371,18 +424,66 @@ contract MarketController is AccessClient {
      * @dev does not increment counter
      */
     function getNextConsignment()
-    external view
+    external
+    view
+    override
     returns (uint256) {
         return nextConsignment;
     }
 
     /**
      * @notice The consignment getter
+     *
+     * Reverts if consignment doesn't exist
+     *
+     * @param _consignmentId - the id of the consignment
+     * @return consignment - the consignment struct
      */
     function getConsignment(uint256 _consignmentId)
-    external view
-    returns (Consignment memory) {
-        return consignments[_consignmentId];
+    public
+    view
+    override
+    consignmentExists(_consignmentId)
+    returns (Consignment memory consignment) {
+        consignment = consignments[_consignmentId];
+    }
+
+    /**
+     * @notice Get the remaining supply of the given consignment.
+     *
+     * Reverts if consignment doesn't exist
+     *
+     * @param _consignmentId - the id of the consignment
+     * @return  uint256 - the remaining supply held by the MarketController
+     */
+    function getSupply(uint256 _consignmentId)
+    public
+    view
+    override
+    consignmentExists(_consignmentId)
+    returns(uint256)
+    {
+        Consignment storage consignment = consignments[_consignmentId];
+        return IERC1155(consignment.tokenAddress).balanceOf(address(this), consignment.tokenId);
+    }
+
+    /**
+     * @notice Is the caller the consignor of the given consignment?
+     *
+     * Reverts if consignment doesn't exist
+     *
+     * @param _account - the _account to check
+     * @param _consignmentId - the id of the consignment
+     * @return  bool - true if caller is consignor
+     */
+    function isConsignor(uint256 _consignmentId, address _account)
+    public
+    view
+    override
+    consignmentExists(_consignmentId)
+    returns(bool)
+    {
+        return consignors[_consignmentId] == _account;
     }
 
     /**
@@ -391,22 +492,30 @@ contract MarketController is AccessClient {
      * Emits a ConsignmentRegistered event.
      *
      * @param _market - the market for the consignment. See {SeenTypes.Market}
-     * @param _seller - the current owner of the consignment
+     * @param _consignor - the address executing the consignment transaction
+     * @param _seller - the seller of the consignment
      * @param _tokenAddress - the contract address issuing the NFT behind the consignment
      * @param _tokenId - the id of the token being consigned
+     * @param _supply - the amount of the token being consigned
      *
      * @return consignment - the registered consignment
      */
     function registerConsignment(
-        Market _market,
+        SeenTypes.Market _market,
+        address _consignor,
         address payable _seller,
         address _tokenAddress,
-        uint256 _tokenId
+        uint256 _tokenId,
+        uint256 _supply
     )
     external
+    override
     onlyRole(MARKET_HANDLER)
     returns (Consignment memory consignment)
     {
+        // Ensure the consigned token has been transferred to this contract
+        require(IERC1155(_tokenAddress).balanceOf(address(this), _tokenId) == _supply);
+
         // Get the id for the new consignment
         uint256 id = nextConsignment++;
 
@@ -416,12 +525,61 @@ contract MarketController is AccessClient {
             _seller,
             _tokenAddress,
             _tokenId,
+            _supply,
             id
         );
         consignments[id] = consignment;
 
+        // Associate the consignor
+        consignors[id] = _consignor;
+
         // Notify listeners of state change
-        emit ConsignmentRegistered(consignment);
+        emit ConsignmentRegistered(_consignor, consignment);
+
+    }
+
+    /**
+     * @notice Release an amount of the consigned token balance to a given address
+     *
+     * Emits a ConsignmentReleased event.
+     *
+     * Reverts if caller is does not have MARKET_HANDLER role.     *
+     * Reverts if consignment doesn't exist     *
+     *
+     * @param _consignmentId - the id of the consignment
+     * @param _amount - the amount of the consigned supply
+     * @param _releaseTo - the address to transfer the consigned token balance to
+     */
+    function releaseConsignment(uint256 _consignmentId, uint256 _amount, address _releaseTo)
+    external
+    override
+    onlyRole(MARKET_HANDLER)
+    consignmentExists(_consignmentId)
+    {
+
+        // Get the consignment into memory
+        Consignment memory consignment = consignments[_consignmentId];
+
+        // Get the current supply
+        uint256 supply = IERC1155(consignment.tokenAddress).balanceOf(address(this), consignment.tokenId);
+
+        // Ensure this contract holds enough supply
+        require(supply >= _amount, "Consigned token supply less than amount");
+
+        // Remove the consignment when the entire supply has been released
+        //if (supply == _amount) delete consignments[_consignmentId];
+
+        // Transfer a balance of the token from the MarketController to the recipient
+        IERC1155(consignment.tokenAddress).safeTransferFrom(
+            address(this),
+            _releaseTo,
+            consignment.tokenId,
+            _amount,
+            new bytes(0x0)
+        );
+
+        // Notify watchers about state change
+        emit ConsignmentReleased(consignment, _amount, _releaseTo);
 
     }
 
@@ -432,19 +590,18 @@ contract MarketController is AccessClient {
      * if overriding to Ticketer.Items for a given consignment.
      *
      * Emits a ConsignmentTicketerSet event.
-     * Reverts if consignment is not registered.
+     *
+     * Reverts if consignment doesn't exist     *
      *
      * @param _consignmentId - the id of the consignment
      * @param _ticketerType - the type of ticketer to use. See: {SeenTypes.Ticketer}
      */
     function setConsignmentTicketer(uint256 _consignmentId, Ticketer _ticketerType)
     external
+    override
     onlyRole(ESCROW_AGENT)
+    consignmentExists(_consignmentId)
     {
-
-        // Be sure this is an existing consignment
-        require(_consignmentId < nextConsignment, "Invalid consignment id.");
-
         // Set the ticketer for the consignment if not different
         if (_ticketerType != consignmentTicketers[_consignmentId]) {
 
@@ -455,6 +612,32 @@ contract MarketController is AccessClient {
             emit ConsignmentTicketerChanged(_consignmentId, _ticketerType);
 
         }
+    }
+
+    /**
+     * @notice Implementation of the {IERC165} interface.
+     *
+     * N.B. This method is inherited from several parents and
+     * the compiler cannot decide which to use. Thus, they must
+     * be overridden here.
+     *
+     * if you just call super.supportsInterface, it chooses
+     * 'the most derived contract'. But that's not good for this
+     * particular function because you may inherit from several
+     * IERC165 contracts, and all concrete ones need to be allowed
+     * to respond.
+     */
+    function supportsInterface(bytes4 interfaceId)
+    public
+    view
+    override(IERC165, ERC1155Receiver)
+    returns (bool)
+    {
+        return (
+            interfaceId == type(IERC165).interfaceId ||
+            interfaceId == type(IERC1155Receiver).interfaceId ||
+            interfaceId == type(IMarketController).interfaceId
+        );
     }
 
 }
