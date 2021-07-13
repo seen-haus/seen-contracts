@@ -2,6 +2,7 @@
 pragma solidity ^0.8.5;
 
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "../access/AccessClient.sol";
 import "../token/nft/ISeenHausNFT.sol";
@@ -13,7 +14,7 @@ import "./IMarketController.sol";
  * @author Cliff Hall
  * @notice Provides centralized management of consignments and various market-related settings.
  */
-contract MarketController is AccessClient, ERC1155Holder {
+contract MarketController is AccessClient, ERC1155Holder, IMarketController {
 
     /// Events
     event NFTAddressChanged(address indexed nft);
@@ -126,6 +127,7 @@ contract MarketController is AccessClient, ERC1155Holder {
      */
     function setNft(address _nft)
     external
+    override
     onlyRole(ADMIN) {
         nft = _nft;
         emit NFTAddressChanged(nft);
@@ -135,7 +137,9 @@ contract MarketController is AccessClient, ERC1155Holder {
      * @notice The nft getter
      */
     function getNft()
-    external view
+    external
+    view
+    override
     returns (address) {
         return nft;
     }
@@ -149,6 +153,7 @@ contract MarketController is AccessClient, ERC1155Holder {
      */
     function setLotsTicketer(address _lotsTicketer)
     external
+    override
     onlyRole(ADMIN) {
         lotsTicketer = _lotsTicketer;
         emit EscrowTicketerAddressChanged(lotsTicketer, Ticketer.Lots);
@@ -158,7 +163,9 @@ contract MarketController is AccessClient, ERC1155Holder {
      * @notice The lots-based escrow ticketer getter
      */
     function getLotsTicketer()
-    external view
+    external
+    view
+    override
     returns (address) {
         return lotsTicketer;
     }
@@ -172,6 +179,7 @@ contract MarketController is AccessClient, ERC1155Holder {
      */
     function setItemsTicketer(address _itemsTicketer)
     external
+    override
     onlyRole(ADMIN) {
         itemsTicketer = _itemsTicketer;
         emit EscrowTicketerAddressChanged(itemsTicketer, Ticketer.Items);
@@ -181,7 +189,9 @@ contract MarketController is AccessClient, ERC1155Holder {
      * @notice The items-based ticketer getter
      */
     function getItemsTicketer()
-    external view
+    external
+    view
+    override
     returns (address) {
         return itemsTicketer;
     }
@@ -195,6 +205,7 @@ contract MarketController is AccessClient, ERC1155Holder {
      */
     function setStaking(address payable _staking)
     external
+    override
     onlyRole(ADMIN) {
         staking = _staking;
         emit StakingAddressChanged(staking);
@@ -204,7 +215,9 @@ contract MarketController is AccessClient, ERC1155Holder {
      * @notice The staking getter
      */
     function getStaking()
-    external view
+    external
+    view
+    override
     returns (address payable) {
         return staking;
     }
@@ -218,6 +231,7 @@ contract MarketController is AccessClient, ERC1155Holder {
      */
     function setMultisig(address payable _multisig)
     external
+    override
     onlyRole(ADMIN) {
         multisig = _multisig;
         emit MultisigAddressChanged(multisig);
@@ -227,7 +241,9 @@ contract MarketController is AccessClient, ERC1155Holder {
      * @notice The multisig getter
      */
     function getMultisig()
-    external view
+    external
+    view
+    override
     returns (address payable) {
         return multisig;
     }
@@ -241,6 +257,7 @@ contract MarketController is AccessClient, ERC1155Holder {
      */
     function setVipStakerAmount(uint256 _vipStakerAmount)
     external
+    override
     onlyRole(ADMIN) {
         vipStakerAmount = _vipStakerAmount;
         emit VipStakerAmountChanged(vipStakerAmount);
@@ -250,7 +267,9 @@ contract MarketController is AccessClient, ERC1155Holder {
      * @notice The vipStakerAmount getter
      */
     function getVipStakerAmount()
-    external view
+    external
+    view
+    override
     returns (uint256) {
         return vipStakerAmount;
     }
@@ -266,6 +285,7 @@ contract MarketController is AccessClient, ERC1155Holder {
      */
     function setFeePercentage(uint16 _feePercentage)
     external
+    override
     onlyRole(ADMIN) {
         require(_feePercentage > 0 && _feePercentage <= 10000,
             "Percentage representation must be between 1 and 10000");
@@ -277,7 +297,9 @@ contract MarketController is AccessClient, ERC1155Holder {
      * @notice The feePercentage getter
      */
     function getFeePercentage()
-    external view
+    external
+    view
+    override
     returns (uint16) {
         return feePercentage;
     }
@@ -294,6 +316,7 @@ contract MarketController is AccessClient, ERC1155Holder {
      */
     function setMaxRoyaltyPercentage(uint16 _maxRoyaltyPercentage)
     external
+    override
     onlyRole(ADMIN) {
         require(_maxRoyaltyPercentage > 0 && _maxRoyaltyPercentage <= 10000,
             "Percentage representation must be between 1 and 10000");
@@ -305,7 +328,9 @@ contract MarketController is AccessClient, ERC1155Holder {
      * @notice The maxRoyaltyPercentage getter
      */
     function getMaxRoyaltyPercentage()
-    external view
+    external
+    view
+    override
     returns (uint16) {
         return maxRoyaltyPercentage;
     }
@@ -322,6 +347,7 @@ contract MarketController is AccessClient, ERC1155Holder {
      */
     function setOutBidPercentage(uint16 _outBidPercentage)
     external
+    override
     onlyRole(ADMIN) {
         require(_outBidPercentage > 0 && _outBidPercentage <= 10000,
             "Percentage representation must be between 1 and 10000");
@@ -335,6 +361,7 @@ contract MarketController is AccessClient, ERC1155Holder {
     function getOutBidPercentage()
     external
     view
+    override
     returns (uint16) {
         return outBidPercentage;
     }
@@ -351,6 +378,7 @@ contract MarketController is AccessClient, ERC1155Holder {
      */
     function setDefaultTicketerType(Ticketer _ticketerType)
     external
+    override
     onlyRole(ADMIN) {
         require(_ticketerType != Ticketer.Default, "Invalid ticketer type.");
         require(_ticketerType != defaultTicketerType, "Type is already default.");
@@ -364,6 +392,7 @@ contract MarketController is AccessClient, ERC1155Holder {
     function getDefaultTicketerType()
     external
     view
+    override
     returns (Ticketer) {
         return defaultTicketerType;
     }
@@ -382,6 +411,7 @@ contract MarketController is AccessClient, ERC1155Holder {
     function getEscrowTicketer(uint256 _consignmentId)
     external
     view
+    override
     consignmentExists(_consignmentId)
     returns (address) {
         Ticketer specified = consignmentTicketers[_consignmentId];
@@ -394,7 +424,9 @@ contract MarketController is AccessClient, ERC1155Holder {
      * @dev does not increment counter
      */
     function getNextConsignment()
-    external view
+    external
+    view
+    override
     returns (uint256) {
         return nextConsignment;
     }
@@ -410,6 +442,7 @@ contract MarketController is AccessClient, ERC1155Holder {
     function getConsignment(uint256 _consignmentId)
     public
     view
+    override
     consignmentExists(_consignmentId)
     returns (Consignment memory consignment) {
         consignment = consignments[_consignmentId];
@@ -426,6 +459,7 @@ contract MarketController is AccessClient, ERC1155Holder {
     function getSupply(uint256 _consignmentId)
     public
     view
+    override
     consignmentExists(_consignmentId)
     returns(uint256)
     {
@@ -445,6 +479,7 @@ contract MarketController is AccessClient, ERC1155Holder {
     function isConsignor(uint256 _consignmentId, address _account)
     public
     view
+    override
     consignmentExists(_consignmentId)
     returns(bool)
     {
@@ -474,6 +509,7 @@ contract MarketController is AccessClient, ERC1155Holder {
         uint256 _supply
     )
     external
+    override
     onlyRole(MARKET_HANDLER)
     returns (Consignment memory consignment)
     {
@@ -516,6 +552,7 @@ contract MarketController is AccessClient, ERC1155Holder {
      */
     function releaseConsignment(uint256 _consignmentId, uint256 _amount, address _releaseTo)
     external
+    override
     onlyRole(MARKET_HANDLER)
     consignmentExists(_consignmentId)
     {
@@ -561,6 +598,7 @@ contract MarketController is AccessClient, ERC1155Holder {
      */
     function setConsignmentTicketer(uint256 _consignmentId, Ticketer _ticketerType)
     external
+    override
     onlyRole(ESCROW_AGENT)
     consignmentExists(_consignmentId)
     {
@@ -574,6 +612,32 @@ contract MarketController is AccessClient, ERC1155Holder {
             emit ConsignmentTicketerChanged(_consignmentId, _ticketerType);
 
         }
+    }
+
+    /**
+     * @notice Implementation of the {IERC165} interface.
+     *
+     * N.B. This method is inherited from several parents and
+     * the compiler cannot decide which to use. Thus, they must
+     * be overridden here.
+     *
+     * if you just call super.supportsInterface, it chooses
+     * 'the most derived contract'. But that's not good for this
+     * particular function because you may inherit from several
+     * IERC165 contracts, and all concrete ones need to be allowed
+     * to respond.
+     */
+    function supportsInterface(bytes4 interfaceId)
+    public
+    view
+    override(IERC165, ERC1155Receiver)
+    returns (bool)
+    {
+        return (
+            interfaceId == type(IERC165).interfaceId ||
+            interfaceId == type(IERC1155Receiver).interfaceId ||
+            interfaceId == type(IMarketController).interfaceId
+        );
     }
 
 }

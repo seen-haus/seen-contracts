@@ -81,7 +81,7 @@ contract SaleHandler is MarketClient {
         Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Get the storage location for the sale
-        Sale storage sale = sales[_consignmentId];
+        Sale storage sale = sales[consignment.id];
 
         // Make sure auction doesn't exist
         require(sale.consignmentId == 0, "Sale exists");
@@ -193,7 +193,7 @@ contract SaleHandler is MarketClient {
         Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Make sure the sale exists and hasn't been settled
-        Sale storage sale = sales[_consignmentId];
+        Sale storage sale = sales[consignment.id];
         require(sale.start != 0, "Sale does not exist");
         require(sale.state != State.Ended, "Sale has already been settled");
 

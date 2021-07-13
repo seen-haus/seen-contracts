@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.5;
 
-import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "../../../market/MarketClient.sol";
-import "../../../util/StringUtils.sol";
 import "../IEscrowTicketer.sol";
 
 /**
@@ -25,7 +23,7 @@ import "../IEscrowTicketer.sol";
  * in a multi-edition sale with the purpose of flipping each
  * item individually to make maximum profit.
  */
-contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Holder, ERC1155 {
+contract ItemsTicketer is IEscrowTicketer, MarketClient, ERC1155 {
 
     // Ticket ID => Ticket
     mapping (uint256 => EscrowTicket) internal tickets;
@@ -185,12 +183,13 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hol
     function supportsInterface(bytes4 interfaceId)
     public
     view
-    override(ERC1155, ERC1155Receiver)
+    override(ERC1155)
     returns (bool)
     {
         return (
-            ERC1155.supportsInterface(interfaceId) ||
-            ERC1155Receiver.supportsInterface(interfaceId)
+            interfaceId == type(IERC165).interfaceId ||
+            interfaceId == type(IERC1155).interfaceId ||
+            interfaceId == type(IEscrowTicketer).interfaceId
         );
     }
 

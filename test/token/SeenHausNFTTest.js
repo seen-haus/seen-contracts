@@ -14,7 +14,8 @@ describe("SeenHausNFT", function() {
     let SeenHausNFT, seenHausNFT;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let counter, tokenURI, tokenId, supply, salePrice, royaltyAmount, expectedRoyalty, percentage, royaltyPercentage;
-    let token, isPhysical, balance, uri, invalidRoyaltyPercentage;
+    let token, isPhysical, balance, uri, invalidRoyaltyPercentage, address, support;
+    let replacementAddress = "0x2d36143CC2E0E74E007E7600F341dC9D37D81C07";
 
     beforeEach( async function () {
 
@@ -97,6 +98,39 @@ describe("SeenHausNFT", function() {
         });
 
         context("Privileged Access", async function () {
+
+            it("setMarketController() should require ADMIN to set the marketController address", async function () {
+
+                // N.B. There is no separate test suite for MarketClient.sol, which is an abstract contract.
+                //      Functionality not covered elsewhere will be tested here in the SeenHausNFT test suite.
+
+                // non-ADMIN attempt
+                await expect(
+                    seenHausNFT.connect(associate).setMarketController(replacementAddress)
+                ).to.be.revertedWith("Access denied, caller doesn't have role");
+
+                // Get address
+                address = await seenHausNFT.getMarketController();
+
+                // Test
+                expect(
+                    address !== replacementAddress,
+                    "non-ADMIN can set marketController address"
+                ).is.true;
+
+                // ADMIN attempt
+                await seenHausNFT.connect(admin).setMarketController(replacementAddress);
+
+                // Get address
+                address = await seenHausNFT.getMarketController();
+
+                // Test
+                expect(
+                    address === replacementAddress,
+                    "ADMIN can't set marketController address"
+                ).is.true;
+
+            });
 
             it("mintDigital() should require MINTER to mint a digital token", async function () {
 
@@ -395,6 +429,66 @@ describe("SeenHausNFT", function() {
                 await expect(
                     seenHausNFT.connect(escrowAgent).mintPhysical(supply, creator.address, tokenURI, invalidRoyaltyPercentage)
                 ).to.be.revertedWith("Royalty percentage exceeds marketplace maximum")
+
+            });
+
+        });
+
+    });
+
+    context("Interfaces", async function () {
+
+        context("supportsInterface()", async function () {
+
+            it("should indicate support for ERC-165 interface", async function () {
+
+                // See https://eips.ethereum.org/EIPS/eip-165#how-a-contract-will-publish-the-interfaces-it-implements
+                support = await seenHausNFT.supportsInterface("0x01ffc9a7");
+
+                // Test
+                await expect(
+                    support,
+                    "ERC-165 interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for ERC-1155 interface", async function () {
+
+                // See https://eips.ethereum.org/EIPS/eip-1155#specification
+                support = await seenHausNFT.supportsInterface("0xd9b67a26");
+
+                // Test
+                await expect(
+                    support,
+                    "ERC-1155 interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for ERC-2981 interface", async function () {
+
+                // See https://eips.ethereum.org/EIPS/eip-2981#specification
+                support = await seenHausNFT.supportsInterface("0x2a55205a");
+
+                // Test
+                await expect(
+                    support,
+                    "ERC-2981 interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for ISeenHausNFT interface", async function () {
+
+                // Current ISeenHausNFT interfaceId
+                support = await seenHausNFT.supportsInterface("0x3ade32fd");
+
+                // Test
+                await expect(
+                    support,
+                    "ISeenHausNFT interface not supported"
+                ).is.true;
 
             });
 

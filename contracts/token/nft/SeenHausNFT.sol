@@ -39,8 +39,8 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
     MarketClient(_marketController)
     ERC1155("")
     {
-        _registerInterface(INTERFACE_ID_2981);
         _registerInterface(type(ISeenHausNFT).interfaceId);
+        _registerInterface(type(IERC2981).interfaceId);
         _registerInterface(type(IERC165).interfaceId);
         _registerInterface(type(IERC1155).interfaceId);
         _registerInterface(type(IERC1155MetadataURI).interfaceId);
@@ -216,10 +216,7 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
     public view override(IERC165, ERC1155, ERC165Storage)
     returns (bool)
     {
-        return (
-            ERC1155.supportsInterface(interfaceId) ||
-            ERC165Storage.supportsInterface(interfaceId)
-        );
+        return ERC165Storage.supportsInterface(interfaceId);
     }
 
     /**

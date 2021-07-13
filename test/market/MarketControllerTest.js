@@ -16,7 +16,7 @@ describe("MarketController", function() {
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let lotsTicketer, itemsTicketer, tokenURI, royaltyPercentage;
     let address, amount, percentage, counter, market, token, tokenId, id, consignment, nextConsignment, escrowTicketer, escrowTicketerType;
-    let replacementAmount, replacementPercentage, supply;
+    let replacementAmount, replacementPercentage, supply, support;
     let replacementAddress = "0x2d36143CC2E0E74E007E7600F341dC9D37D81C07";
     let tooLittle,tooMuch, revertReason;
 
@@ -234,6 +234,39 @@ describe("MarketController", function() {
         });
 
         context("Privileged Access", async function () {
+
+            it("setAccessController() should require ADMIN to set the accessController address", async function () {
+
+                // N.B. There is no separate test suite for AccessClient.sol, which is an abstract contract.
+                //      Functionality not covered elsewhere will be tested here in the MarketController test suite.
+
+                // non-ADMIN attempt
+                await expect(
+                    marketController.connect(associate).setAccessController(replacementAddress)
+                ).to.be.revertedWith("Access denied, caller doesn't have role");
+
+                // Get address
+                address = await marketController.getAccessController();
+
+                // Test
+                expect(
+                    address !== replacementAddress,
+                    "non-ADMIN can set accessController address"
+                ).is.true;
+
+                // ADMIN attempt
+                await marketController.connect(admin).setAccessController(replacementAddress);
+
+                // Get address
+                address = await marketController.getAccessController();
+
+                // Test
+                expect(
+                    address === replacementAddress,
+                    "ADMIN can't set accessController address"
+                ).is.true;
+
+            });
 
             it("setStaking() should require ADMIN to set the staking address", async function () {
 
@@ -989,6 +1022,40 @@ describe("MarketController", function() {
                     ).to.be.revertedWith("Consignment does not exist");
 
                 });
+
+            });
+
+        });
+
+    });
+
+    context("Interfaces", async function () {
+
+        context("supportsInterface()", async function () {
+
+            it("should indicate support for ERC-165 interface", async function () {
+
+                // See https://eips.ethereum.org/EIPS/eip-165#how-a-contract-will-publish-the-interfaces-it-implements
+                support = await marketController.supportsInterface("0x01ffc9a7");
+
+                // Test
+                await expect(
+                    support,
+                    "ERC-165 interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for IMarketController interface", async function () {
+
+                // Current interfaceId for IMarketController
+                support = await marketController.supportsInterface("0x64f7bd36");
+
+                // Test
+                await expect(
+                    support,
+                    "IMarketController interface not supported"
+                ).is.true;
 
             });
 

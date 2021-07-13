@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.5;
 
-import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "../../../access/AccessClient.sol";
 import "../../../market/MarketClient.sol";
-import "../../../util/StringUtils.sol";
 import "../IEscrowTicketer.sol";
 import "../../nft/ISeenHausNFT.sol";
 
@@ -26,7 +24,7 @@ import "../../nft/ISeenHausNFT.sol";
  * scooping up a bunch of the available items in a multi-edition
  * sale must flip or claim them all at once, not individually.
  */
-contract LotsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Holder, ERC721 {
+contract LotsTicketer is IEscrowTicketer, MarketClient, ERC721 {
 
     // Ticket ID => Ticket
     mapping (uint256 => EscrowTicket) internal tickets;
@@ -197,12 +195,13 @@ contract LotsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155Hold
     function supportsInterface(bytes4 interfaceId)
     public
     view
-    override(ERC721, ERC1155Receiver)
+    override(ERC721)
     returns (bool)
     {
         return (
-            ERC721.supportsInterface(interfaceId) ||
-            ERC1155Receiver.supportsInterface(interfaceId)
+            interfaceId == type(IERC165).interfaceId ||
+            interfaceId == type(IERC721).interfaceId ||
+            interfaceId == type(IEscrowTicketer).interfaceId
         );
     }
 

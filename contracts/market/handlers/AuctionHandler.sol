@@ -76,7 +76,7 @@ contract AuctionHandler is MarketClient {
         Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Get the storage location for the auction
-        Auction storage auction = auctions[_consignmentId];
+        Auction storage auction = auctions[consignment.id];
 
         // Make sure auction doesn't exist
         require(auction.consignmentId == 0, "Auction exists");
@@ -86,7 +86,7 @@ contract AuctionHandler is MarketClient {
 
         // Set up the auction
         setAudience(_consignmentId, _audience);
-        auction.consignmentId = _consignmentId;
+        auction.consignmentId = consignment.id;
         auction.start = _start;
         auction.duration = _duration;
         auction.reserve = _reserve;
@@ -184,12 +184,12 @@ contract AuctionHandler is MarketClient {
         Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Make sure the auction exists and hasn't been settled
-        Auction storage auction = auctions[_consignmentId];
+        Auction storage auction = auctions[consignment.id];
         require(auction.start != 0, "Auction does not exist");
         require(auction.state != State.Ended, "Auction has already been settled");
 
         // Set the new audience for the consignment
-        setAudience(_consignmentId, _audience);
+        setAudience(consignment.id, _audience);
 
     }
 
@@ -219,7 +219,7 @@ contract AuctionHandler is MarketClient {
         Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Make sure the auction exists
-        Auction memory auction = auctions[_consignmentId];
+        Auction memory auction = auctions[consignment.id];
         require(auction.start != 0, "Auction does not exist");
 
         // Determine time after which no more bids will be accepted
@@ -232,7 +232,7 @@ contract AuctionHandler is MarketClient {
         require(msg.value >= auction.reserve, "Bid below reserve price");
 
         // Unless auction is for an open audience, check buyer's staking status
-        Audience audience = audiences[_consignmentId];
+        Audience audience = audiences[consignment.id];
         if (audience != Audience.Open) {
             if (audience == Audience.Staker) {
                 require(isStaker() == true, "Buyer is not a staker");
@@ -247,7 +247,7 @@ contract AuctionHandler is MarketClient {
         if (auction.bid > 0) {
             require(msg.value >= (auction.bid + getPercentageOf(auction.bid, marketController.getOutBidPercentage())), "Bid too small");
             auction.buyer.transfer(auction.bid);
-            emit BidReturned(_consignmentId, auction.buyer, auction.bid);
+            emit BidReturned(consignment.id, auction.buyer, auction.bid);
         }
 
         // Record the new bid
@@ -267,9 +267,10 @@ contract AuctionHandler is MarketClient {
                 auction.start = block.timestamp;
                 endTime = auction.start + auction.duration;
 
-                // Notify listeners of state change
-                emit AuctionStarted(_consignmentId);
             }
+
+            // Notify listeners of state change
+            emit AuctionStarted(consignment.id);
 
         }
 

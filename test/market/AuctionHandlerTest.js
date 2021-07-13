@@ -632,6 +632,16 @@ describe("AuctionHandler", function() {
 
                     });
 
+                    it("should emit a AuctionStarted event on first bid", async function () {
+
+                        // First bidder meets reserve
+                        await expect(
+                            auctionHandler.connect(bidder).bid(consignmentId, {value: reserve})
+                        ).to.emit(auctionHandler, "AuctionStarted")
+                            .withArgs(consignmentId);
+
+                    });
+
                     it("should emit an AuctionExtended event when bid is placed in last 15 minutes", async function () {
 
                         // Initial bid meets reserve

@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 const Role = require("../../domain/Role");
+const EscrowTicket = require("../../domain/EscrowTicket");
 const Ticketer = require("../../domain/Ticketer");
 
 describe("ItemsTicketer", function() {
@@ -13,7 +14,7 @@ describe("ItemsTicketer", function() {
     let SeenHausNFT, seenHausNFT;
     let ItemsTicketer, itemsTicketer;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
-    let ticketId, tokenId, tokenURI, counter, supply, half, balance, royaltyPercentage, consignmentId;
+    let ticketId, tokenId, tokenURI, counter, supply, half, balance, royaltyPercentage, consignmentId, support;
 
     beforeEach( async function () {
 
@@ -359,22 +360,93 @@ describe("ItemsTicketer", function() {
 
             });
 
-            it("getTicketInfo() should return valid Token instance", async function () {
+            context("getTicketInfo()", async function () {
 
-                // MARKET_HANDLER issues ticket
-                await itemsTicketer.connect(buyer).claim(ticketId);
+                it("should return a valid EscrowTicket struct", async function () {
 
-                // Get buyer's balance of proof-of-ownership NFT
-                balance = await seenHausNFT.balanceOf(buyer.address, tokenId);
+                    // Get ticket
+                    const response = await itemsTicketer.getTicketInfo(ticketId);
+
+                    // Convert to entity
+                    ticket = new EscrowTicket(
+                        response.id.toString(),
+                        response.consignmentId.toString(),
+                        response.amount.toString(),
+                        response.itemURI
+                    );
+
+                    // Test validity
+                    expect(
+                        ticket.isValid(),
+                        "EscrowTicket not valid"
+                    ).is.true;
+
+                });
+
+                context("Revert Reasons", async function () {
+
+                    it("ticket does not exist", async function () {
+
+                        // A non-existent ticket id
+                        ticketId = itemsTicketer.getNextTicket();
+
+                        // buyer claims their ticket balance
+                        await expect(
+                            itemsTicketer.getTicketInfo(ticketId)
+                        ).revertedWith("Ticket does not exist");
+
+                    });
+
+                });
+
+            });
+
+        });
+
+    });
+
+    context("Interfaces", async function () {
+
+        context("supportsInterface()", async function () {
+
+            it("should indicate support for ERC-165 interface", async function () {
+
+                // See https://eips.ethereum.org/EIPS/eip-165#how-a-contract-will-publish-the-interfaces-it-implements
+                support = await itemsTicketer.supportsInterface("0x01ffc9a7");
 
                 // Test
-                expect(
-                    balance.eq(supply),
-                    "ItemsTicketer didn't transfer balance of ticketed token to buyer"
+                await expect(
+                    support,
+                    "ERC-165 interface not supported"
                 ).is.true;
 
             });
 
+            it("should indicate support for ERC-1155 interface", async function () {
+
+                // See https://eips.ethereum.org/EIPS/eip-1155#specification
+                support = await itemsTicketer.supportsInterface("0xd9b67a26");
+
+                // Test
+                await expect(
+                    support,
+                    "ERC-1155 interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for IEscrowTicketer interface", async function () {
+
+                // Current interfaceId for IEscrowTicketer
+                support = await itemsTicketer.supportsInterface("0x8ebda1da");
+
+                // Test
+                await expect(
+                    support,
+                    "IEscrowTicketer interface not supported"
+                ).is.true;
+
+            });
 
         });
 

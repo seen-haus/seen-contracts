@@ -11,8 +11,6 @@ contract SeenTypes {
     // TODO: Create metadata for Escrow Ticket and get ipfs address
     string public constant ESCROW_TICKET_URI = "ipfs://QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
 
-    bytes4 public constant INTERFACE_ID_2981 = bytes4(keccak256("royaltyInfo(uint256,uint256)"));
-
     bytes32 public constant ADMIN = keccak256("ADMIN");                   // Deployer and any other admins as needed
     bytes32 public constant SELLER = keccak256("SELLER");                 // Whitelisted sellers amd Seen.Haus reps
     bytes32 public constant MINTER = keccak256("MINTER");                 // Whitelisted artists and Seen.Haus reps

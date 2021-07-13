@@ -70,8 +70,9 @@ contract Foreign1155 is SeenTypes, IERC2981, ERC1155 {
     returns (bool)
     {
         return (
-            ERC1155.supportsInterface(interfaceId) ||
-            interfaceId == INTERFACE_ID_2981
+            interfaceId == type(IERC165).interfaceId ||
+            interfaceId == type(IERC1155).interfaceId ||
+            interfaceId == type(IERC2981).interfaceId
         );
     }
 
