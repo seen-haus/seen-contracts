@@ -209,6 +209,7 @@ contract SaleHandler is MarketClient {
      * The buyer's payment will be held for disbursement when sale is settled.
      *
      * Reverts if:
+     *  - Caller is not in audience
      *  - Sale doesn't exist or hasn't started
      *  - Caller is a contract
      *  - The per-transaction buy limit is exceeded
@@ -220,7 +221,11 @@ contract SaleHandler is MarketClient {
      * @param _consignmentId - id of the consignment being sold
      * @param _amount - the amount of the remaining supply to buy
      */
-    function buy(uint256 _consignmentId, uint256 _amount) external payable {
+    function buy(uint256 _consignmentId, uint256 _amount)
+    external
+    payable
+    onlyAudienceMember(_consignmentId)
+    {
 
         // Get the consignment
         Consignment memory consignment = marketController.getConsignment(_consignmentId);
@@ -234,16 +239,6 @@ contract SaleHandler is MarketClient {
         require(!Address.isContract(msg.sender), "Contracts may not buy");
         require(_amount <= sale.perTxCap, "Per transaction limit for this sale exceeded");
         require(msg.value == sale.price * _amount, "Payment does not cover order price");
-
-        // Unless sale is for an open audience, check buyer's staking status
-        Audience audience = audiences[_consignmentId];
-        if (audience != Audience.Open) {
-            if (audience == Audience.Staker) {
-                require(isStaker() == true, "Buyer is not a staker");
-            } else if (audience == Audience.VipStaker) {
-                require(isVipStaker() == true, "Buyer is not a VIP staker");
-            }
-        }
 
         // If this was the first successful purchase...
         if (sale.state == State.Pending) {

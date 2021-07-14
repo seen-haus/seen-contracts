@@ -8,8 +8,7 @@ pragma solidity ^0.8.5;
  */
 contract SeenTypes {
 
-    // TODO: Create metadata for Escrow Ticket and get ipfs address
-    string public constant ESCROW_TICKET_URI = "ipfs://QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
+    string public constant ESCROW_TICKET_URI = "https://seen.haus/claim/";
 
     bytes32 public constant ADMIN = keccak256("ADMIN");                   // Deployer and any other admins as needed
     bytes32 public constant SELLER = keccak256("SELLER");                 // Whitelisted sellers amd Seen.Haus reps

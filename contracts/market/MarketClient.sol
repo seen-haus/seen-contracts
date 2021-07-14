@@ -27,7 +27,7 @@ abstract contract MarketClient is AccessClient {
     IMarketController internal marketController;
 
     /// @notice map a consignment id to an audience
-    mapping(uint256 => Audience) public audiences;
+    mapping(uint256 => Audience) internal audiences;
 
     /**
      * @notice Constructor
@@ -60,7 +60,8 @@ abstract contract MarketClient is AccessClient {
     function getMarketController()
     public
     view
-    returns(address) {
+    returns(address)
+    {
         return address(marketController);
     }
 
@@ -108,6 +109,23 @@ abstract contract MarketClient is AccessClient {
     returns (bool status)
     {
         status = IERC20(marketController.getStaking()).balanceOf(msg.sender) >= marketController.getVipStakerAmount();
+    }
+
+    /**
+     * @notice Modifier that checks that caller is in consignment's audience
+     *
+     * Reverts if user is not in consignment's audience
+     */
+    modifier onlyAudienceMember(uint256 _consignmentId) {
+        Audience audience = audiences[_consignmentId];
+        if (audience != Audience.Open) {
+            if (audience == Audience.Staker) {
+                require(isStaker() == true, "Buyer is not a staker");
+            } else if (audience == Audience.VipStaker) {
+                require(isVipStaker() == true, "Buyer is not a VIP staker");
+            }
+        }
+        _;
     }
 
     /**

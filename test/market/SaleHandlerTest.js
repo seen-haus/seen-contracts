@@ -22,7 +22,8 @@ describe("SaleHandler", function() {
     let ItemsTicketer, itemsTicketer;
     let SeenHausNFT, seenHausNFT;
     let Foreign1155, foreign1155;
-    let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
+    let SeenStaking, seenStaking;
+    let multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let market, tokenAddress, tokenId, tokenURI, sale, physicalTokenId, physicalConsignmentId, consignmentId, nextConsignment, block, blockNumber;
     let royaltyPercentage, supply, start, quantity, price, perTxCap, audience, escrowTicketer;
     let royaltyAmount, sellerAmount, feeAmount, multisigAmount, stakingAmount, grossSale, netAfterRoyalties, consignment;
@@ -45,8 +46,7 @@ describe("SaleHandler", function() {
         buyer = accounts[6];
         escrowAgent = accounts[7];
 
-        staking = accounts[8];         // We just need addresses for these,
-        multisig = accounts[9];        // not functional contracts
+        multisig = accounts[8];               // We just need addresses for these, not functional contracts
 
         // Market control values
         vipStakerAmount = "500";              // Amount of xSEEN to be VIP
@@ -54,6 +54,16 @@ describe("SaleHandler", function() {
         maxRoyaltyPercentage = "5000";        // 50%   = 5000
         outBidPercentage = "500";             // 5%    = 500
         defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
+
+        // Deploy the Foreign1155 mock contract
+        Foreign1155 = await ethers.getContractFactory("Foreign1155");
+        foreign1155 = await Foreign1155.deploy();
+        await foreign1155.deployed();
+
+        // Deploy the SeenStaking mock contract
+        SeenStaking = await ethers.getContractFactory("SeenStaking");
+        seenStaking = await SeenStaking.deploy();
+        await seenStaking.deployed();
 
         // Deploy the AccessController contract
         AccessController = await ethers.getContractFactory("AccessController");
@@ -64,7 +74,7 @@ describe("SaleHandler", function() {
         MarketController = await ethers.getContractFactory("MarketController");
         marketController = await MarketController.deploy(
             accessController.address,
-            staking.address,
+            seenStaking.address,
             multisig.address,
             vipStakerAmount,
             feePercentage,
@@ -81,11 +91,6 @@ describe("SaleHandler", function() {
             marketController.address,
         );
         await seenHausNFT.deployed();
-
-        // Deploy the Foreign1155 contract
-        Foreign1155 = await ethers.getContractFactory("Foreign1155");
-        foreign1155 = await Foreign1155.deploy();
-        await foreign1155.deployed();
 
         // Deploy the SaleHandler contract
         SaleHandler = await ethers.getContractFactory("SaleHandler");
@@ -599,6 +604,78 @@ describe("SaleHandler", function() {
 
         });
 
+        context("Sale Behavior", async function () {
+
+            beforeEach(async function() {
+
+                // Creator transfers all their tokens to seller
+                await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
+
+                // Get the next consignment id
+                consignmentId = await marketController.getNextConsignment();
+
+                // Token is on a foreign contract
+                tokenAddress = foreign1155.address;
+
+                // SELLER creates secondary market sale
+                await saleHandler.connect(seller).createSecondarySale(
+                    seller.address,
+                    tokenAddress,
+                    tokenId,
+                    start,
+                    quantity,
+                    price,
+                    perTxCap,
+                    audience
+                );
+
+                // Fast forward to auction start time
+                await time.increaseTo(start);
+
+            });
+
+            context("Existing Sales", async function () {
+
+                it("should allow buy if audience is STAKER and buyer is a staker", async function () {
+
+                    // Set the audience to STAKER
+                    saleHandler.connect(admin).changeAudience(
+                        consignmentId,
+                        Audience.STAKER
+                    );
+
+                    // Set non-zero staking amount for buyer
+                    await seenStaking.setStakerBalance(buyer.address, "1");
+
+                    // Try to buy
+                    await expect(
+                        saleHandler.connect(buyer).buy(consignmentId, single, {value: price})
+                    ).to.emit(saleHandler, "Purchase");
+
+                });
+
+                it("should allow buy if audience is VIP_STAKER and buyer is not a VIP staker", async function () {
+
+                    // Set the audience to STAKER
+                    saleHandler.connect(admin).changeAudience(
+                        consignmentId,
+                        Audience.STAKER
+                    );
+
+                    // Set non-zero staking amount for buyer
+                    await seenStaking.setStakerBalance(buyer.address, vipStakerAmount);
+
+                    // Try to buy
+                    await expect(
+                        saleHandler.connect(buyer).buy(consignmentId, single, {value: price})
+                    ).to.emit(saleHandler, "Purchase");
+
+                });
+
+            });
+
+        });
+
         context("Revert Reasons", async function () {
 
             context("New Sales", async function () {
@@ -862,9 +939,7 @@ describe("SaleHandler", function() {
 
                     });
 
-                    xit("should revert if audience is STAKER and buyer is not a staker", async function () {
-
-                        // TODO: Mock the staking contract so that staking level can be tested
+                    it("should revert if audience is STAKER and buyer is not a staker", async function () {
 
                         // Set the audience to STAKER
                         saleHandler.connect(admin).changeAudience(
@@ -874,14 +949,12 @@ describe("SaleHandler", function() {
 
                         // Try to buy
                         await expect(
-                            saleHandler.connect(buyer).buy(consignmentId, {value: price})
+                            saleHandler.connect(buyer).buy(consignmentId, single, {value: price})
                         ).to.be.revertedWith("Buyer is not a staker");
 
                     });
 
-                    xit("should revert if audience is VIP_STAKER and buyer is not a VIP staker", async function () {
-
-                        // TODO: Mock the staking contract so that staking level can be tested
+                    it("should revert if audience is VIP_STAKER and buyer is not a VIP staker", async function () {
 
                         // Set the audience to VIP_STAKER
                         saleHandler.connect(admin).changeAudience(
@@ -891,7 +964,7 @@ describe("SaleHandler", function() {
 
                         // Try to buy
                         await expect(
-                            saleHandler.connect(buyer).buy(consignmentId, {value: price})
+                            saleHandler.connect(buyer).buy(consignmentId, single, {value: price})
                         ).to.be.revertedWith("Buyer is not a VIP staker");
 
                     });
@@ -1074,7 +1147,7 @@ describe("SaleHandler", function() {
                     await expect(
                         saleHandler.connect(seller).close(consignmentId)
                     ).to.emit(saleHandler, "FeeDisbursed")
-                        .withArgs(consignmentId, staking.address, stakingAmount);
+                        .withArgs(consignmentId, seenStaking.address, stakingAmount);
 
                 });
 
@@ -1156,7 +1229,7 @@ describe("SaleHandler", function() {
                     await expect(
                         saleHandler.connect(seller).close(consignmentId)
                     ).to.emit(saleHandler, "FeeDisbursed")
-                        .withArgs(consignmentId, staking.address, stakingAmount);
+                        .withArgs(consignmentId, seenStaking.address, stakingAmount);
 
                 });
 

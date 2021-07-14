@@ -199,6 +199,7 @@ contract AuctionHandler is MarketClient {
      * If successful, the bidder's payment will be held and accepted as the standing bid.
      *
      * Reverts if:
+     *  - Caller is not in audience
      *  - Caller is a contract
      *  - Auction doesn't exist or hasn't started
      *  - Auction timer has elapsed
@@ -214,6 +215,7 @@ contract AuctionHandler is MarketClient {
     function bid(uint256 _consignmentId)
     external
     payable
+    onlyAudienceMember(_consignmentId)
     {
         // Get the consignment (reverting if consignment doesn't exist)
         Consignment memory consignment = marketController.getConsignment(_consignmentId);
@@ -230,16 +232,6 @@ contract AuctionHandler is MarketClient {
         require(block.timestamp >= auction.start, "Auction hasn't started");
         require(block.timestamp <= endTime, "Auction timer has elapsed");
         require(msg.value >= auction.reserve, "Bid below reserve price");
-
-        // Unless auction is for an open audience, check buyer's staking status
-        Audience audience = audiences[consignment.id];
-        if (audience != Audience.Open) {
-            if (audience == Audience.Staker) {
-                require(isStaker() == true, "Buyer is not a staker");
-            } else if (audience == Audience.VipStaker) {
-                require(isVipStaker() == true, "Buyer is not a VIP staker");
-            }
-        }
 
         // If a standing bid exists:
         // - Be sure new bid outbids previous

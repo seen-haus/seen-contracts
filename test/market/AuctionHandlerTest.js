@@ -22,7 +22,8 @@ describe("AuctionHandler", function() {
     let ItemsTicketer, itemsTicketer;
     let SeenHausNFT, seenHausNFT;
     let Foreign1155, foreign1155;
-    let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
+    let SeenStaking, seenStaking;
+    let multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let market, tokenAddress, tokenId, tokenURI, auction, physicalTokenId, physicalConsignmentId, consignmentId, nextConsignment, block, blockNumber;
     let royaltyPercentage, supply, start, duration, reserve, audience, clock, escrowTicketer;
     let royaltyAmount, sellerAmount, feeAmount, multisigAmount, stakingAmount, grossSale, netAfterRoyalties;
@@ -49,8 +50,7 @@ describe("AuctionHandler", function() {
         rival = accounts[7];
         escrowAgent = accounts[8];
 
-        staking = accounts[9];         // We just need addresses for these,
-        multisig = accounts[10];       // not functional contracts
+        multisig = accounts[9];         // We just need addresses for these, not functional contracts
 
         // Market control values
         vipStakerAmount = "500";              // Amount of xSEEN to be VIP
@@ -58,6 +58,16 @@ describe("AuctionHandler", function() {
         maxRoyaltyPercentage = "5000";        // 50%   = 5000
         outBidPercentage = "500";             // 5%    = 500
         defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
+
+        // Deploy the Foreign1155 mock contract
+        Foreign1155 = await ethers.getContractFactory("Foreign1155");
+        foreign1155 = await Foreign1155.deploy();
+        await foreign1155.deployed();
+
+        // Deploy the SeenStaking mock contract
+        SeenStaking = await ethers.getContractFactory("SeenStaking");
+        seenStaking = await SeenStaking.deploy();
+        await seenStaking.deployed();
 
         // Deploy the AccessController contract
         AccessController = await ethers.getContractFactory("AccessController");
@@ -68,7 +78,7 @@ describe("AuctionHandler", function() {
         MarketController = await ethers.getContractFactory("MarketController");
         marketController = await MarketController.deploy(
             accessController.address,
-            staking.address,
+            seenStaking.address,
             multisig.address,
             vipStakerAmount,
             feePercentage,
@@ -85,11 +95,6 @@ describe("AuctionHandler", function() {
             marketController.address,
         );
         await seenHausNFT.deployed();
-
-        // Deploy the Foreign1155 contract
-        Foreign1155 = await ethers.getContractFactory("Foreign1155");
-        foreign1155 = await Foreign1155.deploy();
-        await foreign1155.deployed();
 
         // Deploy the AuctionHandler contract
         AuctionHandler = await ethers.getContractFactory("AuctionHandler");
@@ -821,6 +826,127 @@ describe("AuctionHandler", function() {
 
         });
 
+        context("Auction Behavior", async function () {
+
+            beforeEach(async function () {
+
+                // Token is on a foreign contract
+                tokenAddress = foreign1155.address;
+
+                // Creator transfers all their tokens to seller
+                await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
+
+                // Get the consignment id
+                consignmentId = await marketController.getNextConsignment();
+
+                // Let's use the triggered clock this time
+                clock = Clock.TRIGGERED;
+
+                // Seller creates auction
+                await auctionHandler.connect(seller).createSecondaryAuction(
+                    seller.address,
+                    tokenAddress,
+                    tokenId,
+                    start,
+                    duration,
+                    reserve,
+                    audience,
+                    clock
+                );
+
+            })
+
+            context("Existing Auctions", async function () {
+
+                it("first bid should update the auction start time on Clock.TRIGGERED auctions", async function () {
+
+                        // Fast-forward to half way through auction...
+                        const newStart = ethers.BigNumber
+                            .from(start)
+                            .add(
+                                ethers.BigNumber.from(duration).div("2")
+                            )
+                            .toString();
+                        await time.increaseTo(newStart);
+
+                        // Bid
+                        await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve});
+
+                        // Get next consignment
+                        const response = await auctionHandler.getAuction(consignmentId);
+
+                        // Convert to entity
+                        auction = new Auction(
+                            response.buyer,
+                            response.consignmentId.toString(),
+                            response.start.toString(),
+                            response.duration.toString(),
+                            response.reserve.toString(),
+                            response.bid.toString(),
+                            response.clock,
+                            response.state,
+                            response.outcome
+                        );
+
+                        // Test validity
+                        expect(
+                            auction.isValid(),
+                            "Auction not valid"
+                        ).is.true;
+
+                        expect(
+                            auction.start === newStart,
+                            "Auction start time not updated"
+                        )
+
+                    });
+
+                it("should allow bid if audience is STAKER and bidder is a staker", async function () {
+
+                    // Fast forward to auction start time
+                    await time.increaseTo(start);
+
+                    // Set the audience to STAKER
+                    auctionHandler.connect(admin).changeAudience(
+                        consignmentId,
+                        Audience.STAKER
+                    );
+
+                    // Set non-zero staking amount for bidder
+                    await seenStaking.setStakerBalance(bidder.address, "1");
+
+                    // First bidder meets reserve
+                    await expect(
+                        auctionHandler.connect(bidder).bid(consignmentId, {value: reserve})
+                    ).to.emit(auctionHandler, "BidAccepted");
+
+                });
+
+                it("should allow bid if audience is VIP_STAKER and bidder is not a VIP staker", async function () {
+
+                    // Fast forward to auction start time
+                    await time.increaseTo(start);
+
+                    // Set the audience to VIP_STAKER
+                    auctionHandler.connect(admin).changeAudience(
+                        consignmentId,
+                        Audience.VIP_STAKER
+                    );
+
+                    // Set VIP staking amount for bidder
+                    await seenStaking.setStakerBalance(bidder.address, vipStakerAmount);
+
+                    // First bidder meets reserve
+                    await expect(
+                        auctionHandler.connect(bidder).bid(consignmentId, {value: reserve})
+                    ).to.emit(auctionHandler, "BidAccepted");
+
+                });
+
+            });
+
+        });
+
         context("Revert Reasons", async function () {
 
             context("New Auctions", async function () {
@@ -1135,12 +1261,10 @@ describe("AuctionHandler", function() {
 
                     });
 
-                    xit("should revert if audience is STAKER and bidder is not a staker", async function () {
+                    it("should revert if audience is STAKER and bidder is not a staker", async function () {
 
                         // Fast forward to auction start time
                         await time.increaseTo(start);
-
-                        // TODO: Mock the staking contract so that staking level can be tested
 
                         // Set the audience to STAKER
                         auctionHandler.connect(admin).changeAudience(
@@ -1148,19 +1272,17 @@ describe("AuctionHandler", function() {
                             Audience.STAKER
                         );
 
-                        // Try to bid below reserve
+                        // Try to bid when not in audience
                         await expect(
                             auctionHandler.connect(bidder).bid(consignmentId, {value: reserve})
                         ).to.be.revertedWith("Buyer is not a staker");
 
                     });
 
-                    xit("should revert if audience is VIP_STAKER and bidder is not a VIP staker", async function () {
+                    it("should revert if audience is VIP_STAKER and bidder is not a VIP staker", async function () {
 
                         // Fast forward to auction start time
                         await time.increaseTo(start);
-
-                        // TODO: Mock the staking contract so that staking level can be tested
 
                         // Set the audience to VIP_STAKER
                         auctionHandler.connect(admin).changeAudience(
@@ -1168,7 +1290,7 @@ describe("AuctionHandler", function() {
                             Audience.VIP_STAKER
                         );
 
-                        // Try to bid below reserve
+                        // Try to bid when not in audience
                         await expect(
                             auctionHandler.connect(bidder).bid(consignmentId, {value: reserve})
                         ).to.be.revertedWith("Buyer is not a VIP staker");
@@ -1480,7 +1602,7 @@ describe("AuctionHandler", function() {
                     await expect(
                         auctionHandler.connect(bidder).close(consignmentId)
                     ).to.emit(auctionHandler, "FeeDisbursed")
-                        .withArgs(consignmentId, staking.address, stakingAmount);
+                        .withArgs(consignmentId, seenStaking.address, stakingAmount);
 
                 });
 
@@ -1573,7 +1695,7 @@ describe("AuctionHandler", function() {
                     await expect(
                         auctionHandler.connect(bidder).close(consignmentId)
                     ).to.emit(auctionHandler, "FeeDisbursed")
-                        .withArgs(consignmentId, staking.address, stakingAmount);
+                        .withArgs(consignmentId, seenStaking.address, stakingAmount);
 
                 });
 

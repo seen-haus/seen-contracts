@@ -6,7 +6,7 @@ import "../royalty/IERC2981.sol";
 import "../../domain/SeenTypes.sol";
 
 /**
- * @title Sample ERC1155 NFT for Unit Testing
+ * @title Mock ERC-(1155/2981) NFT for Unit Testing
  * @author Cliff Hall
  */
 contract Foreign1155 is SeenTypes, IERC2981, ERC1155 {
@@ -66,7 +66,9 @@ contract Foreign1155 is SeenTypes, IERC2981, ERC1155 {
      * to respond.
      */
     function supportsInterface(bytes4 interfaceId)
-    public view override(IERC165, ERC1155)
+    public
+    pure
+    override(IERC165, ERC1155)
     returns (bool)
     {
         return (
