@@ -11,6 +11,22 @@ import "../domain/SeenTypes.sol";
  */
 interface IMarketController is IERC1155Receiver {
 
+    /// Events
+    event NFTAddressChanged(address indexed nft);
+    event EscrowTicketerAddressChanged(address indexed escrowTicketer, SeenTypes.Ticketer indexed ticketerType);
+    event StakingAddressChanged(address indexed staking);
+    event MultisigAddressChanged(address indexed multisig);
+    event PhysicalItemsAddressChanged(address indexed physicalItems);
+    event PhysicalLotsAddressChanged(address indexed physicalLots);
+    event VipStakerAmountChanged(uint256 indexed vipStakerAmount);
+    event FeePercentageChanged(uint16 indexed feePercentage);
+    event MaxRoyaltyPercentageChanged(uint16 indexed maxRoyaltyPercentage);
+    event OutBidPercentageChanged(uint16 indexed outBidPercentage);
+    event DefaultTicketerTypeChanged(SeenTypes.Ticketer indexed ticketerType);
+    event ConsignmentRegistered(address indexed consignor, SeenTypes.Consignment consignment);
+    event ConsignmentTicketerChanged(uint256 consignmentId, SeenTypes.Ticketer indexed ticketerType);
+    event ConsignmentReleased(SeenTypes.Consignment consignment, uint256 amount, address releasedTo);
+
     /**
      * @notice Sets the address of the xSEEN ERC-20 staking contract.
      *

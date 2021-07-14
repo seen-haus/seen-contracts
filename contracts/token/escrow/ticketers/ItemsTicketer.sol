@@ -3,6 +3,7 @@ pragma solidity ^0.8.5;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "../../../market/MarketClient.sol";
+import "../../../util/StringUtils.sol";
 import "../IEscrowTicketer.sol";
 
 /**
@@ -23,7 +24,7 @@ import "../IEscrowTicketer.sol";
  * in a multi-edition sale with the purpose of flipping each
  * item individually to make maximum profit.
  */
-contract ItemsTicketer is IEscrowTicketer, MarketClient, ERC1155 {
+contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155 {
 
     // Ticket ID => Ticket
     mapping (uint256 => EscrowTicket) internal tickets;
@@ -57,16 +58,33 @@ contract ItemsTicketer is IEscrowTicketer, MarketClient, ERC1155 {
     }
 
     /**
- * @notice Get info about the ticket
- */
-    function getTicketInfo(uint256 ticketId)
+    * @notice Get info about the ticket
+    */
+    function getTicket(uint256 _ticketId)
     external
     view
     override
     returns (EscrowTicket memory)
     {
-        require(ticketId < nextTicket, "Ticket does not exist");
-        return tickets[ticketId];
+        require(_ticketId < nextTicket, "Ticket does not exist");
+        return tickets[_ticketId];
+    }
+
+    /**
+     * @notice Gets the URI for the ticket metadata
+     *
+     * IEscrowTicketer method that normalizes how you get the URI,
+     * since ERC721 and ERC1155 differ in approach.
+     *
+     * @param _ticketId - the token id of the ticket
+     */
+    function getTicketURI(uint256 _ticketId)
+    external
+    pure
+    override
+    returns (string memory)
+    {
+        return uri(_ticketId);
     }
 
     /**
@@ -83,7 +101,7 @@ contract ItemsTicketer is IEscrowTicketer, MarketClient, ERC1155 {
     override
     returns (string memory)
     {
-        return ESCROW_TICKET_URI;
+        return strConcat(ESCROW_TICKET_URI, uintToStr(_tokenId));
     }
 
     /**
@@ -182,7 +200,7 @@ contract ItemsTicketer is IEscrowTicketer, MarketClient, ERC1155 {
      */
     function supportsInterface(bytes4 interfaceId)
     public
-    view
+    pure
     override(ERC1155)
     returns (bool)
     {

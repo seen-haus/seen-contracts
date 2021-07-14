@@ -15,6 +15,7 @@ describe("LotsTicketer", function() {
     let LotsTicketer, lotsTicketer;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let ticket, ticketId, tokenId, tokenURI, counter, supply, balance, royaltyPercentage, owner, consignmentId, support;
+    let ticketURI, ticketURIBase = "https://seen.haus/ticket/metadata/";
 
     beforeEach( async function () {
 
@@ -271,12 +272,12 @@ describe("LotsTicketer", function() {
 
             });
 
-            context("getTicketInfo()", async function () {
+            context("getTicket()", async function () {
 
                 it("should return a valid EscrowTicket struct", async function () {
 
                     // Get ticket
-                    const response = await lotsTicketer.getTicketInfo(ticketId);
+                    const response = await lotsTicketer.getTicket(ticketId);
 
                     // Convert to entity
                     ticket = new EscrowTicket(
@@ -303,10 +304,43 @@ describe("LotsTicketer", function() {
 
                         // buyer claims their ticket balance
                         await expect(
-                            lotsTicketer.getTicketInfo(ticketId)
+                            lotsTicketer.getTicket(ticketId)
                         ).revertedWith("Ticket does not exist");
 
                     });
+
+                });
+
+            });
+
+            context("getTicketURI()", async function () {
+
+                it("should return the appropriate dynamic URI for the ticket", async function () {
+
+                    // Get ticket URI
+                    ticketURI = await lotsTicketer.getTicketURI(ticketId);
+
+                    // Test validity
+                    expect(
+                        ticketURI === `${ticketURIBase}${ticketId}`,
+                        "TicketURI not correct"
+                    ).is.true;
+
+                });
+
+                it("should work even if the ticket id is the max uint256 value", async function () {
+
+                    // Largest possible token id
+                    ticketId = ethers.constants.MaxUint256;
+
+                    // Get ticket URI
+                    ticketURI = await lotsTicketer.getTicketURI(ticketId);
+
+                    // Test validity
+                    expect(
+                        ticketURI === `${ticketURIBase}${ticketId}`,
+                        "TicketURI not correct"
+                    ).is.true;
 
                 });
 
@@ -349,7 +383,7 @@ describe("LotsTicketer", function() {
             it("should indicate support for IEscrowTicketer interface", async function () {
 
                 // Current interfaceId for IEscrowTicketer
-                support = await lotsTicketer.supportsInterface("0x8ebda1da");
+                support = await lotsTicketer.supportsInterface("0x84200a73");
 
                 // Test
                 await expect(

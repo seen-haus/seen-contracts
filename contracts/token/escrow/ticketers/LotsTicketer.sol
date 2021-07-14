@@ -5,8 +5,9 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "../../../access/AccessClient.sol";
 import "../../../market/MarketClient.sol";
-import "../IEscrowTicketer.sol";
+import "../../../util/StringUtils.sol";
 import "../../nft/ISeenHausNFT.sol";
+import "../IEscrowTicketer.sol";
 
 /**
  * @title LotsTicketer
@@ -24,7 +25,7 @@ import "../../nft/ISeenHausNFT.sol";
  * scooping up a bunch of the available items in a multi-edition
  * sale must flip or claim them all at once, not individually.
  */
-contract LotsTicketer is IEscrowTicketer, MarketClient, ERC721 {
+contract LotsTicketer is IEscrowTicketer, StringUtils, MarketClient, ERC721 {
 
     // Ticket ID => Ticket
     mapping (uint256 => EscrowTicket) internal tickets;
@@ -63,7 +64,7 @@ contract LotsTicketer is IEscrowTicketer, MarketClient, ERC721 {
     /**
      * @notice Get info about the ticket
      */
-    function getTicketInfo(uint256 ticketId)
+    function getTicket(uint256 ticketId)
     external
     view
     override
@@ -71,6 +72,23 @@ contract LotsTicketer is IEscrowTicketer, MarketClient, ERC721 {
     {
         require(_exists(ticketId), "Ticket does not exist");
         return tickets[ticketId];
+    }
+
+    /**
+     * @notice Gets the URI for the ticket metadata
+     *
+     * IEscrowTicketer method that normalizes how you get the URI,
+     * since ERC721 and ERC1155 differ in approach.
+     *
+     * @param _ticketId - the token id of the ticket
+     */
+    function getTicketURI(uint256 _ticketId)
+    external
+    pure
+    override
+    returns (string memory)
+    {
+        return tokenURI(_ticketId);
     }
 
     /**
@@ -100,7 +118,7 @@ contract LotsTicketer is IEscrowTicketer, MarketClient, ERC721 {
     override
     returns (string memory)
     {
-        return _baseURI();
+        return strConcat(_baseURI(), uintToStr(_tokenId));
     }
 
     /**
@@ -194,7 +212,7 @@ contract LotsTicketer is IEscrowTicketer, MarketClient, ERC721 {
      */
     function supportsInterface(bytes4 interfaceId)
     public
-    view
+    pure
     override(ERC721)
     returns (bool)
     {

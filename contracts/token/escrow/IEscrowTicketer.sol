@@ -8,7 +8,7 @@ import "../../domain/SeenTypes.sol";
  * @author Cliff Hall
  * @notice Manages the issue and claim of escrow tickets.
  *
- * The ERC-165 identifier for this interface is: 0x8ebda1da
+ * The ERC-165 identifier for this interface is: 0x84200a73
  */
 interface IEscrowTicketer {
 
@@ -23,7 +23,17 @@ interface IEscrowTicketer {
     /**
      * @notice Get info about the ticket
      */
-    function getTicketInfo(uint256 ticketId) external view returns (SeenTypes.EscrowTicket memory);
+    function getTicket(uint256 _ticketId) external view returns (SeenTypes.EscrowTicket memory);
+
+    /**
+     * @notice Gets the URI for the ticket metadata
+     *
+     * This method normalizes how you get the URI,
+     * since ERC721 and ERC1155 differ in approach
+     *
+     * @param _ticketId - the token id of the ticket
+     */
+    function getTicketURI(uint256 _ticketId) external view returns (string memory);
 
     /**
      * Issue an escrow ticket to the buyer

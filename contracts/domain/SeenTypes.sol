@@ -8,7 +8,8 @@ pragma solidity ^0.8.5;
  */
 contract SeenTypes {
 
-    string public constant ESCROW_TICKET_URI = "https://seen.haus/claim/";
+    // Endpoint will server dynamic metadata composed of ticket and ticketed item's info
+    string public constant ESCROW_TICKET_URI = "https://seen.haus/ticket/metadata/";
 
     bytes32 public constant ADMIN = keccak256("ADMIN");                   // Deployer and any other admins as needed
     bytes32 public constant SELLER = keccak256("SELLER");                 // Whitelisted sellers amd Seen.Haus reps

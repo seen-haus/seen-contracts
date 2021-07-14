@@ -25,7 +25,6 @@ contract Foreign1155 is SeenTypes, IERC2981, ERC1155 {
      * @param _amount the amount of tokens to mint
      */
     function mint(address _creator, uint256 _tokenId, uint256 _amount, uint256 _royaltyPercentage) public {
-        require(creators[_tokenId] == zeroAddress, "Token Id exists");
         creators[_tokenId] = _creator;
         royaltyPercentage[_tokenId] = _royaltyPercentage;
         _mint(_creator, _tokenId, _amount, "");

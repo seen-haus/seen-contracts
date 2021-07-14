@@ -16,22 +16,6 @@ import "./IMarketController.sol";
  */
 contract MarketController is AccessClient, ERC1155Holder, IMarketController {
 
-    /// Events
-    event NFTAddressChanged(address indexed nft);
-    event EscrowTicketerAddressChanged(address indexed escrowTicketer, Ticketer indexed ticketerType);
-    event StakingAddressChanged(address indexed staking);
-    event MultisigAddressChanged(address indexed multisig);
-    event PhysicalItemsAddressChanged(address indexed physicalItems);
-    event PhysicalLotsAddressChanged(address indexed physicalLots);
-    event VipStakerAmountChanged(uint256 indexed vipStakerAmount);
-    event FeePercentageChanged(uint16 indexed feePercentage);
-    event MaxRoyaltyPercentageChanged(uint16 indexed maxRoyaltyPercentage);
-    event OutBidPercentageChanged(uint16 indexed outBidPercentage);
-    event DefaultTicketerTypeChanged(Ticketer indexed ticketerType);
-    event ConsignmentRegistered(address indexed consignor, Consignment consignment);
-    event ConsignmentTicketerChanged(uint256 consignmentId, Ticketer indexed ticketerType);
-    event ConsignmentReleased(Consignment consignment, uint256 amount, address releasedTo);
-
     /// @dev the address of the Seen.Haus NFT contract
     address internal nft;
 
@@ -629,7 +613,7 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
      */
     function supportsInterface(bytes4 interfaceId)
     public
-    view
+    pure
     override(IERC165, ERC1155Receiver)
     returns (bool)
     {

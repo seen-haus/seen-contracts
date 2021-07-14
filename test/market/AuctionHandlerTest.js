@@ -29,7 +29,6 @@ describe("AuctionHandler", function() {
     let royaltyAmount, sellerAmount, feeAmount, multisigAmount, stakingAmount, grossSale, netAfterRoyalties;
     let sellerBalance, contractBalance, buyerBalance, ticketerBalance, newBalance, badStartTime, signer, belowReserve, percentage, trollBid, outbid;
 
-    const zeroAddress = ethers.BigNumber.from('0x0000000000000000000000000000000000000000');
     const fifteenMinutes = "900"; // 900 seconds
 
     beforeEach( async function () {
@@ -451,7 +450,7 @@ describe("AuctionHandler", function() {
                             .withArgs(
                                 seller.address,
                                 [ // Auction
-                                    zeroAddress,
+                                    ethers.constants.AddressZero,
                                     consignmentId,
                                     start,
                                     duration,
@@ -533,7 +532,7 @@ describe("AuctionHandler", function() {
                             .withArgs(
                                 seller.address,
                                 [ // Auction
-                                    zeroAddress,
+                                    ethers.constants.AddressZero,
                                     consignmentId,
                                     start,
                                     duration,
