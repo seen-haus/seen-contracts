@@ -68,6 +68,7 @@ contract SeenTypes {
         uint256 tokenId;
         uint256 supply;
         uint256 id;
+        bool marketed;
     }
 
     struct Auction {

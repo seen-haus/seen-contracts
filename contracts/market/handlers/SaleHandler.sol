@@ -15,7 +15,7 @@ import "../MarketClient.sol";
 contract SaleHandler is MarketClient {
 
     // Events
-    event SalePending(address indexed consignor, Sale sale);
+    event SalePending(address indexed consignor, address indexed seller, Sale sale);
     event SaleStarted(uint256 indexed consignmentId);
     event SaleEnded(uint256 indexed consignmentId, Outcome indexed outcome);
     event Purchase(uint256 indexed consignmentId,  uint256 indexed amount, address indexed buyer);
@@ -55,6 +55,7 @@ contract SaleHandler is MarketClient {
      *
      * Reverts if:
      *  - Sale exists for consignment
+     *  - Consignment has already been marketed
      *  - Sale starts in the past
      *
      * Emits a SalePending event.
@@ -80,6 +81,9 @@ contract SaleHandler is MarketClient {
         // Fetch the consignment
         Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
+        // Make sure the consignment hasn't been marketed
+        require(consignment.marketed == false, "Consignment has already been marketed");
+
         // Get the storage location for the sale
         Sale storage sale = sales[consignment.id];
 
@@ -98,8 +102,11 @@ contract SaleHandler is MarketClient {
         sale.state = State.Pending;
         sale.outcome = Outcome.Pending;
 
+        // Notify MarketController the consignment has been marketed
+        marketController.marketConsignment(consignment.id);
+
         // Notify listeners of state change
-        emit SalePending(msg.sender, sale);
+        emit SalePending(msg.sender, consignment.seller, sale);
     }
 
     /**
@@ -158,7 +165,7 @@ contract SaleHandler is MarketClient {
             new bytes(0x0)
         );
 
-        // Register the consignment
+        // Register consignment (Secondaries are automatically marketed upon registration)
         Consignment memory consignment = marketController.registerConsignment(Market.Secondary, msg.sender, _seller, _tokenAddress, _tokenId, _supply);
 
         // Set up the sale
@@ -172,7 +179,7 @@ contract SaleHandler is MarketClient {
         sale.outcome = Outcome.Pending;
 
         // Notify listeners of state change
-        emit SalePending(msg.sender, sale);
+        emit SalePending(msg.sender, consignment.seller, sale);
     }
 
     /**

@@ -9,13 +9,14 @@ const eip55 = require("eip55");
 
 class Consignment {
 
-    constructor (market, seller, tokenAddress, tokenId, supply, id) {
+    constructor (market, seller, tokenAddress, tokenId, supply, id, marketed) {
         this.market = market;
         this.seller = seller;
         this.tokenAddress = tokenAddress;
         this.tokenId = tokenId;
         this.supply = supply;
         this.id = id;
+        this.marketed = marketed;
     }
 
     /**
@@ -24,8 +25,8 @@ class Consignment {
      * @returns {Consignment}
      */
     static fromObject(o) {
-        const {market, seller, tokenAddress, tokenId, supply, id} = o;
-        return new Consignment(market, seller, tokenAddress, tokenId, supply, id);
+        const {market, seller, tokenAddress, tokenId, supply, id, marketed} = o;
+        return new Consignment(market, seller, tokenAddress, tokenId, supply, id, marketed);
     }
 
     /**
@@ -151,6 +152,22 @@ class Consignment {
     }
 
     /**
+     * Is this Consignment instance's marketed field valid?
+     * @returns {boolean}
+     */
+    marketedIsValid() {
+        let valid = false;
+        let {marketed} = this;
+        try {
+            valid = (
+                typeof marketed === "boolean"
+            );
+        } catch (e) {}
+        return valid;
+    }
+
+
+    /**
      * Is this Consignment instance valid?
      * @returns {boolean}
      */
@@ -161,7 +178,8 @@ class Consignment {
             this.tokenAddressIsValid() &&
             this.tokenIdIsValid() &&
             this.supplyIsValid() &&
-            this.idIsValid()
+            this.idIsValid() &&
+            this.marketedIsValid()
         );
     };
 

@@ -3,6 +3,7 @@ const ethers = hre.ethers;
 const { expect } = require("chai");
 const Role = require("../../domain/Role");
 const Token = require("../../domain/Token");
+const Market = require("../../domain/Market");
 const Ticketer = require("../../domain/Ticketer");
 
 describe("SeenHausNFT", function() {
@@ -14,7 +15,7 @@ describe("SeenHausNFT", function() {
     let SeenHausNFT, seenHausNFT;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let counter, tokenURI, tokenId, supply, salePrice, royaltyAmount, expectedRoyalty, percentage, royaltyPercentage;
-    let token, isPhysical, balance, uri, invalidRoyaltyPercentage, address, support;
+    let token, isPhysical, balance, uri, invalidRoyaltyPercentage, address, support, consignmentId, consignment;
     let replacementAddress = "0x2d36143CC2E0E74E007E7600F341dC9D37D81C07";
 
     beforeEach( async function () {
@@ -189,6 +190,146 @@ describe("SeenHausNFT", function() {
                     counter.gt(tokenId),
                     "ESCROW_AGENT can't mint a digital token"
                 ).is.true;
+
+            });
+
+        });
+
+        context("Change Events", async function () {
+
+            context("mintDigital()", async function () {
+
+                it("should emit a TransferSingle event", async function () {
+
+                    // Get next token id
+                    tokenId = await seenHausNFT.getNextToken();
+
+                    // Mint a digital NFT
+                    await expect(
+                        seenHausNFT.connect(minter).mintDigital(supply, creator.address, tokenURI, royaltyPercentage)
+                    ).to.emit(seenHausNFT, 'TransferSingle')
+                        .withArgs(
+                            minter.address,
+                            ethers.constants.AddressZero,
+                            marketController.address,
+                            tokenId,
+                            supply
+                        );
+
+                    // Get counter
+                    counter = await seenHausNFT.getNextToken();
+
+                    // Test
+                    expect(
+                        counter.gt(tokenId),
+                        "MINTER can't mint a digital token"
+                    ).is.true;
+
+                });
+
+                it("should trigger a ConsignmentRegistered event on MarketController", async function () {
+
+                    // Get the next consignment id
+                    consignmentId = await marketController.getNextConsignment();
+
+                    // Get next token id
+                    tokenId = await seenHausNFT.getNextToken();
+
+                    // Mint a digital NFT
+                    await expect(
+                        seenHausNFT.connect(minter).mintDigital(supply, creator.address, tokenURI, royaltyPercentage)
+                    ).emit(marketController, 'ConsignmentRegistered')
+                        .withArgs(
+                            minter.address,     // consignor
+                            creator.address,    // seller
+                            [ // Consignment
+                                Market.PRIMARY,
+                                creator.address,
+                                seenHausNFT.address,
+                                tokenId,
+                                supply,
+                                consignmentId
+                            ]
+                        )
+
+                    // Get counter
+                    counter = await seenHausNFT.getNextToken();
+
+                    // Test
+                    expect(
+                        counter.gt(tokenId),
+                        "MINTER can't mint a digital token"
+                    ).is.true;
+
+                });
+
+            });
+
+            context("mintPhysical()", async function () {
+
+                it("should emit a TransferSingle event", async function () {
+
+                    // Get next token id
+                    tokenId = await seenHausNFT.getNextToken();
+
+                    // Mint a digital NFT
+                    await expect(
+                        seenHausNFT.connect(escrowAgent).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage)
+                    ).to.emit(seenHausNFT, 'TransferSingle')
+                        .withArgs(
+                            escrowAgent.address,
+                            ethers.constants.AddressZero,
+                            marketController.address,
+                            tokenId,
+                            supply
+                        );
+
+                    // Get counter
+                    counter = await seenHausNFT.getNextToken();
+
+                    // Test
+                    expect(
+                        counter.gt(tokenId),
+                        "MINTER can't mint a digital token"
+                    ).is.true;
+
+                });
+
+                it("should trigger a ConsignmentRegistered event on MarketController", async function () {
+
+                    // Get the next consignment id
+                    consignmentId = await marketController.getNextConsignment();
+
+                    // Get next token id
+                    tokenId = await seenHausNFT.getNextToken();
+
+                    // Mint a digital NFT
+                    await expect(
+                        seenHausNFT.connect(escrowAgent).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage)
+                    ).emit(marketController, 'ConsignmentRegistered')
+                        .withArgs(
+                            escrowAgent.address,     // consignor
+                            creator.address,    // seller
+                            [ // Consignment
+                                Market.PRIMARY,
+                                creator.address,
+                                seenHausNFT.address,
+                                tokenId,
+                                supply,
+                                consignmentId
+                            ]
+                        )
+
+                    // Get counter
+                    counter = await seenHausNFT.getNextToken();
+
+                    // Test
+                    expect(
+                        counter.gt(tokenId),
+                        "MINTER can't mint a digital token"
+                    ).is.true;
+
+                });
 
             });
 

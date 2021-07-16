@@ -191,7 +191,6 @@ contract LotsTicketer is IEscrowTicketer, StringUtils, MarketClient, ERC721 {
         // Release the consignment to claimant
         marketController.releaseConsignment(ticket.consignmentId, ticket.amount, msg.sender);
 
-
         // Notify listeners of state change
         emit TicketClaimed(_ticketId, msg.sender, ticket.amount);
 

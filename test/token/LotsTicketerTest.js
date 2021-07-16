@@ -144,6 +144,32 @@ describe("LotsTicketer", function() {
 
         });
 
+        context("Change Events", async function () {
+
+            beforeEach(async function () {
+
+                // MARKET_HANDLER issues ticket
+                ticketId = await lotsTicketer.getNextTicket();
+                await lotsTicketer.connect(marketHandler).issueTicket(consignmentId, supply, buyer.address);
+
+            });
+
+            it("claim() should trigger a ConsignmentReleased event on MarketController", async function () {
+
+                // Make change, test event
+                await expect(
+                    lotsTicketer.connect(buyer).claim(ticketId)
+                ).to.emit(marketController, 'ConsignmentReleased')
+                    .withArgs(
+                        consignmentId,
+                        supply,
+                        buyer.address
+                    );
+
+            });
+
+        });
+
         context("Issuing Tickets", async function () {
 
             it("should transfer escrow ticket to buyer", async function () {

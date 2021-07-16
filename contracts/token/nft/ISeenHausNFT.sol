@@ -9,6 +9,8 @@ import "../../domain/SeenTypes.sol";
  * @title ISeenHausNFT
  * @author Cliff Hall
  * @notice This is the interface for the Seen.House ERC-1155 NFT contract.
+ *
+ * The ERC-165 identifier for this interface is: 0x3ade32fd
  */
 interface ISeenHausNFT is IERC2981, IERC1155 {
 

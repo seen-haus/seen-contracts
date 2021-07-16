@@ -839,11 +839,19 @@ describe("MarketController", function() {
 
                 // Make change, test event
                 await expect(
-                    marketController.connect(marketHandler).registerConsignment(market, seller.address, seller.address, token.address, tokenId, supply)
+                    marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply)
                 ).to.emit(marketController, 'ConsignmentRegistered')
                     .withArgs(
+                        associate.address,
                         seller.address,
-                        [market, seller.address, token.address, tokenId, supply, nextConsignment]
+                        [
+                            market,
+                            seller.address,
+                            token.address,
+                            tokenId,
+                            supply,
+                            nextConsignment
+                        ]
                     );
 
             });
@@ -915,7 +923,8 @@ describe("MarketController", function() {
                         response.tokenAddress,
                         response.tokenId.toString(),
                         response.supply.toString(),
-                        response.id.toString()
+                        response.id.toString(),
+                        response.marketed
                     );
 
                     // Test validity
@@ -931,7 +940,7 @@ describe("MarketController", function() {
                     expect(consignment.tokenId === tokenId.toString()).is.true;
                     expect(consignment.supply === supply.toString()).is.true;
                     expect(consignment.id === id).is.true;
-
+                    expect(consignment.marketed).is.false;
                 });
 
             });
@@ -1049,7 +1058,7 @@ describe("MarketController", function() {
             it("should indicate support for IMarketController interface", async function () {
 
                 // Current interfaceId for IMarketController
-                support = await marketController.supportsInterface("0x64f7bd36");
+                support = await marketController.supportsInterface("0xe5f2f941");
 
                 // Test
                 await expect(

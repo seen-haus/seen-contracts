@@ -7,7 +7,10 @@ import "../domain/SeenTypes.sol";
 /**
  * @title IMarketController
  * @author Cliff Hall
- * @notice Declared as abstract contract rather than interface as it must inherit for enum types.
+ *
+ * @notice Manages configuration and consignments used by the Seen.Haus contract suite.
+ *
+ * The ERC-165 identifier for this interface is: 0xe5f2f941
  */
 interface IMarketController is IERC1155Receiver {
 
@@ -16,16 +19,15 @@ interface IMarketController is IERC1155Receiver {
     event EscrowTicketerAddressChanged(address indexed escrowTicketer, SeenTypes.Ticketer indexed ticketerType);
     event StakingAddressChanged(address indexed staking);
     event MultisigAddressChanged(address indexed multisig);
-    event PhysicalItemsAddressChanged(address indexed physicalItems);
-    event PhysicalLotsAddressChanged(address indexed physicalLots);
     event VipStakerAmountChanged(uint256 indexed vipStakerAmount);
     event FeePercentageChanged(uint16 indexed feePercentage);
     event MaxRoyaltyPercentageChanged(uint16 indexed maxRoyaltyPercentage);
     event OutBidPercentageChanged(uint16 indexed outBidPercentage);
     event DefaultTicketerTypeChanged(SeenTypes.Ticketer indexed ticketerType);
-    event ConsignmentRegistered(address indexed consignor, SeenTypes.Consignment consignment);
     event ConsignmentTicketerChanged(uint256 consignmentId, SeenTypes.Ticketer indexed ticketerType);
-    event ConsignmentReleased(SeenTypes.Consignment consignment, uint256 amount, address releasedTo);
+    event ConsignmentRegistered(address indexed consignor, address indexed seller, SeenTypes.Consignment consignment);
+    event ConsignmentMarketed(address indexed consignor, address indexed seller, uint256 indexed consignmentId);
+    event ConsignmentReleased(uint256 indexed consignmentId, uint256 amount, address releasedTo);
 
     /**
      * @notice Sets the address of the xSEEN ERC-20 staking contract.
@@ -234,9 +236,20 @@ interface IMarketController is IERC1155Receiver {
     returns(SeenTypes.Consignment memory);
 
     /**
+      * @notice Update consignment to indicate it has been marketed
+      *
+      * Emits a ConsignmentMarketed event.
+      *
+      * Reverts if consignment has already been marketed.
+      *
+      * @param _consignmentId - the id of the consignment
+      */
+    function marketConsignment(uint256 _consignmentId) external;
+
+    /**
      * @notice Release the consigned item to a given address
      *
-     * Emits a ConsignmentTicketerSet event.
+     * Emits a ConsignmentReleased event.
      *
      * Reverts if caller is does not have MARKET_HANDLER role.
      *

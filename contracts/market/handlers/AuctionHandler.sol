@@ -13,7 +13,7 @@ import "../MarketClient.sol";
 contract AuctionHandler is MarketClient {
 
     /// Events
-    event AuctionPending(address indexed consignor, Auction auction);
+    event AuctionPending(address indexed consignor, address indexed seller, Auction auction);
     event AuctionStarted(uint256 indexed consignmentId);
     event AuctionExtended(uint256 indexed consignmentId);
     event AuctionEnded(uint256 indexed consignmentId, Outcome indexed outcome);
@@ -51,7 +51,13 @@ contract AuctionHandler is MarketClient {
     /**
      * @notice Create a new primary market auction. (English style)
      *
-     * Requires a consignment
+     * Emits an AuctionPending event
+     *
+     * Reverts if:
+     *  - Consignment doesn't exist
+     *  - Consignment has already been marketed
+     *  - Auction already exists for consignment
+     *  - Start time is in the past
      *
      * @param _consignmentId - the id of the consignment being sold
      * @param _start - the scheduled start time of the auction
@@ -75,6 +81,9 @@ contract AuctionHandler is MarketClient {
         // Get the consignment (reverting if consignment doesn't exist)
         Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
+        // Make sure the consignment hasn't been marketed
+        require(consignment.marketed == false, "Consignment has already been marketed");
+
         // Get the storage location for the auction
         Auction storage auction = auctions[consignment.id];
 
@@ -94,14 +103,22 @@ contract AuctionHandler is MarketClient {
         auction.state = State.Pending;
         auction.outcome = Outcome.Pending;
 
+        // Notify MarketController the consignment has been marketed
+        marketController.marketConsignment(consignment.id);
+
         // Notify listeners of state change
-        emit AuctionPending(msg.sender, auction);
+        emit AuctionPending(msg.sender, consignment.seller, auction);
     }
 
     /**
-     * @notice Create a new auction. (English style)
+     * @notice Create a new secondary market auction
      *
-     * For a single edition of one ERC-1155 token.
+     * Emits an AuctionPending event.
+     *
+     * Reverts if:
+     *  - Contract no approved to transfer seller's tokens
+     *  - Seller doesn't own the token balance to be auctioned
+     *  - Start time is in the past
      *
      * @param _seller - the current owner of the consignment
      * @param _tokenAddress - the contract address issuing the NFT behind the consignment
@@ -125,7 +142,6 @@ contract AuctionHandler is MarketClient {
     external
     onlyRole(SELLER)
     {
-
         // Make sure start time isn't in the past
         require (_start >= block.timestamp, "Time runs backward?");
 
@@ -147,7 +163,7 @@ contract AuctionHandler is MarketClient {
             new bytes(0x0)
         );
 
-        // Register consignment
+        // Register consignment (Secondaries are automatically marketed upon registration)
         Consignment memory consignment = marketController.registerConsignment(Market.Secondary, msg.sender, _seller, _tokenAddress, _tokenId, supply);
 
         // Set up the auction
@@ -162,7 +178,7 @@ contract AuctionHandler is MarketClient {
         auction.outcome = Outcome.Pending;
 
         // Notify listeners of state change
-        emit AuctionPending(msg.sender, auction);
+        emit AuctionPending(msg.sender, consignment.seller, auction);
     }
 
     /**

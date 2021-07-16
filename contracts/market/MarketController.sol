@@ -485,7 +485,7 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
      * @return consignment - the registered consignment
      */
     function registerConsignment(
-        SeenTypes.Market _market,
+        Market _market,
         address _consignor,
         address payable _seller,
         address _tokenAddress,
@@ -503,6 +503,10 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
         // Get the id for the new consignment
         uint256 id = nextConsignment++;
 
+        // Primary market NFTs (minted here) are not automatically marketed.
+        // Secondary market NFTs are automatically marketed (sale or auction).
+        bool marketed = (_market == Market.Secondary);
+
         // Create and store the consignment
         consignment = Consignment(
             _market,
@@ -510,7 +514,8 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
             _tokenAddress,
             _tokenId,
             _supply,
-            id
+            id,
+            marketed
         );
         consignments[id] = consignment;
 
@@ -518,8 +523,41 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
         consignors[id] = _consignor;
 
         // Notify listeners of state change
-        emit ConsignmentRegistered(_consignor, consignment);
+        emit ConsignmentRegistered(_consignor, _seller , consignment);
+        if (marketed) {
+            emit ConsignmentMarketed(_consignor, consignment.seller, consignment.id);
+        }
+    }
 
+    /**
+     * @notice Update consignment to indicate it has been marketed
+     *
+     * Emits a ConsignmentMarketed event.
+     *
+     * Reverts if consignment has already been marketed.
+     *
+     * @param _consignmentId - the id of the consignment
+     */
+    function marketConsignment(uint256 _consignmentId)
+    external
+    override
+    onlyRole(MARKET_HANDLER)
+    consignmentExists(_consignmentId)
+    {
+        // Get the consignment into memory
+        Consignment storage consignment = consignments[_consignmentId];
+
+        // A consignment can only be marketed once
+        require(consignment.marketed == false, "Consignment has already been marketed");
+
+        // Update the consignment
+        consignment.marketed = true;
+
+        // Consignor address
+        address consignor = consignors[_consignmentId];
+
+        // Notify listeners of state change
+        emit ConsignmentMarketed(consignor, consignment.seller, consignment.id);
     }
 
     /**
@@ -563,7 +601,7 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
         );
 
         // Notify watchers about state change
-        emit ConsignmentReleased(consignment, _amount, _releaseTo);
+        emit ConsignmentReleased(consignment.id, _amount, _releaseTo);
 
     }
 
@@ -623,5 +661,4 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
             interfaceId == type(IMarketController).interfaceId
         );
     }
-
 }
