@@ -21,7 +21,7 @@ function getConfig() {
     const feePercentage = "20";
     const maxRoyaltyPercentage = "50";
     const outBidPercentage = "5";
-    const defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
+    const defaultTicketerType = Ticketer.ITEMS;  // default escrow ticketer type
 
     // Staking contract address
     const STAKING = {
@@ -99,7 +99,7 @@ async function main() {
         marketController.address
     );
     await lotsTicketer.deployed();
-    deploymentComplete(config.lotsTicketer, lotsTicketer.address, [
+    deploymentComplete("LotsTicketer", lotsTicketer.address, [
         accessController.address,
         marketController.address
     ]);
@@ -111,7 +111,7 @@ async function main() {
         marketController.address
     );
     await itemsTicketer.deployed();
-    deploymentComplete(config.itemsTicketer, itemsTicketer.address, [
+    deploymentComplete("ItemsTicketer", itemsTicketer.address, [
         accessController.address,
         marketController.address
     ]);
