@@ -2,77 +2,86 @@
 /* global ethers hre */
 /* eslint prefer-const: "off" */
 
-const { getSelectors, FacetCutAction } = require('./libraries/diamond.js')
+const { getSelectors, InterfaceIds, FacetCutAction } = require('./libraries/diamond-utils.js')
 
 async function deployDiamond () {
-  const accounts = await ethers.getSigners()
-  const contractOwner = accounts[0]
 
-  // deploy DiamondCutFacet
-  const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet')
-  const diamondCutFacet = await DiamondCutFacet.deploy()
-  await diamondCutFacet.deployed()
-  console.log('DiamondCutFacet deployed:', diamondCutFacet.address)
+  // Deploy the AccessController
+  const AccessController = await ethers.getContractFactory("AccessController");
+  const accessController = await AccessController.deploy();
+  await accessController.deployed();
+  //console.log('AccessController deployed:', accessController.address)
 
-  // deploy Diamond
+  // Diamond Cut Facet
+  const DiamondCutFacet = await ethers.getContractFactory("DiamondCutFacet");
+  const dcf = await DiamondCutFacet.deploy();
+  await dcf.deployed();
+  const diamondCutSelectors = getSelectors(dcf);
+  const diamondCutCut = [dcf.address, FacetCutAction.Add, diamondCutSelectors];
+  //console.log('DiamondCutFacet deployed:', dcf.address)
+
+  // Diamond Loupe Facet
+  const DiamondLoupeFacet = await ethers.getContractFactory("DiamondLoupeFacet");
+  const dlf = await DiamondLoupeFacet.deploy();
+  await dlf.deployed();
+  const diamondLoupeSelectors = getSelectors(dlf);
+  const diamondLoupeCut = [dlf.address, FacetCutAction.Add, diamondLoupeSelectors];
+  //console.log('DiamondLoupeFacet deployed:', dlf.address)
+
+  // Deploy Diamond
   const Diamond = await ethers.getContractFactory('Diamond')
-  const diamond = await Diamond.deploy(contractOwner.address, diamondCutFacet.address)
+  const diamond = await Diamond.deploy(
+      accessController.address,
+      [diamondCutCut, diamondLoupeCut],
+      [InterfaceIds.DiamondCut, InterfaceIds.DiamondLoupe, InterfaceIds.ERC165]
+  )
   await diamond.deployed()
-  console.log('Diamond deployed:', diamond.address)
+  //console.log('Diamond deployed:', diamond.address)
 
-  // deploy DiamondInit
-  const DiamondInit = await ethers.getContractFactory('DiamondInit')
-  const diamondInit = await DiamondInit.deploy()
-  await diamondInit.deployed()
-  console.log('DiamondInit deployed:', diamondInit.address)
+/* Diagnostic Display
 
-  // deploy facets
-  console.log('')
-  console.log('Deploying facets')
-  const FacetNames = [
-    'DiamondLoupeFacet',
-    'OwnershipFacet'
-  ]
-  const cut = []
-  for (const FacetName of FacetNames) {
-    const Facet = await ethers.getContractFactory(FacetName)
-    const facet = await Facet.deploy()
-    await facet.deployed()
-    console.log(`${FacetName} deployed: ${diamondInit.address}`)
-    cut.push({
-      facetAddress: facet.address,
-      action: FacetCutAction.Add,
-      functionSelectors: getSelectors(facet)
-    })
-  }
+  // Verify supported interfaces with Diamond Proxy's onboard ERC-165 implementation
+  let supports165 = await diamond.supportsInterface(InterfaceIds.ERC165);
+  console.log(`Supports IERC165 ${supports165}`);
 
-  // upgrade diamond with facets
-  console.log('')
-  console.log('Diamond Cut:', cut)
-  const diamondCut = await ethers.getContractAt('IDiamondCut', diamond.address)
-  let tx
-  let receipt
-  // call to init function
-  let functionCall = diamondInit.interface.encodeFunctionData('init')
-  tx = await diamondCut.diamondCut(cut, diamondInit.address, functionCall)
-  console.log('Diamond cut tx: ', tx.hash)
-  receipt = await tx.wait()
-  if (!receipt.status) {
-    throw Error(`Diamond upgrade failed: ${tx.hash}`)
-  }
-  console.log('Completed diamond cut')
-  return diamond.address
+  let supportsDiamondLoupe = await diamond.supportsInterface(InterfaceIds.DiamondLoupe);
+  console.log(`Supports IDiamondLoupe ${supportsDiamondLoupe}`);
+
+  let supportsDiamondCut = await diamond.supportsInterface(InterfaceIds.DiamondCut);
+  console.log(`Supports IDiamondCut ${supportsDiamondCut}`);
+
+  // Get the Diamond proxy,cast to DiamondLoupeFacet's abi so hardhat knows the functions are available
+  const cast = await ethers.getContractAt('DiamondLoupeFacet', diamond.address);
+
+  // Verify facet addresses
+  let addresses = await cast.facetAddresses();
+  console.log(addresses);
+
+*/
+
+  return [diamond.address, dcf.address, dlf.address];
+
 }
+
+/*
+main()
+    .then(() => process.exit(0))
+    .catch(error => {
+      console.error(error);
+      process.exit(1);
+    });
+
+*/
 
 // We recommend this pattern to be able to use async/await everywhere
 // and properly handle errors.
 if (require.main === module) {
   deployDiamond()
-    .then(() => process.exit(0))
-    .catch(error => {
-      console.error(error)
-      process.exit(1)
-    })
+      .then(() => process.exit(0))
+      .catch(error => {
+        console.error(error)
+        process.exit(1)
+      })
 }
 
 exports.deployDiamond = deployDiamond

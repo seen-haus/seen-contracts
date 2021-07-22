@@ -8,8 +8,9 @@ pragma solidity ^0.8.5;
 
 import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
 import { LibDiamond } from "../libraries/LibDiamond.sol";
+import { SeenTypes } from"../../domain/SeenTypes.sol";
 
-contract DiamondCutFacet is IDiamondCut {
+contract DiamondCutFacet is SeenTypes, IDiamondCut {
     /// @notice Add/replace/remove any number of functions and optionally execute
     ///         a function with delegatecall
     /// @param _diamondCut Contains the facet addresses and function selectors
@@ -21,8 +22,8 @@ contract DiamondCutFacet is IDiamondCut {
         address _init,
         bytes calldata _calldata
     ) external override {
-        LibDiamond.enforceIsContractOwner();
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
+        ds.accessController.hasRole(ADMIN, msg.sender);
         uint256 originalSelectorCount = ds.selectorCount;
         uint256 selectorCount = originalSelectorCount;
         bytes32 selectorSlot;

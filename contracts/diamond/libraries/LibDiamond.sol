@@ -6,25 +6,32 @@ pragma solidity ^0.8.5;
 * EIP-2535 Diamonds: https://eips.ethereum.org/EIPS/eip-2535
 /******************************************************************************/
 import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
+import { IAccessControl } from "../interfaces/IAccessControl.sol";
 
 library LibDiamond {
+
     bytes32 constant DIAMOND_STORAGE_POSITION = keccak256("diamond.standard.diamond.storage");
 
     struct DiamondStorage {
+
         // maps function selectors to the facets that execute the functions.
         // and maps the selectors to their position in the selectorSlots array.
         // func selector => address facet, selector position
         mapping(bytes4 => bytes32) facets;
+
         // array of slots of function selectors.
         // each slot holds 8 function selectors.
         mapping(uint256 => bytes32) selectorSlots;
+
         // The number of function selectors in selectorSlots
         uint16 selectorCount;
+
         // Used to query if a contract implements an interface.
         // Used to implement ERC-165.
         mapping(bytes4 => bool) supportedInterfaces;
-        // owner of the contract
-        address contractOwner;
+
+        // notice the Seen.Haus AccessController
+        IAccessControl accessController;
     }
 
     function diamondStorage() internal pure returns (DiamondStorage storage ds) {
@@ -32,23 +39,6 @@ library LibDiamond {
         assembly {
             ds.slot := position
         }
-    }
-
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    function setContractOwner(address _newOwner) internal {
-        DiamondStorage storage ds = diamondStorage();
-        address previousOwner = ds.contractOwner;
-        ds.contractOwner = _newOwner;
-        emit OwnershipTransferred(previousOwner, _newOwner);
-    }
-
-    function contractOwner() internal view returns (address contractOwner_) {
-        contractOwner_ = diamondStorage().contractOwner;
-    }
-
-    function enforceIsContractOwner() internal view {
-        require(msg.sender == diamondStorage().contractOwner, "LibDiamond: Must be contract owner");
     }
 
     event DiamondCut(IDiamondCut.FacetCut[] _diamondCut, address _init, bytes _calldata);

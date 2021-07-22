@@ -74,6 +74,12 @@ function findAddressPositionInFacets (facetAddress, facets) {
   }
 }
 
+exports.InterfaceIds = {
+  DiamondLoupe: "0x48e2b093",
+  DiamondCut: "0x1f931c1c",
+  ERC165: "0x01ffc9a7"
+};
+
 exports.getSelectors = getSelectors
 exports.getSelector = getSelector
 exports.FacetCutAction = FacetCutAction

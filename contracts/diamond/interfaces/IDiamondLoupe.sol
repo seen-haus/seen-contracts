@@ -4,6 +4,8 @@ pragma solidity ^0.8.5;
 /******************************************************************************\
 * Author: Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
 * EIP-2535 Diamonds: https://eips.ethereum.org/EIPS/eip-2535
+*
+* The EIP-165 id for this interface is: 0x48e2b093
 /******************************************************************************/
 
 // A loupe is a small magnifying glass used to look at diamonds.
