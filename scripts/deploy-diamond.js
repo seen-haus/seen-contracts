@@ -12,14 +12,6 @@ async function deployDiamond () {
   await accessController.deployed();
   //console.log('AccessController deployed:', accessController.address)
 
-  // Diamond Cut Facet
-  const DiamondCutFacet = await ethers.getContractFactory("DiamondCutFacet");
-  const dcf = await DiamondCutFacet.deploy();
-  await dcf.deployed();
-  const diamondCutSelectors = getSelectors(dcf);
-  const diamondCutCut = [dcf.address, FacetCutAction.Add, diamondCutSelectors];
-  //console.log('DiamondCutFacet deployed:', dcf.address)
-
   // Diamond Loupe Facet
   const DiamondLoupeFacet = await ethers.getContractFactory("DiamondLoupeFacet");
   const dlf = await DiamondLoupeFacet.deploy();
@@ -28,12 +20,20 @@ async function deployDiamond () {
   const diamondLoupeCut = [dlf.address, FacetCutAction.Add, diamondLoupeSelectors];
   //console.log('DiamondLoupeFacet deployed:', dlf.address)
 
+  // Diamond Cut Facet
+  const DiamondCutFacet = await ethers.getContractFactory("DiamondCutFacet");
+  const dcf = await DiamondCutFacet.deploy();
+  await dcf.deployed();
+  const diamondCutSelectors = getSelectors(dcf);
+  const diamondCutCut = [dcf.address, FacetCutAction.Add, diamondCutSelectors];
+  //console.log('DiamondCutFacet deployed:', dcf.address)
+
   // Deploy Diamond
   const Diamond = await ethers.getContractFactory('Diamond')
   const diamond = await Diamond.deploy(
       accessController.address,
-      [diamondCutCut, diamondLoupeCut],
-      [InterfaceIds.DiamondCut, InterfaceIds.DiamondLoupe, InterfaceIds.ERC165]
+      [diamondLoupeCut, diamondCutCut],
+      [InterfaceIds.DiamondLoupe, InterfaceIds.DiamondCut, InterfaceIds.ERC165]
   )
   await diamond.deployed()
   //console.log('Diamond deployed:', diamond.address)
@@ -59,7 +59,7 @@ async function deployDiamond () {
 
 */
 
-  return [diamond.address, dcf.address, dlf.address];
+  return [diamond.address, dlf.address, dcf.address];
 
 }
 
