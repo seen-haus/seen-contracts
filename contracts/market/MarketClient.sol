@@ -5,8 +5,8 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../access/AccessClient.sol";
-import "./MarketController.sol";
 import "./IMarketController.sol";
+import "../token/royalty/IERC2981.sol";
 
 /**
  * @title MarketClient

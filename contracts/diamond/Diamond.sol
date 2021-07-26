@@ -66,8 +66,11 @@ contract Diamond {
      * @param _interfaceId - the sighash of the given interface
      */
     function supportsInterface(bytes4 _interfaceId) external view returns (bool) {
+        // Get the DiamondStorage struct
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-        return ds.supportedInterfaces[_interfaceId];
+
+        // Return the value
+        return ds.supportedInterfaces[_interfaceId] || false;
     }
 
     /**
@@ -77,12 +80,9 @@ contract Diamond {
      * function if a facet is found and returns any value.
      */
     fallback() external payable {
-        // Get the diamond storage struct
-        LibDiamond.DiamondStorage storage ds;
-        bytes32 position = LibDiamond.DIAMOND_STORAGE_POSITION;
-        assembly {
-            ds.slot := position
-        }
+
+        // Get the DiamondStorage struct
+        LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
 
         // Make sure the function exists
         address facet = address(bytes20(ds.facets[msg.sig]));
@@ -101,6 +101,7 @@ contract Diamond {
                     return(0, returndatasize())
                 }
         }
+
     }
 
     /// Contract can receive ETH

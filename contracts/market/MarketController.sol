@@ -4,73 +4,33 @@ pragma solidity ^0.8.5;
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import "../access/AccessClient.sol";
-import "../token/nft/ISeenHausNFT.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "../diamond/libraries/LibMarketController.sol";
 import "../token/escrow/IEscrowTicketer.sol";
+import "../token/nft/ISeenHausNFT.sol";
+import "../domain/SeenTypes.sol";
 import "./IMarketController.sol";
+
 
 /**
  * @title MarketController
  * @author Cliff Hall
  * @notice Provides centralized management of consignments and various market-related settings.
  */
-contract MarketController is AccessClient, ERC1155Holder, IMarketController {
-
-    /// @dev the address of the Seen.Haus NFT contract
-    address internal nft;
-
-    /// @dev the address of the xSEEN ERC-20 Seen.Haus staking contract
-    address payable internal staking;
-
-    /// @dev the address of the Seen.Haus multi-sig wallet
-    address payable internal multisig;
-
-    /// @dev address of the Seen.Haus lots-based escrow ticketing contract
-    address internal lotsTicketer;
-
-    /// @dev address of the Seen.Haus items-based escrow ticketing contract
-    address internal itemsTicketer;
-
-    /// @dev the default escrow ticketer type to use for physical consignments unless overridden with setConsignmentTicketer
-    Ticketer internal defaultTicketerType;
-
-    /// @dev the minimum amount of xSEEN ERC-20 a caller must hold to participate in VIP events
-    uint256 internal vipStakerAmount;
-
-    /// @dev the percentage that will be taken as a fee from the net of a Seen.Haus sale or auction (after royalties)
-    uint16 internal feePercentage;         // 1.75% = 175, 100% = 10000
-
-    /// @dev the maximum percentage of a Seen.Haus sale or auction that will be paid as a royalty
-    uint16 internal maxRoyaltyPercentage;  // 1.75% = 175, 100% = 10000
-
-    /// @dev the minimum percentage a Seen.Haus auction bid must be above the previous bid to prevail
-    uint16 internal outBidPercentage;      // 1.75% = 175, 100% = 10000
-
-    /// @dev next consignment id
-    uint256 internal nextConsignment;
-
-    /// @dev consignment id => consignment
-    mapping(uint256 => Consignment) internal consignments;
-
-    /// @dev consignmentId to consignor address
-    mapping(uint256 => address) internal consignors;
-
-    /// @dev consignment id => ticketer type
-    mapping(uint256 => Ticketer) internal consignmentTicketers;
+contract MarketController is SeenTypes, Initializable, ERC1155Holder, IMarketController {
 
     /**
-     * @notice Constructor
+     * @notice Initializer
      *
-     * @param _accessController - the Seen.Haus AccessController
      * @param _staking - Seen.Haus staking contract
      * @param _multisig - Seen.Haus multi-sig wallet
      * @param _vipStakerAmount - the minimum amount of xSEEN ERC-20 a caller must hold to participate in VIP events
      * @param _feePercentage - percentage that will be taken as a fee from the net of a Seen.Haus sale or auction (after royalties)
      * @param _maxRoyaltyPercentage - maximum percentage of a Seen.Haus sale or auction that will be paid as a royalty
      * @param _outBidPercentage - minimum percentage a Seen.Haus auction bid must be above the previous bid to prevail
+     * @param _defaultTicketerType - which ticketer type to use if none has been specified for a given consignment
      */
-    constructor(
-        address _accessController,
+    function initialize (
         address payable _staking,
         address payable _multisig,
         uint256 _vipStakerAmount,
@@ -79,15 +39,17 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
         uint16 _outBidPercentage,
         Ticketer _defaultTicketerType
     )
-    AccessClient(_accessController)
+    public
+    initializer
     {
-        staking = _staking;
-        multisig = _multisig;
-        vipStakerAmount = _vipStakerAmount;
-        feePercentage = _feePercentage;
-        maxRoyaltyPercentage = _maxRoyaltyPercentage;
-        outBidPercentage = _outBidPercentage;
-        defaultTicketerType = _defaultTicketerType;
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        mcs.staking = _staking;
+        mcs.multisig = _multisig;
+        mcs.vipStakerAmount = _vipStakerAmount;
+        mcs.feePercentage = _feePercentage;
+        mcs.maxRoyaltyPercentage = _maxRoyaltyPercentage;
+        mcs.outBidPercentage = _outBidPercentage;
+        mcs.defaultTicketerType = _defaultTicketerType;
     }
 
     /**
@@ -97,8 +59,23 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
      */
     modifier consignmentExists(uint256 _consignmentId) {
 
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+
         // Make sure the consignment exists
-        require(_consignmentId < nextConsignment, "Consignment does not exist");
+        require(_consignmentId < mcs.nextConsignment, "Consignment does not exist");
+        _;
+    }
+
+    /**
+     * @dev Modifier that checks that the caller has a specific role.
+     *
+     * Reverts if caller doesn't have role.
+     *
+     * See: {AccessController.hasRole}
+     */
+    modifier onlyRole(bytes32 _role) {
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        require(mcs.accessController.hasRole(_role, msg.sender), "Access denied, caller doesn't have role");
         _;
     }
 
@@ -113,8 +90,9 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     external
     override
     onlyRole(ADMIN) {
-        nft = _nft;
-        emit NFTAddressChanged(nft);
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        mcs.nft = _nft;
+        emit NFTAddressChanged(_nft);
     }
 
     /**
@@ -125,7 +103,8 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     view
     override
     returns (address) {
-        return nft;
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        return mcs.nft;
     }
 
     /**
@@ -139,8 +118,9 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     external
     override
     onlyRole(ADMIN) {
-        lotsTicketer = _lotsTicketer;
-        emit EscrowTicketerAddressChanged(lotsTicketer, Ticketer.Lots);
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        mcs.lotsTicketer = _lotsTicketer;
+        emit EscrowTicketerAddressChanged(mcs.lotsTicketer, Ticketer.Lots);
     }
 
     /**
@@ -151,7 +131,8 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     view
     override
     returns (address) {
-        return lotsTicketer;
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        return mcs.lotsTicketer;
     }
 
     /**
@@ -165,8 +146,9 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     external
     override
     onlyRole(ADMIN) {
-        itemsTicketer = _itemsTicketer;
-        emit EscrowTicketerAddressChanged(itemsTicketer, Ticketer.Items);
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        mcs.itemsTicketer = _itemsTicketer;
+        emit EscrowTicketerAddressChanged(mcs.itemsTicketer, Ticketer.Items);
     }
 
     /**
@@ -177,7 +159,8 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     view
     override
     returns (address) {
-        return itemsTicketer;
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        return mcs.itemsTicketer;
     }
 
     /**
@@ -191,8 +174,9 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     external
     override
     onlyRole(ADMIN) {
-        staking = _staking;
-        emit StakingAddressChanged(staking);
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        mcs.staking = _staking;
+        emit StakingAddressChanged(mcs.staking);
     }
 
     /**
@@ -203,7 +187,8 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     view
     override
     returns (address payable) {
-        return staking;
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        return mcs.staking;
     }
 
     /**
@@ -217,8 +202,9 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     external
     override
     onlyRole(ADMIN) {
-        multisig = _multisig;
-        emit MultisigAddressChanged(multisig);
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        mcs.multisig = _multisig;
+        emit MultisigAddressChanged(mcs.multisig);
     }
 
     /**
@@ -229,7 +215,8 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     view
     override
     returns (address payable) {
-        return multisig;
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        return mcs.multisig;
     }
 
     /**
@@ -243,8 +230,9 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     external
     override
     onlyRole(ADMIN) {
-        vipStakerAmount = _vipStakerAmount;
-        emit VipStakerAmountChanged(vipStakerAmount);
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        mcs.vipStakerAmount = _vipStakerAmount;
+        emit VipStakerAmountChanged(mcs.vipStakerAmount);
     }
 
     /**
@@ -255,7 +243,8 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     view
     override
     returns (uint256) {
-        return vipStakerAmount;
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        return mcs.vipStakerAmount;
     }
 
     /**
@@ -273,8 +262,9 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     onlyRole(ADMIN) {
         require(_feePercentage > 0 && _feePercentage <= 10000,
             "Percentage representation must be between 1 and 10000");
-        feePercentage = _feePercentage;
-        emit FeePercentageChanged(feePercentage);
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        mcs.feePercentage = _feePercentage;
+        emit FeePercentageChanged(mcs.feePercentage);
     }
 
     /**
@@ -285,7 +275,8 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     view
     override
     returns (uint16) {
-        return feePercentage;
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        return mcs.feePercentage;
     }
 
     /**
@@ -304,8 +295,9 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     onlyRole(ADMIN) {
         require(_maxRoyaltyPercentage > 0 && _maxRoyaltyPercentage <= 10000,
             "Percentage representation must be between 1 and 10000");
-        maxRoyaltyPercentage = _maxRoyaltyPercentage;
-        emit MaxRoyaltyPercentageChanged(maxRoyaltyPercentage);
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        mcs.maxRoyaltyPercentage = _maxRoyaltyPercentage;
+        emit MaxRoyaltyPercentageChanged(mcs.maxRoyaltyPercentage);
     }
 
     /**
@@ -316,7 +308,8 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     view
     override
     returns (uint16) {
-        return maxRoyaltyPercentage;
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        return mcs.maxRoyaltyPercentage;
     }
 
     /**
@@ -335,8 +328,9 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     onlyRole(ADMIN) {
         require(_outBidPercentage > 0 && _outBidPercentage <= 10000,
             "Percentage representation must be between 1 and 10000");
-        outBidPercentage = _outBidPercentage;
-        emit OutBidPercentageChanged(outBidPercentage);
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        mcs.outBidPercentage = _outBidPercentage;
+        emit OutBidPercentageChanged(mcs.outBidPercentage);
     }
 
     /**
@@ -347,7 +341,8 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     view
     override
     returns (uint16) {
-        return outBidPercentage;
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        return mcs.outBidPercentage;
     }
 
     /**
@@ -364,10 +359,11 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     external
     override
     onlyRole(ADMIN) {
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
         require(_ticketerType != Ticketer.Default, "Invalid ticketer type.");
-        require(_ticketerType != defaultTicketerType, "Type is already default.");
-        defaultTicketerType = _ticketerType;
-        emit DefaultTicketerTypeChanged(_ticketerType);
+        require(_ticketerType != mcs.defaultTicketerType, "Type is already default.");
+        mcs.defaultTicketerType = _ticketerType;
+        emit DefaultTicketerTypeChanged(mcs.defaultTicketerType);
     }
 
     /**
@@ -378,7 +374,8 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     view
     override
     returns (Ticketer) {
-        return defaultTicketerType;
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        return mcs.defaultTicketerType;
     }
 
     /**
@@ -398,9 +395,10 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     override
     consignmentExists(_consignmentId)
     returns (address) {
-        Ticketer specified = consignmentTicketers[_consignmentId];
-        Ticketer ticketerType = (specified == Ticketer.Default) ? defaultTicketerType : specified;
-        return (ticketerType == Ticketer.Lots) ? lotsTicketer : itemsTicketer;
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        Ticketer specified = mcs.consignmentTicketers[_consignmentId];
+        Ticketer ticketerType = (specified == Ticketer.Default) ? mcs.defaultTicketerType : specified;
+        return (ticketerType == Ticketer.Lots) ? mcs.lotsTicketer : mcs.itemsTicketer;
     }
 
     /**
@@ -412,7 +410,8 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     view
     override
     returns (uint256) {
-        return nextConsignment;
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        return mcs.nextConsignment;
     }
 
     /**
@@ -429,7 +428,8 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     override
     consignmentExists(_consignmentId)
     returns (Consignment memory consignment) {
-        consignment = consignments[_consignmentId];
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        consignment = mcs.consignments[_consignmentId];
     }
 
     /**
@@ -447,7 +447,8 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     consignmentExists(_consignmentId)
     returns(uint256)
     {
-        Consignment storage consignment = consignments[_consignmentId];
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        Consignment storage consignment = mcs.consignments[_consignmentId];
         return IERC1155(consignment.tokenAddress).balanceOf(address(this), consignment.tokenId);
     }
 
@@ -467,7 +468,8 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     consignmentExists(_consignmentId)
     returns(bool)
     {
-        return consignors[_consignmentId] == _account;
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        return mcs.consignors[_consignmentId] == _account;
     }
 
     /**
@@ -497,11 +499,13 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     onlyRole(MARKET_HANDLER)
     returns (Consignment memory consignment)
     {
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+
         // Ensure the consigned token has been transferred to this contract
         require(IERC1155(_tokenAddress).balanceOf(address(this), _tokenId) == _supply);
 
         // Get the id for the new consignment
-        uint256 id = nextConsignment++;
+        uint256 id = mcs.nextConsignment++;
 
         // Primary market NFTs (minted here) are not automatically marketed.
         // Secondary market NFTs are automatically marketed (sale or auction).
@@ -517,10 +521,10 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
             id,
             marketed
         );
-        consignments[id] = consignment;
+        mcs.consignments[id] = consignment;
 
         // Associate the consignor
-        consignors[id] = _consignor;
+        mcs.consignors[id] = _consignor;
 
         // Notify listeners of state change
         emit ConsignmentRegistered(_consignor, _seller , consignment);
@@ -544,8 +548,10 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     onlyRole(MARKET_HANDLER)
     consignmentExists(_consignmentId)
     {
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+
         // Get the consignment into memory
-        Consignment storage consignment = consignments[_consignmentId];
+        Consignment storage consignment = mcs.consignments[_consignmentId];
 
         // A consignment can only be marketed once
         require(consignment.marketed == false, "Consignment has already been marketed");
@@ -554,7 +560,7 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
         consignment.marketed = true;
 
         // Consignor address
-        address consignor = consignors[_consignmentId];
+        address consignor = mcs.consignors[_consignmentId];
 
         // Notify listeners of state change
         emit ConsignmentMarketed(consignor, consignment.seller, consignment.id);
@@ -578,9 +584,10 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     onlyRole(MARKET_HANDLER)
     consignmentExists(_consignmentId)
     {
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
 
         // Get the consignment into memory
-        Consignment memory consignment = consignments[_consignmentId];
+        Consignment memory consignment = mcs.consignments[_consignmentId];
 
         // Get the current supply
         uint256 supply = IERC1155(consignment.tokenAddress).balanceOf(address(this), consignment.tokenId);
@@ -624,11 +631,13 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
     onlyRole(ESCROW_AGENT)
     consignmentExists(_consignmentId)
     {
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+
         // Set the ticketer for the consignment if not different
-        if (_ticketerType != consignmentTicketers[_consignmentId]) {
+        if (_ticketerType != mcs.consignmentTicketers[_consignmentId]) {
 
             // Set the ticketer for the consignment
-            consignmentTicketers[_consignmentId] = _ticketerType;
+            mcs.consignmentTicketers[_consignmentId] = _ticketerType;
 
             // Notify listeners of state change
             emit ConsignmentTicketerChanged(_consignmentId, _ticketerType);
@@ -636,29 +645,4 @@ contract MarketController is AccessClient, ERC1155Holder, IMarketController {
         }
     }
 
-    /**
-     * @notice Implementation of the {IERC165} interface.
-     *
-     * N.B. This method is inherited from several parents and
-     * the compiler cannot decide which to use. Thus, they must
-     * be overridden here.
-     *
-     * if you just call super.supportsInterface, it chooses
-     * 'the most derived contract'. But that's not good for this
-     * particular function because you may inherit from several
-     * IERC165 contracts, and all concrete ones need to be allowed
-     * to respond.
-     */
-    function supportsInterface(bytes4 interfaceId)
-    public
-    pure
-    override(IERC165, ERC1155Receiver)
-    returns (bool)
-    {
-        return (
-            interfaceId == type(IERC165).interfaceId ||
-            interfaceId == type(IERC1155Receiver).interfaceId ||
-            interfaceId == type(IMarketController).interfaceId
-        );
-    }
 }
