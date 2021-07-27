@@ -174,6 +174,8 @@ describe('Diamond', async function () {
 
   });
 
+  // TODO: Add tests of diamondCut where the newly cut facet's address and a function call with arguments are passed
+  // Need to be certain that intializer functions are properly executed and demonstrate how to encode the calls
   context("DiamondCutFacet", async function () {
 
     beforeEach(async function () {

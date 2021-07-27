@@ -4,7 +4,6 @@ pragma solidity ^0.8.5;
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "../diamond/libraries/LibMarketController.sol";
 import "../token/escrow/IEscrowTicketer.sol";
 import "../token/nft/ISeenHausNFT.sol";
@@ -17,11 +16,32 @@ import "./IMarketController.sol";
  * @author Cliff Hall
  * @notice Provides centralized management of consignments and various market-related settings.
  */
-contract MarketController is SeenTypes, Initializable, ERC1155Holder, IMarketController {
+contract MarketController is SeenTypes, ERC1155Holder, IMarketController {
 
     /**
-     * @notice Initializer
+     * @dev Modifier to protect initializer function from being invoked twice.
+     */
+    modifier initializer() {
+        LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        require(mcs.initializing || !mcs.initialized, "Initializable: contract is already initialized");
+
+        bool isTopLevelCall = !mcs.initializing;
+        if (isTopLevelCall) {
+            mcs.initializing = true;
+            mcs.initialized = true;
+        }
+
+        _;
+
+        if (isTopLevelCall) {
+            mcs.initializing = false;
+        }
+    }
+
+    /**
+     * @notice Intitializer
      *
+     * @param _accessController - Seen.Haus AccessController contract
      * @param _staking - Seen.Haus staking contract
      * @param _multisig - Seen.Haus multi-sig wallet
      * @param _vipStakerAmount - the minimum amount of xSEEN ERC-20 a caller must hold to participate in VIP events
@@ -31,6 +51,7 @@ contract MarketController is SeenTypes, Initializable, ERC1155Holder, IMarketCon
      * @param _defaultTicketerType - which ticketer type to use if none has been specified for a given consignment
      */
     function initialize (
+        address _accessController,
         address payable _staking,
         address payable _multisig,
         uint256 _vipStakerAmount,
@@ -43,6 +64,7 @@ contract MarketController is SeenTypes, Initializable, ERC1155Holder, IMarketCon
     initializer
     {
         LibMarketController.MarketControllerStorage storage mcs = LibMarketController.marketControllerStorage();
+        mcs.accessController = IAccessControl(_accessController);
         mcs.staking = _staking;
         mcs.multisig = _multisig;
         mcs.vipStakerAmount = _vipStakerAmount;

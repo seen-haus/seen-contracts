@@ -12,7 +12,6 @@ import "../../domain/SeenTypes.sol";
 library LibMarketController {
 
     bytes32 constant MARKET_CONTROLLER_STORAGE_POSITION = keccak256("haus.seen.market.controller.storage");
-
     struct MarketControllerStorage {
 
         // the Seen.Haus AccessController
@@ -59,6 +58,12 @@ library LibMarketController {
 
         // consignment id => ticketer type
         mapping(uint256 => SeenTypes.Ticketer) consignmentTicketers;
+
+        // Indicates that the facet has been initialized.
+        bool initialized;
+
+        // Indicates that the facet is in the process of being initialized.
+        bool initializing;
 
     }
 

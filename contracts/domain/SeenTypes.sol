@@ -8,14 +8,14 @@ pragma solidity ^0.8.5;
  */
 contract SeenTypes {
 
-    // Endpoint will server dynamic metadata composed of ticket and ticketed item's info
-    string public constant ESCROW_TICKET_URI = "https://seen.haus/ticket/metadata/";
+    // Endpoint will serve dynamic metadata composed of ticket and ticketed item's info
+    string internal constant ESCROW_TICKET_URI = "https://seen.haus/ticket/metadata/";
 
-    bytes32 public constant ADMIN = keccak256("ADMIN");                   // Deployer and any other admins as needed
-    bytes32 public constant SELLER = keccak256("SELLER");                 // Whitelisted sellers amd Seen.Haus reps
-    bytes32 public constant MINTER = keccak256("MINTER");                 // Whitelisted artists and Seen.Haus reps
-    bytes32 public constant ESCROW_AGENT = keccak256("ESCROW_AGENT");     // Seen.Haus Physical Item Escrow Agent
-    bytes32 public constant MARKET_HANDLER = keccak256("MARKET_HANDLER"); // Market Handler contracts
+    bytes32 internal constant ADMIN = keccak256("ADMIN");                   // Deployer and any other admins as needed
+    bytes32 internal constant SELLER = keccak256("SELLER");                 // Whitelisted sellers amd Seen.Haus reps
+    bytes32 internal constant MINTER = keccak256("MINTER");                 // Whitelisted artists and Seen.Haus reps
+    bytes32 internal constant ESCROW_AGENT = keccak256("ESCROW_AGENT");     // Seen.Haus Physical Item Escrow Agent
+    bytes32 internal constant MARKET_HANDLER = keccak256("MARKET_HANDLER"); // Market Handler contracts
 
     enum Market {
         Primary,
