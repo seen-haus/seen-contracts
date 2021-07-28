@@ -5,18 +5,20 @@
 const Role = require("../domain/Role");
 const hre = require("hardhat");
 const Ticketer = require("../domain/Ticketer");
-const { getSelectors, InterfaceIds, FacetCutAction } = require('./libraries/diamond-utils.js')
+const { deployDiamond } = require('./util/deploy-diamond.js');
+const { InterfaceIds, getFacetAddCut } = require('./util/diamond-utils.js')
+const { cutMarketControllerFacet } = require('./util/cut-market-controller-facet.js');
 
 const ethers = hre.ethers;
 let contract, contracts = [];
 const divider = "-".repeat(80);
 
+// TODO: DISCUSS TO GET INITIAL SETTINGS FOR ALL THESE PARAMS
 function getConfig() {
 
     // Get the network we're deploying to
     const network = hre.network.name;
 
-    // TODO: DISCUSS TO GET INITIAL SETTINGS FOR ALL THESE PARAMS
     // Market configuration params
     const vipStakerAmount = "500";
     const feePercentage = "20";
@@ -70,66 +72,42 @@ async function main() {
     await accessController.deployed();
     deploymentComplete('AccessController', accessController.address, []);
 
-    // Diamond Loupe Facet
-    const DiamondLoupeFacet = await ethers.getContractFactory("DiamondLoupeFacet");
-    const dlf = await DiamondLoupeFacet.deploy();
-    await dlf.deployed();
-    const diamondLoupeSelectors = getSelectors(dlf);
-    const diamondLoupeCut = [dlf.address, FacetCutAction.Add, diamondLoupeSelectors];
-    deploymentComplete('DiamondLoupeFacet', dlf.address, []);
-
-    // Diamond Cut Facet
-    const DiamondCutFacet = await ethers.getContractFactory("DiamondCutFacet");
-    const dcf = await DiamondCutFacet.deploy();
-    await dcf.deployed();
-    const diamondCutSelectors = getSelectors(dcf);
-    const diamondCutCut = [dcf.address, FacetCutAction.Add, diamondCutSelectors];
-    deploymentComplete('DiamondCutFacet', dcf.address, []);
-
     // Deploy the MarketController Facet
     const MarketController = await ethers.getContractFactory("MarketController");
     const mcf = await MarketController.deploy();
-    const marketControllerSelectors = getSelectors(mcf).remove(['supportsInterface(bytes4)']);
-    const marketControllerCut = [mcf.address, FacetCutAction.Add, marketControllerSelectors];
     deploymentComplete('MarketController', mcf.address, []);
 
-    // Deploy Diamond
-    const Diamond = await ethers.getContractFactory('Diamond');
-    const diamond = await Diamond.deploy(
+    // Interfaces that will be supported at the Diamond address
+    const interfaces = [
+        InterfaceIds.DiamondLoupe,
+        InterfaceIds.DiamondCut,
+        InterfaceIds.ERC165,
+        InterfaceIds.IMarketController
+    ];
+
+    // Deploy the Diamond
+    [diamond, dlf, dcf, diamondArgs] = await deployDiamond(accessController, interfaces);
+
+    // Report completion of Diamond and its core facets
+    deploymentComplete('DiamondLoupeFacet', dlf.address, []);
+    deploymentComplete('DiamondCutFacet', dcf.address, []);
+    deploymentComplete('Diamond', diamond.address, diamondArgs);
+
+    // Prepare MarketController initialization arguments
+    const initArgs = [
         accessController.address,
-        [diamondLoupeCut, diamondCutCut],
-        [
-            InterfaceIds.DiamondLoupe,
-            InterfaceIds.DiamondCut,
-            InterfaceIds.ERC165,
-            InterfaceIds.IMarketController
-        ]
-    )
-    await diamond.deployed();
-    deploymentComplete('Diamond', diamond.address, []);
+        config.staking,
+        config.multisig,
+        config.vipStakerAmount,
+        config.feePercentage,
+        config.maxRoyaltyPercentage,
+        config.outBidPercentage,
+        config.defaultTicketerType
+    ];
 
-    // Encode MarketController initialization call
-    const initAbi = "function initialize(address _accessController, address payable _staking, address payable _multisig, uint256 _vipStakerAmount, uint16 _feePercentage, uint16 _maxRoyaltyPercentage, uint16 _outBidPercentage, uint8 _defaultTicketerType)";
-    const mci = new ethers.utils.Interface([initAbi]);
-    const callData = mci.encodeFunctionData(
-        "initialize",
-        [
-            accessController.address,
-            config.staking,
-            config.multisig,
-            config.vipStakerAmount,
-            config.feePercentage,
-            config.maxRoyaltyPercentage,
-            config.outBidPercentage,
-            config.defaultTicketerType
-        ]
-    );
-
-    // Cast Diamond to DiamondCutFacet
-    const cutFacetViaDiamond = await ethers.getContractAt('DiamondCutFacet', diamond.address);
-
-    // Cut MarketController facet, initializing
-    await cutFacetViaDiamond.diamondCut([marketControllerCut], mcf.address, callData);
+    // Cut the MarketController facet into the Diamond
+    await cutMarketControllerFacet(diamond, mcf, initArgs);
+    console.log(`✅ MarketController facet cut into Diamond.`)
 
     // Deploy the chosen LotsTicketer IEscrowTicketer implementation
     const LotsTicketer = await ethers.getContractFactory("LotsTicketer");

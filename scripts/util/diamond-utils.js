@@ -74,6 +74,21 @@ function findAddressPositionInFacets (facetAddress, facets) {
   }
 }
 
+function getFacetAddCut(facet, omitFunctions= []) {
+  let selectors = omitFunctions.length ? getSelectors(facet).remove(omitFunctions) : getSelectors(facet);
+  return [facet.address, FacetCutAction.Add, selectors];
+}
+
+function getFacetReplaceCut(facet, omitFunctions= []) {
+  let selectors = omitFunctions.length ? getSelectors(facet).remove(omitFunctions) : getSelectors(facet);
+  return [facet.address, FacetCutAction.Replace, selectors];
+}
+
+function getFacetRemoveCut(facet, omitFunctions= []) {
+  let selectors = omitFunctions.length ? getSelectors(facet).remove(omitFunctions) : getSelectors(facet);
+  return [facet.address, FacetCutAction.Remove, selectors];
+}
+
 exports.InterfaceIds = {
   DiamondLoupe: "0x48e2b093",
   DiamondCut: "0x1f931c1c",
@@ -81,9 +96,12 @@ exports.InterfaceIds = {
   IMarketController: "0xe5f2f941"
 };
 
-exports.getSelectors = getSelectors
-exports.getSelector = getSelector
-exports.FacetCutAction = FacetCutAction
-exports.remove = remove
-exports.removeSelectors = removeSelectors
-exports.findAddressPositionInFacets = findAddressPositionInFacets
+exports.getSelectors = getSelectors;
+exports.getSelector = getSelector;
+exports.FacetCutAction = FacetCutAction;
+exports.remove = remove;
+exports.removeSelectors = removeSelectors;
+exports.findAddressPositionInFacets = findAddressPositionInFacets;
+exports.getFacetAddCut = getFacetAddCut;
+exports.getFacetReplaceCut = getFacetReplaceCut;
+exports.getFacetRemoveCut = getFacetRemoveCut;

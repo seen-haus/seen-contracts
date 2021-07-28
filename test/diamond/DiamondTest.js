@@ -1,18 +1,10 @@
+const { assert } = require('chai');
 const hre = require("hardhat");
 const ethers = hre.ethers;
 
-const {
-  getSelectors,
-  InterfaceIds,
-  FacetCutAction,
-  removeSelectors,
-  findAddressPositionInFacets
-} = require('../../scripts/libraries/diamond-utils.js')
-
-const { deployDiamond } = require('../../scripts/deploy-diamond.js');
-const { assert } = require('chai');
+const { getSelectors, InterfaceIds, FacetCutAction, removeSelectors } = require('../../scripts/util/diamond-utils.js')
+const { deployDiamond } = require('../../scripts/util/deploy-diamond.js');
 const Facet = require("../../domain/Facet");
-
 
 describe('Diamond', async function () {
 
@@ -20,21 +12,33 @@ describe('Diamond', async function () {
   const gasLimit = 1600000;
 
   // Common vars
-  let diamondAddress, diamondLoupeAddress, diamondCutAddress;
+  let diamond, diamondLoupe, diamondCut;
   let loupeFacetViaDiamond, cutFacetViaDiamond;
   let Test1Facet, test1Facet, test1ViaDiamond, Test2Facet, test2Facet, test2ViaDiamond;
   let tx, receipt, addresses, address, selectors, interfaces, facets, facet, facetCuts, result, keepers;
 
   beforeEach(async function () {
 
+    // Deploy the AccessController
+    const AccessController = await ethers.getContractFactory("AccessController");
+    const accessController = await AccessController.deploy();
+    await accessController.deployed();
+
+    // Interfaces that will be supported at the Diamond address
+    interfaces = [
+      InterfaceIds.DiamondLoupe,
+      InterfaceIds.DiamondCut,
+      InterfaceIds.ERC165
+    ];
+
     // Deploy the Diamond
-    [diamondAddress, diamondLoupeAddress, diamondCutAddress] = await deployDiamond();
+    [diamond, diamondLoupe, diamondCut] = await deployDiamond(accessController, interfaces);
 
     // Cast Diamond to DiamondLoupeFacet
-    loupeFacetViaDiamond = await ethers.getContractAt('DiamondLoupeFacet', diamondAddress);
+    loupeFacetViaDiamond = await ethers.getContractAt('DiamondLoupeFacet', diamond.address);
 
     // Cast Diamond to DiamondCutFacet
-    cutFacetViaDiamond = await ethers.getContractAt('DiamondCutFacet', diamondAddress);
+    cutFacetViaDiamond = await ethers.getContractAt('DiamondCutFacet', diamond.address);
 
     // Get the facet addresses
     addresses = Object.assign([], await loupeFacetViaDiamond.facetAddresses());
@@ -113,10 +117,10 @@ describe('Diamond', async function () {
       it('facet addresses should be correct and in order', async () => {
 
         // DiamondLoupeFacet was first cut
-        assert.equal(addresses[0], diamondLoupeAddress);
+        assert.equal(addresses[0], diamondLoupe.address);
 
         // DiamondCutFacet was second cut
-        assert.equal(addresses[1], diamondCutAddress);
+        assert.equal(addresses[1], diamondCut.address);
 
       });
 
@@ -128,7 +132,7 @@ describe('Diamond', async function () {
 
         // Test cutFacetViaDiamond selectors
         selectors = getSelectors(cutFacetViaDiamond);
-        result = await loupeFacetViaDiamond.facetFunctionSelectors(diamondCutAddress);
+        result = await loupeFacetViaDiamond.facetFunctionSelectors(diamondCut.address);
         assert.sameMembers(result, selectors);
 
       });
@@ -137,7 +141,7 @@ describe('Diamond', async function () {
 
         // Test DiamondLoupeFacet selectors
         selectors = getSelectors(loupeFacetViaDiamond);
-        result = await loupeFacetViaDiamond.facetFunctionSelectors(diamondLoupeAddress);
+        result = await loupeFacetViaDiamond.facetFunctionSelectors(diamondLoupe.address);
         assert.sameMembers(result, selectors);
 
       });
@@ -193,10 +197,10 @@ describe('Diamond', async function () {
       addresses.push(test2Facet.address);
 
       // Cast Diamond to Test1Facet
-      test1ViaDiamond = await ethers.getContractAt('Test1Facet', diamondAddress);
+      test1ViaDiamond = await ethers.getContractAt('Test1Facet', diamond.address);
 
       // Cast Diamond to Test2Facet
-      test2ViaDiamond = await ethers.getContractAt('Test2Facet', diamondAddress);
+      test2ViaDiamond = await ethers.getContractAt('Test2Facet', diamond.address);
 
     });
 
@@ -474,7 +478,7 @@ describe('Diamond', async function () {
           // Check that the remaining facet address is correct
           assert.equal(
               facets[0].facetAddress,
-              diamondLoupeAddress,
+              diamondLoupe.address,
               "Incorrect facet address"
           );
 

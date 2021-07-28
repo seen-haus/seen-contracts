@@ -5,6 +5,9 @@ const Role = require("../../domain/Role");
 const Token = require("../../domain/Token");
 const Market = require("../../domain/Market");
 const Ticketer = require("../../domain/Ticketer");
+const { InterfaceIds } = require('../../scripts/util/diamond-utils.js')
+const { deployDiamond } = require('../../scripts/util/deploy-diamond.js');
+const { cutMarketControllerFacet } = require('../../scripts/util/cut-market-controller-facet.js');
 
 describe("SeenHausNFT", function() {
 
@@ -47,9 +50,23 @@ describe("SeenHausNFT", function() {
         accessController = await AccessController.deploy();
         await accessController.deployed();
 
-        // Deploy the MarketController contract
+        // Deploy the MarketController Facet
         MarketController = await ethers.getContractFactory("MarketController");
-        marketController = await MarketController.deploy(
+        const mcf = await MarketController.deploy();
+
+        // Interfaces that will be supported at the Diamond address
+        interfaces = [
+            InterfaceIds.DiamondLoupe,
+            InterfaceIds.DiamondCut,
+            InterfaceIds.ERC165,
+            InterfaceIds.IMarketController
+        ];
+
+        // Deploy the Diamond
+        [diamond, diamondLoupe, diamondCut] = await deployDiamond(accessController, interfaces);
+
+        // Prepare MarketController initialization arguments
+        const initArgs = [
             accessController.address,
             staking.address,
             multisig.address,
@@ -58,8 +75,13 @@ describe("SeenHausNFT", function() {
             maxRoyaltyPercentage,
             outBidPercentage,
             defaultTicketerType
-        );
-        await marketController.deployed();
+        ];
+
+        // Cut the MarketController facet into the Diamond
+        await cutMarketControllerFacet(diamond, mcf, initArgs);
+
+        // Cast Diamond to MarketController
+        marketController = await ethers.getContractAt('MarketController', diamond.address);
 
         // Deploy the SeenHausNFT contract
         SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
