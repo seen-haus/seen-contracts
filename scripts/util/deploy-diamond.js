@@ -2,15 +2,26 @@
 /* eslint prefer-const: "off" */
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { getFacetAddCut } = require('./diamond-utils.js')
+const { getFacetAddCut, InterfaceIds } = require('./diamond-utils.js')
 
 /**
  * Deploy the Diamond
- * @param accessController - the
- * @param interfaces
+ * @param accessController - the AccessController
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployDiamond (accessController, interfaces) {
+async function deployDiamond () {
+
+  // Core interfaces that will be supported at the Diamond address
+  const interfaces = [
+    InterfaceIds.DiamondLoupe,
+    InterfaceIds.DiamondCut,
+    InterfaceIds.ERC165
+  ];
+
+  // Deploy the AccessController contract
+  const AccessController = await ethers.getContractFactory("AccessController");
+  const accessController = await AccessController.deploy();
+  await accessController.deployed();
 
   // Diamond Loupe Facet
   const DiamondLoupeFacet = await ethers.getContractFactory("DiamondLoupeFacet");
@@ -36,7 +47,7 @@ async function deployDiamond (accessController, interfaces) {
   await diamond.deployed()
   //console.log('Diamond deployed:', diamond.address)
 
-  return [diamond, dlf, dcf, diamondArgs];
+  return [diamond, dlf, dcf, accessController, diamondArgs];
 
 }
 

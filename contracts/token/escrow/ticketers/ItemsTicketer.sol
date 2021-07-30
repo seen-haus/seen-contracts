@@ -4,8 +4,8 @@ pragma solidity ^0.8.5;
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "../../../market/MarketClient.sol";
 import "../../../util/StringUtils.sol";
-import "../../nft/ISeenHausNFT.sol";
-import "../IEscrowTicketer.sol";
+import "../../../interfaces/ISeenHausNFT.sol";
+import "../../../interfaces/IEscrowTicketer.sol";
 
 /**
  * @title ItemsTicketer

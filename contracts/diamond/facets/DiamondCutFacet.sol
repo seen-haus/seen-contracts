@@ -11,9 +11,10 @@ pragma solidity ^0.8.5;
  * @author Nick Mudge
  * @author Cliff Hall
  */
-import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
-import { LibDiamond } from "../libraries/LibDiamond.sol";
+import { IDiamondCut } from "../../interfaces/IDiamondCut.sol";
 import { SeenTypes } from"../../domain/SeenTypes.sol";
+import {DiamondLib} from "../DiamondLib.sol";
+import {FacetLib} from "../FacetLib.sol";
 
 contract DiamondCutFacet is SeenTypes, IDiamondCut {
 
@@ -32,7 +33,7 @@ contract DiamondCutFacet is SeenTypes, IDiamondCut {
     external override
     {
         // Get the diamond storage slot
-        LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
+        DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
 
         // Ensure the caller has the ADMIN role
         ds.accessController.hasRole(ADMIN, msg.sender);
@@ -51,7 +52,7 @@ contract DiamondCutFacet is SeenTypes, IDiamondCut {
         
         // Cut the facets
         for (uint256 facetIndex; facetIndex < _facetCuts.length; facetIndex++) {
-            (selectorCount, selectorSlot) = LibDiamond.addReplaceRemoveFacetSelectors(
+            (selectorCount, selectorSlot) = FacetLib.addReplaceRemoveFacetSelectors(
                 selectorCount,
                 selectorSlot,
                 _facetCuts[facetIndex].facetAddress,
@@ -74,6 +75,7 @@ contract DiamondCutFacet is SeenTypes, IDiamondCut {
         emit DiamondCut(_facetCuts, _init, _calldata);
 
         // Initialize the facet
-        LibDiamond.initializeDiamondCut(_init, _calldata);
+        FacetLib.initializeDiamondCut(_init, _calldata);
+
     }
 }

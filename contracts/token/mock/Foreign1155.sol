@@ -2,7 +2,7 @@
 pragma solidity ^0.8.5;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "../royalty/IERC2981.sol";
+import "../../interfaces/IERC2981.sol";
 import "../../domain/SeenTypes.sol";
 
 /**

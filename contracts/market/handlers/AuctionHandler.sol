@@ -3,8 +3,8 @@ pragma solidity ^0.8.5;
 
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "../../token/escrow/IEscrowTicketer.sol";
-import "../../token/nft/ISeenHausNFT.sol";
+import "../../interfaces/IEscrowTicketer.sol";
+import "../../interfaces/ISeenHausNFT.sol";
 import "../MarketClient.sol";
 
 

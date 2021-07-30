@@ -19,20 +19,8 @@ describe('Diamond', async function () {
 
   beforeEach(async function () {
 
-    // Deploy the AccessController
-    const AccessController = await ethers.getContractFactory("AccessController");
-    const accessController = await AccessController.deploy();
-    await accessController.deployed();
-
-    // Interfaces that will be supported at the Diamond address
-    interfaces = [
-      InterfaceIds.DiamondLoupe,
-      InterfaceIds.DiamondCut,
-      InterfaceIds.ERC165
-    ];
-
     // Deploy the Diamond
-    [diamond, diamondLoupe, diamondCut] = await deployDiamond(accessController, interfaces);
+    [diamond, diamondLoupe, diamondCut, accessController] = await deployDiamond();
 
     // Cast Diamond to DiamondLoupeFacet
     loupeFacetViaDiamond = await ethers.getContractAt('DiamondLoupeFacet', diamond.address);

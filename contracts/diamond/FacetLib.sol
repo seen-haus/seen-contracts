@@ -2,7 +2,9 @@
 pragma solidity ^0.8.5;
 
 /**
- * @title LibDiamond
+ * @title LibFacet
+ *
+ * Facet management functions
  *
  * @notice Diamond library based on Nick Mudge's gas-optimized diamond-2 reference.
  * Reference Implementation  : https://github.com/mudgen/diamond-2-hardhat
@@ -11,46 +13,21 @@ pragma solidity ^0.8.5;
  * @author Nick Mudge
  * @author Cliff Hall
  */
+
+// Libraries
+import { DiamondLib } from "./DiamondLib.sol";
+
+// Interfaces
 import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
 import { IAccessControl } from "../interfaces/IAccessControl.sol";
 
-library LibDiamond {
+library FacetLib {
 
     event DiamondCut(IDiamondCut.FacetCut[] _diamondCut, address _init, bytes _calldata);
 
-    bytes32 constant DIAMOND_STORAGE_POSITION = keccak256("diamond.standard.diamond.storage");
     bytes32 constant CLEAR_ADDRESS_MASK = bytes32(uint256(0xffffffffffffffffffffffff));
     bytes32 constant CLEAR_SELECTOR_MASK = bytes32(uint256(0xffffffff << 224));
     bytes32 constant ADMIN = keccak256("ADMIN"); // Seen Haus contract administration role
-
-    struct DiamondStorage {
-
-        // maps function selectors to the facets that execute the functions.
-        // and maps the selectors to their position in the selectorSlots array.
-        // func selector => address facet, selector position
-        mapping(bytes4 => bytes32) facets;
-
-        // array of slots of function selectors.
-        // each slot holds 8 function selectors.
-        mapping(uint256 => bytes32) selectorSlots;
-
-        // The number of function selectors in selectorSlots
-        uint16 selectorCount;
-
-        // Used to query if a contract implements an interface.
-        // Used to implement ERC-165.
-        mapping(bytes4 => bool) supportedInterfaces;
-
-        // notice the Seen.Haus AccessController
-        IAccessControl accessController;
-    }
-
-    function diamondStorage() internal pure returns (DiamondStorage storage ds) {
-        bytes32 position = DIAMOND_STORAGE_POSITION;
-        assembly {
-            ds.slot := position
-        }
-    }
 
     /**
      * @notice Cut facets of the Diamond
@@ -75,7 +52,7 @@ library LibDiamond {
     ) internal {
 
         // Get the diamond storage slot
-        LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
+        DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
 
         // Ensure the caller has the ADMIN role
         require(ds.accessController.hasRole(ADMIN, msg.sender), "Caller must have ADMIN role");
@@ -97,7 +74,7 @@ library LibDiamond {
 
         // Cut the facets
         for (uint256 facetIndex; facetIndex < _facetCuts.length; facetIndex++) {
-            (selectorCount, selectorSlot) = LibDiamond.addReplaceRemoveFacetSelectors(
+            (selectorCount, selectorSlot) = addReplaceRemoveFacetSelectors(
                 selectorCount,
                 selectorSlot,
                 _facetCuts[facetIndex].facetAddress,
@@ -124,7 +101,7 @@ library LibDiamond {
         emit DiamondCut(_facetCuts, _init, _calldata);
 
         // Initialize the facet
-        LibDiamond.initializeDiamondCut(_init, _calldata);
+        initializeDiamondCut(_init, _calldata);
     }
 
     /**
@@ -153,11 +130,10 @@ library LibDiamond {
         bytes4[] memory _selectors
     ) internal returns (uint256, bytes32) {
 
-        // Make sure there are some selectors to work wiht
-        DiamondStorage storage ds = diamondStorage();
+        // Make sure there are some selectors to work with
+        DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
         require(_selectors.length > 0, "LibDiamondCut: No selectors in facet to cut");
 
-        //
         // Add a selector
         if (_action == IDiamondCut.FacetCutAction.Add) {
 

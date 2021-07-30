@@ -2,16 +2,19 @@
 pragma solidity ^0.8.5;
 
 /**
- * @title LibMarketController
+ * @title MarketControllerBase
+ *
+ * @dev Provides access to the the MarketController Storage slot for MarketController facets
  *
  * @author Cliff Hall
  */
-import "../interfaces/IAccessControl.sol";
+import "../../interfaces/IAccessControl.sol";
 import "../../domain/SeenTypes.sol";
 
-library LibMarketController {
+library MarketControllerLib {
 
     bytes32 constant MARKET_CONTROLLER_STORAGE_POSITION = keccak256("haus.seen.market.controller.storage");
+
     struct MarketControllerStorage {
 
         // the Seen.Haus AccessController
@@ -59,11 +62,11 @@ library LibMarketController {
         // consignment id => ticketer type
         mapping(uint256 => SeenTypes.Ticketer) consignmentTicketers;
 
-        // Indicates that the facet has been initialized.
-        bool initialized;
+        // MarketConfigFacet initialization state
+        bool configFacetInitialized;
 
-        // Indicates that the facet is in the process of being initialized.
-        bool initializing;
+        // MarketClerkFacet initialization state
+        bool clerkFacetInitialized;
 
     }
 

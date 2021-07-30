@@ -13,13 +13,14 @@ pragma solidity ^0.8.5;
  */
 
 // Libraries
-import { LibDiamond } from "./libraries/LibDiamond.sol";
+import { DiamondLib } from "./DiamondLib.sol";
+import { FacetLib } from "./FacetLib.sol";
 
 // Interfaces
-import { IAccessControl } from "./interfaces/IAccessControl.sol";
-import { IDiamondLoupe } from "./interfaces/IDiamondLoupe.sol";
-import { IDiamondCut } from "./interfaces/IDiamondCut.sol";
-import { IERC165 } from "./interfaces/IERC165.sol";
+import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import { IAccessControl } from "../interfaces/IAccessControl.sol";
+import { IDiamondLoupe } from "../interfaces/IDiamondLoupe.sol";
+import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
 
 contract Diamond {
 
@@ -41,18 +42,19 @@ contract Diamond {
     ) payable {
 
         // Get the DiamondStorage struct
-        LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
+        DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
 
         // Set the AccessController instance
         ds.accessController = _accessController;
 
         // Cut the diamond with the given facets
-        LibDiamond.diamondCut(_facetCuts, address(0), new bytes(0));
+        FacetLib.diamondCut(_facetCuts, address(0), new bytes(0));
 
         // Add supported interfaces
         if (_interfaceIds.length > 0) {
             for (uint8 x = 0; x < _interfaceIds.length; x++) {
-                ds.supportedInterfaces[_interfaceIds[x]] = true;
+                //ds.supportedInterfaces[_interfaceIds[x]] = true;
+                DiamondLib.addSupportedInterface(_interfaceIds[x]);
             }
         }
 
@@ -61,16 +63,13 @@ contract Diamond {
     /**
      * @notice Onboard implementation of ERC-165 interface detection standard.
      *
-     * Allows proper operation even with optional omission of DiamondLoupeFacet
-     *
      * @param _interfaceId - the sighash of the given interface
      */
     function supportsInterface(bytes4 _interfaceId) external view returns (bool) {
-        // Get the DiamondStorage struct
-        LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
 
-        // Return the value
-        return ds.supportedInterfaces[_interfaceId] || false;
+        // Get the DiamondStorage struct
+        return DiamondLib.supportsInterface(_interfaceId) ;
+
     }
 
     /**
@@ -82,7 +81,7 @@ contract Diamond {
     fallback() external payable {
 
         // Get the DiamondStorage struct
-        LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
+        DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
 
         // Make sure the function exists
         address facet = address(bytes20(ds.facets[msg.sig]));

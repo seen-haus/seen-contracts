@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.5;
 
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "../../market/MarketClient.sol";
-import "../royalty/IERC2981.sol";
-import "./ISeenHausNFT.sol";
+import "../../interfaces/IERC2981.sol";
+import "../../interfaces/ISeenHausNFT.sol";
 
 /**
  * @title SeenHausNFT

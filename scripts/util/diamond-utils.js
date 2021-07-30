@@ -93,7 +93,7 @@ exports.InterfaceIds = {
   DiamondLoupe: "0x48e2b093",
   DiamondCut: "0x1f931c1c",
   ERC165: "0x01ffc9a7",
-  IMarketController: "0xe5f2f941"
+  IMarketController: "0xe5f2f941" // TODO find out if this interface has changed
 };
 
 exports.getSelectors = getSelectors;

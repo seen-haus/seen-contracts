@@ -7,7 +7,7 @@ const hre = require("hardhat");
 const Ticketer = require("../domain/Ticketer");
 const { deployDiamond } = require('./util/deploy-diamond.js');
 const { InterfaceIds, getFacetAddCut } = require('./util/diamond-utils.js')
-const { cutMarketControllerFacet } = require('./util/cut-market-controller-facet.js');
+const { deployMarketControllerFacets } = require('./util/deploy-market-controller-facets.js');
 
 const ethers = hre.ethers;
 let contract, contracts = [];
@@ -66,29 +66,11 @@ async function main() {
     const deployer = accounts[0];
     console.log("🔱 Deployer account: ", deployer ? deployer : "not found" && process.exit());
 
-    // Deploy the AccessController contract
-    const AccessController = await ethers.getContractFactory("AccessController");
-    const accessController = await AccessController.deploy();
-    await accessController.deployed();
-    deploymentComplete('AccessController', accessController.address, []);
-
-    // Deploy the MarketController Facet
-    const MarketController = await ethers.getContractFactory("MarketController");
-    const mcf = await MarketController.deploy();
-    deploymentComplete('MarketController', mcf.address, []);
-
-    // Interfaces that will be supported at the Diamond address
-    const interfaces = [
-        InterfaceIds.DiamondLoupe,
-        InterfaceIds.DiamondCut,
-        InterfaceIds.ERC165,
-        InterfaceIds.IMarketController
-    ];
-
     // Deploy the Diamond
-    [diamond, dlf, dcf, diamondArgs] = await deployDiamond(accessController, interfaces);
+    [diamond, dlf, dcf, accessController, diamondArgs] = await deployDiamond();
 
     // Report completion of Diamond and its core facets
+    deploymentComplete('AccessController', accessController.address, []);
     deploymentComplete('DiamondLoupeFacet', dlf.address, []);
     deploymentComplete('DiamondCutFacet', dcf.address, []);
     deploymentComplete('Diamond', diamond.address, diamondArgs);
@@ -106,8 +88,10 @@ async function main() {
     ];
 
     // Cut the MarketController facet into the Diamond
-    await cutMarketControllerFacet(diamond, mcf, initArgs);
-    console.log(`✅ MarketController facet cut into Diamond.`)
+    [marketConfigFacet, marketClerkFacet] = await deployMarketControllerFacets(diamond, initArgs);
+    deploymentComplete('MarketConfigFacet', marketConfigFacet.address, []);
+    deploymentComplete('MarketClerkFacet', marketClerkFacet.address, []);
+    console.log(`✅ MarketController facets cut into Diamond.`)
 
     // Deploy the chosen LotsTicketer IEscrowTicketer implementation
     const LotsTicketer = await ethers.getContractFactory("LotsTicketer");
@@ -170,7 +154,7 @@ async function main() {
     ]);
 
     // Cast Diamond to MarketController
-    const marketControllertViaDiamond = await ethers.getContractAt('MarketController', diamond.address);
+    const marketControllertViaDiamond = await ethers.getContractAt('IMarketController', diamond.address);
 
     // Add Escrow Ticketer and NFT addresses to MarketController
     await marketControllertViaDiamond.setNft(seenHausNFT.address);

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.5;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "../interfaces/IMarketController.sol";
+import "../interfaces/IERC2981.sol";
 import "../access/AccessClient.sol";
-import "./IMarketController.sol";
-import "../token/royalty/IERC2981.sol";
 
 /**
  * @title MarketClient
