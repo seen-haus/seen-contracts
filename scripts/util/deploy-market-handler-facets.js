@@ -13,15 +13,25 @@ const { getFacetAddCut } = require('./diamond-utils.js');
  */
 async function deployMarketHandlerFacets(diamond) {
 
-    // Deploy the AuctionHandlerFacet contract
-    AuctionHandlerFacet = await ethers.getContractFactory("AuctionHandlerFacet");
-    const auctionHandlerFacet = await AuctionHandlerFacet.deploy();
-    await auctionHandlerFacet.deployed();
+    // Deploy the AuctionBuilderFacet contract
+    const AuctionBuilderFacet = await ethers.getContractFactory("AuctionBuilderFacet");
+    const auctionBuilderFacet = await AuctionBuilderFacet.deploy();
+    await auctionBuilderFacet.deployed();
 
-    // Deploy the SaleHandlerFacet contract
-    SaleHandlerFacet = await ethers.getContractFactory("SaleHandlerFacet");
-    const saleHandlerFacet = await SaleHandlerFacet.deploy();
-    await saleHandlerFacet.deployed();
+    // Deploy the AuctionRunnerFacet contract
+    const AuctionRunnerFacet = await ethers.getContractFactory("AuctionRunnerFacet");
+    const auctionRunnerFacet = await AuctionRunnerFacet.deploy();
+    await auctionRunnerFacet.deployed();
+
+    // Deploy the SaleBuilderFacet contract
+    const SaleBuilderFacet = await ethers.getContractFactory("SaleBuilderFacet");
+    const saleBuilderFacet = await SaleBuilderFacet.deploy();
+    await saleBuilderFacet.deployed();
+
+    // Deploy the SaleRunnerFacet contract
+    const SaleRunnerFacet = await ethers.getContractFactory("SaleRunnerFacet");
+    const saleRunnerFacet = await SaleRunnerFacet.deploy();
+    await saleBuilderFacet.deployed();
 
     // Cast Diamond to DiamondCutFacet
     const cutFacet = await ethers.getContractAt('DiamondCutFacet', diamond.address);
@@ -31,15 +41,24 @@ async function deployMarketHandlerFacets(diamond) {
     let initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
     let callData = initInterface.encodeFunctionData("initialize");
 
-    // Cut AuctionHandler facet, initializing
-    const auctionHandlerCut = getFacetAddCut(auctionHandlerFacet, [initFunction]);
-    await cutFacet.diamondCut([auctionHandlerCut], auctionHandlerFacet.address, callData);
+    // Cut AuctionBuilder facet facet, initializing
+    const auctionBuilderCut = getFacetAddCut(auctionBuilderFacet, [initFunction]);
+    await cutFacet.diamondCut([auctionBuilderCut], auctionBuilderFacet.address, callData);
 
-    // Cut SaleHandler facet, initializing
-    const saleHandlerCut = getFacetAddCut(saleHandlerFacet, [initFunction]);
-    await cutFacet.diamondCut([saleHandlerCut], saleHandlerFacet.address, callData);
+    // Cut AuctionRunner facet facet, initializing
+    const auctionRunnerCut = getFacetAddCut(auctionRunnerFacet, [initFunction]);
+    await cutFacet.diamondCut([auctionRunnerCut], auctionRunnerFacet.address, callData);
 
-    return [auctionHandlerFacet, saleHandlerFacet];
+    // Cut SaleBuilder facet, initializing
+    const saleBuilderCut = getFacetAddCut(saleBuilderFacet, [initFunction]);
+    await cutFacet.diamondCut([saleBuilderCut], saleBuilderFacet.address, callData);
+
+    // Cut SaleRunner facet, initializing
+    const saleRunnerCut = getFacetAddCut(saleRunnerFacet, [initFunction]);
+    await cutFacet.diamondCut([saleRunnerCut], saleRunnerFacet.address, callData);
+
+    return [auctionBuilderFacet, auctionRunnerFacet, saleBuilderFacet, saleRunnerFacet];
+
 }
 
 if (require.main === module) {

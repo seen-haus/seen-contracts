@@ -10,7 +10,6 @@ const State = require("../../domain/State");
 const Outcome = require("../../domain/Outcome");
 const Audience = require("../../domain/Audience");
 const Ticketer = require("../../domain/Ticketer");
-const { InterfaceIds } = require('../../scripts/util/diamond-utils.js')
 const { deployDiamond } = require('../../scripts/util/deploy-diamond.js');
 const { deployMarketControllerFacets } = require('../../scripts/util/deploy-market-controller-facets.js');
 const { deployMarketHandlerFacets } = require('../../scripts/util/deploy-market-handler-facets.js');
@@ -93,7 +92,7 @@ describe("AuctionHandler", function() {
         marketController = await ethers.getContractAt('IMarketController', diamond.address);
 
         // Cut the Market Handler facets into the Diamond
-        [auctionHandlerFacet, saleHandlerFacet] = await deployMarketHandlerFacets(diamond);
+        [auctionBuilderFacet, auctionRunnerFacet, saleBuilderFacet, saleRunnerFacet] = await deployMarketHandlerFacets(diamond);
 
         // Cast Diamond to IAuctionHandler
         auctionHandler = await ethers.getContractAt('IAuctionHandler', diamond.address);
@@ -374,32 +373,7 @@ describe("AuctionHandler", function() {
 
                 });
 
-                it("pull() should require caller has ADMIN role", async function () {
-
-                    // Fast-forward to end of auction, no bids...
-                    await time.increaseTo(
-                        ethers.BigNumber
-                            .from(start)
-                            .add(duration)
-                            .add(
-                                "1" // 1s after end of auction
-                            )
-                            .toString()
-                    );
-
-                    // non-ADMIN attempt
-                    await expect(
-                        auctionHandler.connect(associate).pullAuction(consignmentId)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
-
-                    // ADMIN attempt
-                    await expect (
-                        auctionHandler.connect(admin).pullAuction(consignmentId)
-                    ).to.emit(auctionHandler,"AuctionEnded");
-
-                });
-
-                it("cancel() should require caller has ADMIN role", async function () {
+                it("cancelAuction() should require caller has ADMIN role", async function () {
 
                     // Wait until auction starts and bid
                     await time.increaseTo(start);
@@ -726,7 +700,7 @@ describe("AuctionHandler", function() {
 
                 });
 
-                context("close()", async function () {
+                context("closeAuction()", async function () {
 
                     beforeEach(async function () {
 
@@ -789,39 +763,7 @@ describe("AuctionHandler", function() {
 
                 });
 
-                context("pull()", async function () {
-
-                    beforeEach(async function () {
-
-                        // Fast-forward to end of auction, no bids...
-                        await time.increaseTo(
-                            ethers.BigNumber
-                                .from(start)
-                                .add(duration)
-                                .add(
-                                    "1" // 1s after end of auction
-                                )
-                                .toString()
-                        );
-
-                    });
-
-                    it("should emit an AuctionEnded event", async function () {
-
-                        // Admin pulls auction with no bids
-                        await expect(
-                            auctionHandler.connect(admin).pullAuction(consignmentId)
-                        ).to.emit(auctionHandler, "AuctionEnded")
-                            .withArgs(
-                                consignmentId,
-                                Outcome.PULLED
-                            );
-
-                    });
-
-                });
-
-                context("cancel()", async function () {
+                context("cancelAuction()", async function () {
 
                     beforeEach(async function () {
 
@@ -1264,26 +1206,6 @@ describe("AuctionHandler", function() {
 
                     });
 
-                    it("should revert if auction timer has elapsed", async function () {
-
-                        // Fast-forward past end of auction...
-                        await time.increaseTo(
-                            ethers.BigNumber
-                                .from(start)
-                                .add(duration)
-                                .add(
-                                    "1" // 1s after end of auction
-                                )
-                                .toString()
-                        );
-
-                        // Try to bid after auction has ended
-                        await expect(
-                            auctionHandler.connect(bidder).bid(consignmentId, {value: reserve})
-                        ).to.be.revertedWith("Auction timer has elapsed");
-
-                    });
-
                     it("should revert if auction start time hasn't arrived", async function () {
 
                         // Try to bid before auction has started
@@ -1362,7 +1284,7 @@ describe("AuctionHandler", function() {
 
                 });
 
-                context("close()", async function () {
+                context("closeAuction()", async function () {
 
                     beforeEach(async function () {
 
@@ -1428,93 +1350,7 @@ describe("AuctionHandler", function() {
 
                 });
 
-                context("pull()", async function () {
-
-                    it("should revert if consignment doesn't exist", async function () {
-
-                        // get next consignment id
-                        consignmentId = await marketController.getNextConsignment();
-
-                        // ADMIN attempts to pull nonexistent auction
-                        await expect(
-                            auctionHandler.connect(admin).pullAuction(consignmentId)
-                        ).to.be.revertedWith("Consignment does not exist");
-
-                    });
-
-                    it("should revert if auction doesn't exist", async function () {
-
-                        // Seller creates digital token
-                        consignmentId = await marketController.getNextConsignment();
-                        tokenId = await seenHausNFT.getNextToken();
-                        await seenHausNFT.connect(seller).mintDigital(supply, seller.address, tokenURI, royaltyPercentage);
-
-                        // ADMIN attempts to set cancel nonexistent auction
-                        await expect(
-                            auctionHandler.connect(admin).cancelAuction(consignmentId)
-                        ).to.be.revertedWith("Auction does not exist");
-
-                    });
-
-                    it("should revert if end time not yet reached", async function () {
-
-                        // ADMIN attempts to pull auction whose timer has not elapsed
-                        await expect(
-                            auctionHandler.connect(admin).pullAuction(consignmentId)
-                        ).to.be.revertedWith("Auction end time not yet reached");
-
-                    });
-
-                    it("should revert if auction has already been settled", async function () {
-
-                        // Fast-forward to end of auction, no bids...
-                        await time.increaseTo(
-                            ethers.BigNumber
-                                .from(start)
-                                .add(duration)
-                                .add(
-                                    "1" // 1s after end of auction
-                                )
-                                .toString()
-                        );
-
-                        // Pull the auction
-                        auctionHandler.connect(admin).pullAuction(consignmentId)
-
-                        // ADMIN attempts to pull auction that has already been settled
-                        await expect(
-                            auctionHandler.connect(admin).pullAuction(consignmentId)
-                        ).to.be.revertedWith("Auction has already been settled");
-
-                    });
-
-                    it("should revert if bids have been placed", async function () {
-
-                        // Fast-forward to auction start and bid
-                        await time.increaseTo(start);
-                        await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve});
-
-                        // Fast-forward to end of auction
-                        await time.increaseTo(
-                            ethers.BigNumber
-                                .from(start)
-                                .add(duration)
-                                .add(
-                                    "1" // 1s after end of auction
-                                )
-                                .toString()
-                        );
-
-                        // ADMIN attempts to pull auction where bids have been placed
-                        await expect(
-                            auctionHandler.connect(admin).pullAuction(consignmentId)
-                        ).to.be.revertedWith("Bids have been placed");
-
-                    });
-
-                });
-
-                context("cancel()", async function () {
+                context("cancelAuction()", async function () {
 
                     it("should revert if consignment doesn't exist", async function () {
 
@@ -1539,26 +1375,6 @@ describe("AuctionHandler", function() {
                         await expect(
                             auctionHandler.connect(admin).cancelAuction(consignmentId)
                         ).to.be.revertedWith("Auction does not exist");
-
-                    });
-
-                    it("should revert if auction timer has elapsed", async function () {
-
-                        // Fast-forward to end of auction, no bids
-                        await time.increaseTo(
-                            ethers.BigNumber
-                                .from(start)
-                                .add(duration)
-                                .add(
-                                    "1" // 1s after end of auction
-                                )
-                                .toString()
-                        );
-
-                        // ADMIN attempts to set cancel an auction whose timer has elapsed
-                        await expect(
-                            auctionHandler.connect(admin).cancelAuction(consignmentId)
-                        ).to.be.revertedWith("Auction timer has elapsed");
 
                     });
 
@@ -1855,7 +1671,7 @@ describe("AuctionHandler", function() {
 
                 });
 
-                context("close()", async function () {
+                context("closeAuction()", async function () {
 
                     beforeEach(async function () {
 
@@ -1939,56 +1755,7 @@ describe("AuctionHandler", function() {
 
                 });
 
-                context("pull()", async function () {
-
-                    beforeEach(async function () {
-
-                        // Fast-forward to end of auction, no bids...
-                        await time.increaseTo(
-                            ethers.BigNumber
-                                .from(start)
-                                .add(duration)
-                                .add(
-                                    "1" // 1s after end of auction
-                                )
-                                .toString()
-                        );
-
-                    });
-
-                    it("should transfer consigned balance of token to seller if digital", async function () {
-
-                        // Admin pulls auction with no bids
-                        await auctionHandler.connect(admin).pullAuction(consignmentId);
-
-                        // Get contract's new balance of token
-                        newBalance = await marketController.getSupply(tokenId);
-                        expect(contractBalance.sub(supply).eq(newBalance));
-
-                        // Get seller's new balance of token
-                        sellerBalance = await seenHausNFT.balanceOf(seller.address, tokenId);
-                        expect(buyerBalance.eq(contractBalance));
-
-                    });
-
-                    it("should transfer consigned balance of token to seller if physical", async function () {
-
-                        // Admin pulls auction with no bids
-                        await auctionHandler.connect(admin).pullAuction(physicalConsignmentId);
-
-                        // Get contract's new balance of token
-                        newBalance = await marketController.getSupply(tokenId);
-                        expect(contractBalance.sub(supply).eq(newBalance));
-
-                        // Get seller's new balance of token
-                        sellerBalance = await seenHausNFT.balanceOf(seller.address, physicalTokenId);
-                        expect(buyerBalance.eq(contractBalance));
-
-                    });
-
-                });
-
-                context("cancel()", async function () {
+                context("cancelAuction()", async function () {
 
                     beforeEach(async function () {
 

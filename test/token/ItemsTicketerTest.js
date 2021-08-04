@@ -4,7 +4,6 @@ const { expect } = require("chai");
 const Role = require("../../domain/Role");
 const EscrowTicket = require("../../domain/EscrowTicket");
 const Ticketer = require("../../domain/Ticketer");
-const { InterfaceIds } = require('../../scripts/util/diamond-utils.js')
 const { deployDiamond } = require('../../scripts/util/deploy-diamond.js');
 const { deployMarketControllerFacets } = require('../../scripts/util/deploy-market-controller-facets.js');
 

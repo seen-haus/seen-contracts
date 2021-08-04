@@ -27,7 +27,6 @@ contract SeenTypes {
     enum Outcome {
         Pending,
         Closed,
-        Pulled,
         Canceled
     }
 

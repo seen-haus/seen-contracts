@@ -31,12 +31,17 @@ library MarketHandlerLib {
         // @dev map a consignment id to an auction
         mapping(uint256 => SeenTypes.Auction) auctions;
 
-        // AuctionHandlerFacet initialization state
-        bool auctionHandlerFacetInitialized;
+        // AuctionBuilderFacet initialization state
+        bool auctionBuilderFacetInitialized;
 
-        // SaleHandlerFacet initialization state
-        bool saleHandlerFacetInitialized;
+        // AuctionRunnerFacet initialization state
+        bool auctionRunnerFacetInitialized;
 
+        // SaleBuilderFacet initialization state
+        bool saleBuilderFacetInitialized;
+
+        // SaleRunnerFacet initialization state
+        bool saleRunnerFacetInitialized;
 
     }
 

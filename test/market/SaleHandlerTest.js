@@ -10,7 +10,6 @@ const Outcome = require("../../domain/Outcome");
 const Audience = require("../../domain/Audience");
 const Ticketer = require("../../domain/Ticketer");
 const Consignment = require("../../domain/Consignment");
-const { InterfaceIds } = require('../../scripts/util/diamond-utils.js')
 const { deployDiamond } = require('../../scripts/util/deploy-diamond.js');
 const { deployMarketControllerFacets } = require('../../scripts/util/deploy-market-controller-facets.js');
 const { deployMarketHandlerFacets } = require('../../scripts/util/deploy-market-handler-facets.js');
@@ -90,7 +89,7 @@ describe("SaleHandler", function() {
         marketController = await ethers.getContractAt('IMarketController', diamond.address);
 
         // Cut the Market Handler facets into the Diamond
-        [auctionHandlerFacet, saleHandlerFacet] = await deployMarketHandlerFacets(diamond);
+        [auctionBuilderFacet, auctionRunnerFacet, saleBuilderFacet, saleRunnerFacet] = await deployMarketHandlerFacets(diamond);
 
         // Cast Diamond to IAuctionHandler
         saleHandler = await ethers.getContractAt('ISaleHandler', diamond.address);
@@ -321,7 +320,7 @@ describe("SaleHandler", function() {
 
                 });
 
-                it("cancel() should require caller has ADMIN role", async function () {
+                it("cancelSale() should require caller has ADMIN role", async function () {
 
                     // Wait until sale starts and buy
                     await time.increaseTo(start);
@@ -573,7 +572,7 @@ describe("SaleHandler", function() {
 
                 });
 
-                context("close()", async function () {
+                context("closeSale()", async function () {
 
                     beforeEach(async function () {
 
@@ -625,7 +624,7 @@ describe("SaleHandler", function() {
 
                 });
 
-                context("cancel()", async function () {
+                context("cancelSale()", async function () {
 
                     beforeEach(async function () {
 
@@ -1065,7 +1064,7 @@ describe("SaleHandler", function() {
 
                 });
 
-                context("close()", async function () {
+                context("closeSale()", async function () {
 
                     beforeEach(async function () {
 
@@ -1123,7 +1122,7 @@ describe("SaleHandler", function() {
 
                 });
 
-                context("cancel()", async function () {
+                context("cancelSale()", async function () {
 
                     beforeEach(async function () {
 
@@ -1375,7 +1374,7 @@ describe("SaleHandler", function() {
 
                 });
 
-                context("close()", async function () {
+                context("closeSale()", async function () {
 
                     beforeEach(async function () {
 
@@ -1448,7 +1447,7 @@ describe("SaleHandler", function() {
 
                 });
 
-                context("cancel()", async function () {
+                context("cancelSale()", async function () {
 
                     beforeEach(async function () {
 

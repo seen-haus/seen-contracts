@@ -14,12 +14,12 @@ const { getFacetAddCut } = require('./diamond-utils.js')
 async function deployMarketControllerFacets(diamond, marketConfig) {
 
     // Deploy the MarketConfig Facet
-    MarketConfigFacet = await ethers.getContractFactory("MarketConfigFacet");
+    const MarketConfigFacet = await ethers.getContractFactory("MarketConfigFacet");
     const marketConfigFacet = await MarketConfigFacet.deploy();
     await marketConfigFacet.deployed();
 
-    // Deploy the MarketClerkFacet Facet
-    MarketClerkFacet = await ethers.getContractFactory("MarketClerkFacet");
+    // sDeploy the MarketClerkFacet Facet
+    const MarketClerkFacet = await ethers.getContractFactory("MarketClerkFacet");
     const marketClerkFacet = await MarketClerkFacet.deploy();
     await marketClerkFacet.deployed();
 

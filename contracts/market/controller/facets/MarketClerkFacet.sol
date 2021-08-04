@@ -2,12 +2,11 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "../../interfaces/IEscrowTicketer.sol";
-import "../../interfaces/IMarketClerk.sol";
-import "../../diamond/DiamondLib.sol";
-import "./MarketControllerBase.sol";
-import "./MarketControllerLib.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "../../../interfaces/IMarketClerk.sol";
+import "../../../diamond/DiamondLib.sol";
+import "../MarketControllerBase.sol";
+import "../MarketControllerLib.sol";
 
 /**
  * @title MarketClerkFacet
@@ -36,7 +35,6 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder {
     public
     onlyUnInitialized
     {
-        // Register supported interfaces
         DiamondLib.supportsInterface(type(IMarketClerk).interfaceId);
         DiamondLib.supportsInterface(type(IERC1155Receiver).interfaceId);
     }

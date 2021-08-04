@@ -224,7 +224,7 @@ describe("Sale", function() {
             expect(sale.isValid()).is.false;
 
             // Valid field value
-            sale.outcome = Outcome.PULLED;
+            sale.outcome = Outcome.CLOSED;
             expect(sale.outcomeIsValid()).is.true;
             expect(sale.isValid()).is.true;
 

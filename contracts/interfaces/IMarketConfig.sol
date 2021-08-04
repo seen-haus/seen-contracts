@@ -12,7 +12,7 @@ import "../domain/SeenTypes.sol";
  *
  * @dev Contributes its events and functions to the IMarketController interface
  *
- * The ERC-165 identifier for this interface is: // TODO: what is the interface id here
+ * The ERC-165 identifier for this interface is: // TODO: find interface id
  */
 interface IMarketConfig {
 

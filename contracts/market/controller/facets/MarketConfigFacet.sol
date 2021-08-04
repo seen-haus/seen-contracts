@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "../../interfaces/IMarketConfig.sol";
-import "../../diamond/DiamondLib.sol";
-import "./MarketControllerBase.sol";
-import "./MarketControllerLib.sol";
+import "../../../interfaces/IMarketController.sol";
+import "../../../interfaces/IMarketConfig.sol";
+import "../../../diamond/DiamondLib.sol";
+import "../MarketControllerBase.sol";
+import "../MarketControllerLib.sol";
 
 /**
  * @title MarketConfigFacet
@@ -48,7 +49,8 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
     onlyUnInitialized
     {
         // Register supported interfaces
-        DiamondLib.supportsInterface(type(IMarketConfig).interfaceId);
+        DiamondLib.supportsInterface(type(IMarketConfig).interfaceId);     // when combined with IMarketClerk ...
+        DiamondLib.supportsInterface(type(IMarketController).interfaceId); // ... supports IMarketController
 
         // Initialize market config params
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();

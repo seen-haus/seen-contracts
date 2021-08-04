@@ -2,7 +2,7 @@ const { assert } = require('chai');
 const hre = require("hardhat");
 const ethers = hre.ethers;
 
-const { getSelectors, InterfaceIds, FacetCutAction, removeSelectors } = require('../../scripts/util/diamond-utils.js')
+const { getSelectors, FacetCutAction, removeSelectors } = require('../../scripts/util/diamond-utils.js')
 const { deployDiamond } = require('../../scripts/util/deploy-diamond.js');
 const Facet = require("../../domain/Facet");
 

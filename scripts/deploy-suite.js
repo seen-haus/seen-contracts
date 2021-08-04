@@ -96,9 +96,11 @@ async function main() {
     deploymentComplete('MarketClerkFacet', marketClerkFacet.address, []);
 
     // Cut the Market Handler facets into the Diamond
-    [auctionHandlerFacet, saleHandlerFacet] = await deployMarketHandlerFacets(diamond);
-    deploymentComplete('AuctionHandlerFacet', auctionHandlerFacet.address, []);
-    deploymentComplete('SaleHandlerFacet', saleHandlerFacet.address, []);
+    [auctionBuilderFacet, auctionRunnerFacet, saleBuilderFacet, saleRunnerFacet] = await deployMarketHandlerFacets(diamond);
+    deploymentComplete('AuctionBuilderFacet', auctionBuilderFacet.address, []);
+    deploymentComplete('AuctionRunnerFacet', auctionRunnerFacet.address, []);
+    deploymentComplete('SaleBuilderFacet', saleBuilderFacet.address, []);
+    deploymentComplete('SaleRunnerFacet', saleRunnerFacet.address, []);
 
     console.log(`🎟 Deploying Ticketer contracts...`);
 
