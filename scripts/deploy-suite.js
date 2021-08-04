@@ -56,7 +56,8 @@ async function main() {
     // Compile everything (in case run by node)
     await hre.run('compile');
 
-    console.log(`\n${divider}\nNetwork: ${hre.network.name}\nDeploying. ${new Date()}\n${divider}`);
+    console.log(`${divider}\nSeen Haus Contract Suite Deployer\n${divider}`);
+    console.log(`⛓  Network: ${hre.network.name}\n📅 ${new Date()}`);
 
     // Get the market config
     const config = getConfig();
@@ -65,6 +66,7 @@ async function main() {
     const accounts = await ethers.provider.listAccounts();
     const deployer = accounts[0];
     console.log("🔱 Deployer account: ", deployer ? deployer : "not found" && process.exit());
+    console.log(divider);
 
     console.log(`💎 Deploying Diamond and Jeweler's Facets...`);
 
@@ -88,7 +90,7 @@ async function main() {
         config.defaultTicketerType
     ];
 
-    console.log(`💎 Deploying Marketplace Facets...`);
+    console.log(`\n💎 Deploying Marketplace Facets...`);
 
     // Cut the MarketController facet into the Diamond
     [marketConfigFacet, marketClerkFacet] = await deployMarketControllerFacets(diamond, marketConfig);
@@ -102,7 +104,7 @@ async function main() {
     deploymentComplete('SaleBuilderFacet', saleBuilderFacet.address, []);
     deploymentComplete('SaleRunnerFacet', saleRunnerFacet.address, []);
 
-    console.log(`🎟 Deploying Ticketer contracts...`);
+    console.log(`\n🎟 Deploying Ticketer contracts...`);
 
     // Deploy the chosen LotsTicketer IEscrowTicketer implementation
     const LotsTicketer = await ethers.getContractFactory("LotsTicketer");
@@ -128,7 +130,7 @@ async function main() {
         diamond.address
     ]);
 
-    console.log(`🖼 Deploying Seen Haus NFT contract...`);
+    console.log(`\n🖼 Deploying Seen Haus NFT contract...`);
 
     // Deploy the SeenHausNFT contract
     const SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
@@ -142,6 +144,8 @@ async function main() {
         diamond.address
     ]);
 
+    console.log(`\n🌐️Configuring and granting roles...`);
+
     // Cast Diamond to the supported interfaces we need to interact with it
     const marketController = await ethers.getContractAt('IMarketController', diamond.address);
 
@@ -149,14 +153,14 @@ async function main() {
     await marketController.setNft(seenHausNFT.address);
     await marketController.setLotsTicketer(lotsTicketer.address);
     await marketController.setItemsTicketer(itemsTicketer.address);
-    console.log(`✅ MarketController updated with escrow ticketer and NFT addresses.`);
+    console.log(`✅ MarketController updated with NFT and Escrow Ticketer addresses.`);
 
     // Add MARKET_HANDLER role to contracts that need it
     await accessController.grantRole(Role.MARKET_HANDLER, diamond.address); // Market handlers live behind diamond now
     await accessController.grantRole(Role.MARKET_HANDLER, itemsTicketer.address);
     await accessController.grantRole(Role.MARKET_HANDLER, lotsTicketer.address);
     await accessController.grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
-    console.log(`✅ Granted MARKET_HANDLER role to Diamond, ItemsTicketer, LotsTicketer, & SeenHausNFT.`);
+    console.log(`✅ Granted MARKET_HANDLER role to appropriate contracts.`);
 
     // Bail now if deploying locally
     if (hre.network.name === 'hardhat') process.exit();
