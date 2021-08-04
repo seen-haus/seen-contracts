@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.5;
+pragma solidity ^0.8.0;
 
 /**
  * @title DiamondLib
@@ -14,7 +14,7 @@ pragma solidity ^0.8.5;
  * @author Cliff Hall
  */
 import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
-import { IAccessControl } from "../interfaces/IAccessControl.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
 library DiamondLib {
 

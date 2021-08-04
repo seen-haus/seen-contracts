@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.5;
+pragma solidity ^0.8.0;
 
 /**
  * @title Diamond
@@ -14,11 +14,11 @@ pragma solidity ^0.8.5;
 
 // Libraries
 import { DiamondLib } from "./DiamondLib.sol";
-import { FacetLib } from "./FacetLib.sol";
+import {JewelerLib} from "./JewelerLib.sol";
 
 // Interfaces
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import { IAccessControl } from "../interfaces/IAccessControl.sol";
+import { IAccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { IDiamondLoupe } from "../interfaces/IDiamondLoupe.sol";
 import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
 
@@ -48,7 +48,7 @@ contract Diamond {
         ds.accessController = _accessController;
 
         // Cut the diamond with the given facets
-        FacetLib.diamondCut(_facetCuts, address(0), new bytes(0));
+        JewelerLib.diamondCut(_facetCuts, address(0), new bytes(0));
 
         // Add supported interfaces
         if (_interfaceIds.length > 0) {

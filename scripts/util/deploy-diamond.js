@@ -27,13 +27,11 @@ async function deployDiamond () {
   const DiamondLoupeFacet = await ethers.getContractFactory("DiamondLoupeFacet");
   const dlf = await DiamondLoupeFacet.deploy();
   await dlf.deployed();
-  //console.log('DiamondLoupeFacet deployed:', dlf.address)
 
   // Diamond Cut Facet
   const DiamondCutFacet = await ethers.getContractFactory("DiamondCutFacet");
   const dcf = await DiamondCutFacet.deploy();
   await dcf.deployed();
-  //console.log('DiamondCutFacet deployed:', dcf.address)
 
   // Arguments for Diamond constructor
   const diamondArgs = [
@@ -45,7 +43,6 @@ async function deployDiamond () {
   const Diamond = await ethers.getContractFactory('Diamond');
   const diamond = await Diamond.deploy(...diamondArgs);
   await diamond.deployed()
-  //console.log('Diamond deployed:', diamond.address)
 
   return [diamond, dlf, dcf, accessController, diamondArgs];
 

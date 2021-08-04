@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.5;
+pragma solidity ^0.8.0;
 
 /**
- * @title LibFacet
+ * @title FacetLib
  *
  * Facet management functions
  *
@@ -19,15 +19,15 @@ import { DiamondLib } from "./DiamondLib.sol";
 
 // Interfaces
 import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
-import { IAccessControl } from "../interfaces/IAccessControl.sol";
+import { IAccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 
-library FacetLib {
+library JewelerLib {
 
     event DiamondCut(IDiamondCut.FacetCut[] _diamondCut, address _init, bytes _calldata);
 
-    bytes32 constant CLEAR_ADDRESS_MASK = bytes32(uint256(0xffffffffffffffffffffffff));
-    bytes32 constant CLEAR_SELECTOR_MASK = bytes32(uint256(0xffffffff << 224));
-    bytes32 constant ADMIN = keccak256("ADMIN"); // Seen Haus contract administration role
+    bytes32 internal constant CLEAR_ADDRESS_MASK = bytes32(uint256(0xffffffffffffffffffffffff));
+    bytes32 internal constant CLEAR_SELECTOR_MASK = bytes32(uint256(0xffffffff << 224));
+    bytes32 internal constant ADMIN = keccak256("ADMIN");
 
     /**
      * @notice Cut facets of the Diamond

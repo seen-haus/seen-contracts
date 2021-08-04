@@ -1,48 +1,63 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.5;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "../../interfaces/IEscrowTicketer.sol";
+import "../../interfaces/ISaleHandler.sol";
 import "../../interfaces/ISeenHausNFT.sol";
-import "../MarketClient.sol";
+import "../../domain/SeenConstants.sol";
+import "../../domain/SeenTypes.sol";
+import "./MarketHandlerBase.sol";
 
 /**
- * @title SaleHandler
+ * @title SaleHandlerFacet
  * @author Cliff Hall
  * @notice Handles the creation, running, and disposition of Seen.Haus sales.
  */
-contract SaleHandler is MarketClient {
+contract SaleHandlerFacet is ISaleHandler, MarketHandlerBase {
 
-    // Events
-    event SalePending(address indexed consignor, address indexed seller, Sale sale);
-    event SaleStarted(uint256 indexed consignmentId);
-    event SaleEnded(uint256 indexed consignmentId, Outcome indexed outcome);
-    event Purchase(uint256 indexed consignmentId,  uint256 indexed amount, address indexed buyer);
-
-    /// @dev map a consignment id to a sale
-    mapping(uint256 => Sale) private sales;
+    // Threshold to auction extension window
+    uint256 constant extensionWindow = 15 minutes;
 
     /**
-     * @notice Constructor
-     *
-     * This contract is granted the MARKET_HANDLER role with the AccessController
-     *
-     * @param _accessController - the Seen.Haus AccessController
-     * @param _marketController - the Seen.Haus MarketController
+     * @dev Modifier to protect initializer function from being invoked twice.
      */
-    constructor(address _accessController, address _marketController)
-    AccessClient(_accessController)
-    MarketClient(_marketController)
-    {}
+    modifier onlyUnInitialized() {
+
+        MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
+        require(!mhs.saleHandlerFacetInitialized, "Initializer: contract is already initialized");
+        mhs.saleHandlerFacetInitialized = true;
+        _;
+    }
+
+    /**
+     * @notice Facet Initializer
+     *
+     * // Register supported interfaces
+     */
+    function initialize ()
+    public
+    onlyUnInitialized
+    {
+        // Register supported interfaces
+        DiamondLib.supportsInterface(type(ISaleHandler).interfaceId);
+    }
 
     /**
      * @notice The sale getter
      */
     function getSale(uint256 _consignmentId)
-    external view
-    returns (Sale memory) {
-        return sales[_consignmentId];
+    external
+    override
+    view
+    returns (Sale memory)
+    {
+        // Get Market Handler Storage struct
+        MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
+
+        // Return sale
+        return mhs.sales[_consignmentId];
     }
 
     /**
@@ -74,18 +89,21 @@ contract SaleHandler is MarketClient {
         Audience _audience
     )
     external
+    override
     onlyRole(SELLER)
     onlyConsignor(_consignmentId)
     {
+        // Get Market Handler Storage slot
+        MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
 
         // Fetch the consignment
-        Consignment memory consignment = marketController.getConsignment(_consignmentId);
+        Consignment memory consignment = getMarketController().getConsignment(_consignmentId);
 
         // Make sure the consignment hasn't been marketed
         require(consignment.marketed == false, "Consignment has already been marketed");
 
         // Get the storage location for the sale
-        Sale storage sale = sales[consignment.id];
+        Sale storage sale = mhs.sales[consignment.id];
 
         // Make sure auction doesn't exist
         require(sale.consignmentId == 0, "Sale exists");
@@ -103,7 +121,7 @@ contract SaleHandler is MarketClient {
         sale.outcome = Outcome.Pending;
 
         // Notify MarketController the consignment has been marketed
-        marketController.marketConsignment(consignment.id);
+        getMarketController().marketConsignment(consignment.id);
 
         // Notify listeners of state change
         emit SalePending(msg.sender, consignment.seller, sale);
@@ -144,8 +162,11 @@ contract SaleHandler is MarketClient {
         Audience _audience
     )
     external
+    override
     onlyRole(SELLER)
     {
+        // Get Market Handler Storage slot
+        MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
 
         // Make sure start time isn't in the past
         require (_start >= block.timestamp, "Time runs backward?");
@@ -159,18 +180,18 @@ contract SaleHandler is MarketClient {
         // To register the consignment, tokens must first be in MarketController's possession
         IERC1155(_tokenAddress).safeTransferFrom(
             _seller,
-            address(marketController),
+            address(getMarketController()),
             _tokenId,
             _supply,
             new bytes(0x0)
         );
 
         // Register consignment (Secondaries are automatically marketed upon registration)
-        Consignment memory consignment = marketController.registerConsignment(Market.Secondary, msg.sender, _seller, _tokenAddress, _tokenId, _supply);
+        Consignment memory consignment = getMarketController().registerConsignment(Market.Secondary, msg.sender, _seller, _tokenAddress, _tokenId, _supply);
 
         // Set up the sale
         setAudience(consignment.id, _audience);
-        Sale storage sale = sales[consignment.id];
+        Sale storage sale = mhs.sales[consignment.id];
         sale.consignmentId = consignment.id;
         sale.start = _start;
         sale.price = _price;
@@ -192,15 +213,18 @@ contract SaleHandler is MarketClient {
      * @param _consignmentId - the id of the consignment being sold
      * @param _audience - the new audience for the sale
      */
-    function changeAudience(uint256 _consignmentId, Audience _audience)
+    function changeSaleAudience(uint256 _consignmentId, Audience _audience)
     external
+    override
     onlyRole(ADMIN) {
+        // Get Market Handler Storage slot
+        MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
 
         // Get consignment (reverting if not valid)
-        Consignment memory consignment = marketController.getConsignment(_consignmentId);
+        Consignment memory consignment = getMarketController().getConsignment(_consignmentId);
 
         // Make sure the sale exists and hasn't been settled
-        Sale storage sale = sales[consignment.id];
+        Sale storage sale = mhs.sales[consignment.id];
         require(sale.start != 0, "Sale does not exist");
         require(sale.state != State.Ended, "Sale has already been settled");
 
@@ -230,15 +254,18 @@ contract SaleHandler is MarketClient {
      */
     function buy(uint256 _consignmentId, uint256 _amount)
     external
+    override
     payable
     onlyAudienceMember(_consignmentId)
     {
+        // Get Market Handler Storage slot
+        MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
 
         // Get the consignment
-        Consignment memory consignment = marketController.getConsignment(_consignmentId);
+        Consignment memory consignment = getMarketController().getConsignment(_consignmentId);
 
         // Make sure the sale exists
-        Sale storage sale = sales[_consignmentId];
+        Sale storage sale = mhs.sales[_consignmentId];
         require(sale.start != 0, "Sale does not exist");
 
         // Make sure we can accept the buy order
@@ -259,17 +286,17 @@ contract SaleHandler is MarketClient {
         }
 
         // Determine if consignment is physical
-        address nft = marketController.getNft();
+        address nft = getMarketController().getNft();
         if (nft == consignment.tokenAddress && ISeenHausNFT(nft).isPhysical(consignment.tokenId)) {
 
             // Issue an escrow ticket to the buyer
-            address escrowTicketer = marketController.getEscrowTicketer(_consignmentId);
+            address escrowTicketer = getMarketController().getEscrowTicketer(_consignmentId);
             IEscrowTicketer(escrowTicketer).issueTicket(_consignmentId, _amount, payable(msg.sender));
 
         } else {
 
             // Release the purchased amount of the consigned token supply to buyer
-            marketController.releaseConsignment(_consignmentId, _amount, msg.sender);
+            getMarketController().releaseConsignment(_consignmentId, _amount, msg.sender);
 
         }
 
@@ -290,13 +317,18 @@ contract SaleHandler is MarketClient {
      *
      * @param _consignmentId - id of the consignment being sold
      */
-    function close(uint256 _consignmentId) external {
+    function closeSale(uint256 _consignmentId)
+    external
+    override
+    {
+        // Get Market Handler Storage slot
+        MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
 
         // Get consignment
-        Consignment memory consignment = marketController.getConsignment(_consignmentId);
+        Consignment memory consignment = getMarketController().getConsignment(_consignmentId);
 
         // Make sure the sale exists and can be closed normally
-        Sale storage sale = sales[_consignmentId];
+        Sale storage sale = mhs.sales[_consignmentId];
         require(sale.start != 0, "Sale does not exist");
         require(sale.state != State.Ended, "Sale has already been settled");
         require(sale.state == State.Running, "Sale hasn't started");
@@ -327,13 +359,19 @@ contract SaleHandler is MarketClient {
      *
      * @param _consignmentId - id of the consignment being sold
      */
-    function cancel(uint256 _consignmentId) external onlyRole(ADMIN) {
+    function cancelSale(uint256 _consignmentId)
+    external
+    override
+    onlyRole(ADMIN)
+    {
+        // Get Market Handler Storage slot
+        MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
 
         // Get the consignment
-        Consignment memory consignment = marketController.getConsignment(_consignmentId);
+        Consignment memory consignment = getMarketController().getConsignment(_consignmentId);
 
         // Make sure the sale exists and can canceled
-        Sale storage sale = sales[_consignmentId];
+        Sale storage sale = mhs.sales[_consignmentId];
         require(sale.start != 0, "Sale does not exist");
         require(sale.state != State.Ended, "Sale has already been settled");
 
@@ -342,7 +380,7 @@ contract SaleHandler is MarketClient {
         sale.outcome = Outcome.Canceled;
 
         // Determine the amount sold and remaining
-        uint256 remaining = marketController.getSupply(_consignmentId);
+        uint256 remaining = getMarketController().getSupply(_consignmentId);
         uint256 sold = consignment.supply - remaining;
 
         // Disburse the funds for the sold items
@@ -354,7 +392,7 @@ contract SaleHandler is MarketClient {
         if (remaining > 0) {
 
             // Transfer the remaining supply back to the seller
-            marketController.releaseConsignment(_consignmentId, remaining, consignment.seller);
+            getMarketController().releaseConsignment(_consignmentId, remaining, consignment.seller);
 
         }
 

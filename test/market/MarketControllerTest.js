@@ -51,8 +51,7 @@ describe("MarketController", function() {
         [diamond, diamondLoupe, diamondCut, accessController] = await deployDiamond();
 
         // Prepare MarketController initialization arguments
-        const initArgs = [
-            accessController.address,
+        const marketConfig = [
             staking.address,
             multisig.address,
             vipStakerAmount,
@@ -63,7 +62,7 @@ describe("MarketController", function() {
         ];
 
         // Cut the MarketController facet into the Diamond
-        await deployMarketControllerFacets(diamond, initArgs);
+        await deployMarketControllerFacets(diamond, marketConfig);
 
         // Cast Diamond to MarketController
         marketController = await ethers.getContractAt('IMarketController', diamond.address);

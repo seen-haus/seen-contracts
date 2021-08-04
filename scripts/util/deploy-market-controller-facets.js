@@ -5,39 +5,39 @@ const ethers = hre.ethers;
 const { getFacetAddCut } = require('./diamond-utils.js')
 
 /**
- * Cut the MarketController facets
+ * Cut the Market Controller facets
  *
  * @param diamond
- * @param marketConfig
- * @param marketClerk
- * @param initArgs
+ * @param config
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployMarketControllerFacets(diamond, initArgs) {
+async function deployMarketControllerFacets(diamond, marketConfig) {
 
     // Deploy the MarketConfig Facet
     MarketConfigFacet = await ethers.getContractFactory("MarketConfigFacet");
     const marketConfigFacet = await MarketConfigFacet.deploy();
+    await marketConfigFacet.deployed();
 
     // Deploy the MarketClerkFacet Facet
     MarketClerkFacet = await ethers.getContractFactory("MarketClerkFacet");
     const marketClerkFacet = await MarketClerkFacet.deploy();
+    await marketClerkFacet.deployed();
 
     // Cast Diamond to DiamondCutFacet
     const cutFacet = await ethers.getContractAt('DiamondCutFacet', diamond.address);
 
     // Cut MarketConfig facet, initializing
-    let configInitAbi = "initialize(address _accessController, address payable _staking, address payable _multisig, uint256 _vipStakerAmount, uint16 _feePercentage, uint16 _maxRoyaltyPercentage, uint16 _outBidPercentage, uint8 _defaultTicketerType)";
-    const configInterface = new ethers.utils.Interface([`function ${configInitAbi}`]);
-    const configCallData = configInterface.encodeFunctionData("initialize", initArgs);
-    const marketConfigCut = getFacetAddCut(marketConfigFacet);
+    let configInitFunction = "initialize(address payable _staking, address payable _multisig, uint256 _vipStakerAmount, uint16 _feePercentage, uint16 _maxRoyaltyPercentage, uint16 _outBidPercentage, uint8 _defaultTicketerType)";
+    const configInterface = new ethers.utils.Interface([`function ${configInitFunction}`]);
+    const configCallData = configInterface.encodeFunctionData("initialize", marketConfig);
+    const marketConfigCut = getFacetAddCut(marketConfigFacet, [configInitFunction]);
     await cutFacet.diamondCut([marketConfigCut], marketConfigFacet.address, configCallData);
 
     // Cut MarketClerk facet, initializing
-    let clerkInitAbi = "initialize()";
-    const clerkInterface = new ethers.utils.Interface([`function ${clerkInitAbi}`]);
+    let clerkInitFunction = "initialize()";
+    const clerkInterface = new ethers.utils.Interface([`function ${clerkInitFunction}`]);
     const clerkCallData = clerkInterface.encodeFunctionData("initialize");
-    const marketClerkCut = getFacetAddCut(marketClerkFacet, ['supportsInterface(bytes4)']);
+    const marketClerkCut = getFacetAddCut(marketClerkFacet, ['supportsInterface(bytes4)', clerkInitFunction]);
     await cutFacet.diamondCut([marketClerkCut], marketClerkFacet.address, clerkCallData);
 
     return [marketConfigFacet, marketClerkFacet];

@@ -1,24 +1,20 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.5;
+pragma solidity ^0.8.0;
+
+import "../../domain/SeenTypes.sol";
 
 /**
- * @title MarketControllerBase
+ * @title MarketControllerLib
  *
  * @dev Provides access to the the MarketController Storage slot for MarketController facets
  *
  * @author Cliff Hall
  */
-import "../../interfaces/IAccessControl.sol";
-import "../../domain/SeenTypes.sol";
-
 library MarketControllerLib {
 
     bytes32 constant MARKET_CONTROLLER_STORAGE_POSITION = keccak256("haus.seen.market.controller.storage");
 
     struct MarketControllerStorage {
-
-        // the Seen.Haus AccessController
-        IAccessControl accessController;
 
         // the address of the Seen.Haus NFT contract
         address nft;

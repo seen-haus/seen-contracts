@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.5;
+pragma solidity ^0.8.0;
 
 import "./MarketControllerLib.sol";
+import "../../diamond/DiamondLib.sol";
 import "../../domain/SeenTypes.sol";
+import "../../domain/SeenConstants.sol";
 
 /**
  * @title MarketControllerBase
  * @author Cliff Hall
- * @notice Provides domain, initializer, modifiers to MarketController facets
+ * @notice Provides domain and common modifiers to MarketController facets
  */
-abstract contract MarketControllerBase is SeenTypes {
+abstract contract MarketControllerBase is SeenTypes, SeenConstants {
 
     /**
      * @dev Modifier that checks that the consignment exists
@@ -33,8 +35,8 @@ abstract contract MarketControllerBase is SeenTypes {
      * See: {AccessController.hasRole}
      */
     modifier onlyRole(bytes32 _role) {
-        MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
-        require(mcs.accessController.hasRole(_role, msg.sender), "Access denied, caller doesn't have role");
+        DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
+        require(ds.accessController.hasRole(_role, msg.sender), "Access denied, caller doesn't have role");
         _;
     }
 

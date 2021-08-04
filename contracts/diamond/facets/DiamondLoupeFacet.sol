@@ -1,25 +1,24 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.5;
-/******************************************************************************\
-* Author: Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
-* EIP-2535 Diamonds: https://eips.ethereum.org/EIPS/eip-2535
-/******************************************************************************/
+pragma solidity ^0.8.0;
 
-import {DiamondLib} from  "../DiamondLib.sol";
 import { IDiamondLoupe } from "../../interfaces/IDiamondLoupe.sol";
+import { DiamondLib } from  "../DiamondLib.sol";
 
+/**
+ * @title DiamondLoupeFacet
+ *
+ * @notice DiamondCut facet based on Nick Mudge's gas-optimized diamond-2 reference.
+ * Reference Implementation  : https://github.com/mudgen/diamond-2-hardhat
+ * EIP-2535 Diamond Standard : https://eips.ethereum.org/EIPS/eip-2535
+ *
+ * @author Nick Mudge
+ */
 contract DiamondLoupeFacet is IDiamondLoupe {
 
-    // Diamond Loupe Functions
-    ////////////////////////////////////////////////////////////////////
-    /// These functions are expected to be called frequently by tools.
-    //
-    // struct Facet {
-    //     address facetAddress;
-    //     bytes4[] functionSelectors;
-    // }
-    /// @notice Gets all facets and their selectors.
-    /// @return facets_ Facet
+    /**
+     *  @notice Gets all facets and their selectors.
+     *  @return facets_ Facet
+     */
     function facets() external override view returns (Facet[] memory facets_) {
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
         facets_ = new Facet[](ds.selectorCount);
@@ -72,13 +71,15 @@ contract DiamondLoupeFacet is IDiamondLoupe {
         }
     }
 
-    /// @notice Gets all the function selectors supported by a specific facet.
-    /// @param _facet The facet address.
-    /// @return _facetFunctionSelectors The selectors associated with a facet address.
-    function facetFunctionSelectors(address _facet) external override view returns (bytes4[] memory _facetFunctionSelectors) {
+    /**
+     * @notice Gets all the function selectors supported by a specific facet.
+     * @param _facet The facet address.
+     * @return facetFunctionSelectors_ The selectors associated with a facet address.
+     */
+    function facetFunctionSelectors(address _facet) external override view returns (bytes4[] memory facetFunctionSelectors_) {
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
         uint256 numSelectors;
-        _facetFunctionSelectors = new bytes4[](ds.selectorCount);
+        facetFunctionSelectors_ = new bytes4[](ds.selectorCount);
         uint256 selectorIndex;
         // loop through function selectors
         for (uint256 slotIndex; selectorIndex < ds.selectorCount; slotIndex++) {
@@ -91,19 +92,21 @@ contract DiamondLoupeFacet is IDiamondLoupe {
                 bytes4 selector = bytes4(slot << (selectorSlotIndex << 5));
                 address facet = address(bytes20(ds.facets[selector]));
                 if (_facet == facet) {
-                    _facetFunctionSelectors[numSelectors] = selector;
+                    facetFunctionSelectors_[numSelectors] = selector;
                     numSelectors++;
                 }
             }
         }
         // Set the number of selectors in the array
         assembly {
-            mstore(_facetFunctionSelectors, numSelectors)
+            mstore(facetFunctionSelectors_, numSelectors)
         }
     }
 
-    /// @notice Get all the facet addresses used by a diamond.
-    /// @return facetAddresses_
+    /**
+     * @notice Get all the facet addresses used by a diamond
+     * @return facetAddresses_
+     */
     function facetAddresses() external override view returns (address[] memory facetAddresses_) {
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
         facetAddresses_ = new address[](ds.selectorCount);
@@ -140,10 +143,13 @@ contract DiamondLoupeFacet is IDiamondLoupe {
         }
     }
 
-    /// @notice Gets the facet that supports the given selector.
-    /// @dev If facet is not found return address(0).
-    /// @param _functionSelector The function selector.
-    /// @return facetAddress_ The facet address.
+    /**
+     * @notice Gets the facet that supports the given selector.
+     *
+     * @dev If facet is not found return address(0).
+     * @param _functionSelector The function selector.
+     * @return facetAddress_ The facet address.
+     */
     function facetAddress(bytes4 _functionSelector) external override view returns (address facetAddress_) {
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
         facetAddress_ = address(bytes20(ds.facets[_functionSelector]));

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.5;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "../domain/SeenTypes.sol";
+import "../domain/SeenConstants.sol";
 
 /**
  * @title AccessController
  * @author Cliff Hall
  * @notice Implements centralized role-based access for Seen.Haus contracts.
  */
-contract AccessController is SeenTypes, AccessControl  {
+contract AccessController is AccessControl, SeenConstants  {
 
     /**
      * @notice Constructor

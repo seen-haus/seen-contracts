@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.5;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "../../interfaces/IEscrowTicketer.sol";
 import "../../interfaces/IMarketClerk.sol";
 import "../../diamond/DiamondLib.sol";
-import "../../domain/SeenTypes.sol";
 import "./MarketControllerBase.sol";
 import "./MarketControllerLib.sol";
 
@@ -15,7 +14,7 @@ import "./MarketControllerLib.sol";
  * @author Cliff Hall
  * @notice Manages consignments for the Seen.Haus contract suite.
  */
-contract MarketClerkFacet is MarketControllerBase, ERC1155Holder, IMarketClerk {
+contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder {
 
     /**
      * @dev Modifier to protect initializer function from being invoked twice.
@@ -33,7 +32,7 @@ contract MarketClerkFacet is MarketControllerBase, ERC1155Holder, IMarketClerk {
      *
      * Register IMarketClerk,
      */
-    function initialize ()
+    function initialize()
     public
     onlyUnInitialized
     {
@@ -48,9 +47,10 @@ contract MarketClerkFacet is MarketControllerBase, ERC1155Holder, IMarketClerk {
      */
     function getNextConsignment()
     external
-    view
     override
-    returns (uint256) {
+    view
+    returns (uint256)
+    {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         return mcs.nextConsignment;
     }
@@ -65,10 +65,11 @@ contract MarketClerkFacet is MarketControllerBase, ERC1155Holder, IMarketClerk {
      */
     function getConsignment(uint256 _consignmentId)
     public
-    view
     override
+    view
     consignmentExists(_consignmentId)
-    returns (Consignment memory consignment) {
+    returns (Consignment memory consignment)
+    {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         consignment = mcs.consignments[_consignmentId];
     }
@@ -83,8 +84,8 @@ contract MarketClerkFacet is MarketControllerBase, ERC1155Holder, IMarketClerk {
      */
     function getSupply(uint256 _consignmentId)
     public
-    view
     override
+    view
     consignmentExists(_consignmentId)
     returns(uint256)
     {
@@ -104,8 +105,8 @@ contract MarketClerkFacet is MarketControllerBase, ERC1155Holder, IMarketClerk {
      */
     function isConsignor(uint256 _consignmentId, address _account)
     public
-    view
     override
+    view
     consignmentExists(_consignmentId)
     returns(bool)
     {

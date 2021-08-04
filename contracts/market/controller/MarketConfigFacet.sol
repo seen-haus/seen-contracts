@@ -1,24 +1,23 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.5;
+pragma solidity ^0.8.0;
 
 import "../../interfaces/IMarketConfig.sol";
 import "../../diamond/DiamondLib.sol";
-import "../../domain/SeenTypes.sol";
-import "./MarketControllerLib.sol";
 import "./MarketControllerBase.sol";
+import "./MarketControllerLib.sol";
 
 /**
  * @title MarketConfigFacet
  * @author Cliff Hall
  * @notice Provides centralized management of various market-related settings.
  */
-contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
+contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
 
     /**
      * @dev Modifier to protect initializer function from being invoked twice.
      */
-    modifier onlyUnInitialized() {
-
+    modifier onlyUnInitialized()
+    {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         require(!mcs.configFacetInitialized, "Initializer: contract is already initialized");
         mcs.configFacetInitialized = true;
@@ -28,7 +27,6 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
     /**
      * @notice Facet Initializer
      *
-     * @param _accessController - Seen.Haus AccessController contract
      * @param _staking - Seen.Haus staking contract
      * @param _multisig - Seen.Haus multi-sig wallet
      * @param _vipStakerAmount - the minimum amount of xSEEN ERC-20 a caller must hold to participate in VIP events
@@ -38,7 +36,6 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
      * @param _defaultTicketerType - which ticketer type to use if none has been specified for a given consignment
      */
     function initialize (
-        address _accessController,
         address payable _staking,
         address payable _multisig,
         uint256 _vipStakerAmount,
@@ -55,7 +52,6 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
 
         // Initialize market config params
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
-        mcs.accessController = IAccessControl(_accessController);
         mcs.staking = _staking;
         mcs.multisig = _multisig;
         mcs.vipStakerAmount = _vipStakerAmount;
@@ -75,7 +71,8 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
     function setNft(address _nft)
     external
     override
-    onlyRole(ADMIN) {
+    onlyRole(ADMIN)
+    {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         mcs.nft = _nft;
         emit NFTAddressChanged(_nft);
@@ -86,9 +83,10 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
      */
     function getNft()
     external
-    view
     override
-    returns (address) {
+    view
+    returns (address)
+    {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         return mcs.nft;
     }
@@ -103,7 +101,8 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
     function setLotsTicketer(address _lotsTicketer)
     external
     override
-    onlyRole(ADMIN) {
+    onlyRole(ADMIN)
+    {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         mcs.lotsTicketer = _lotsTicketer;
         emit EscrowTicketerAddressChanged(mcs.lotsTicketer, Ticketer.Lots);
@@ -114,9 +113,10 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
      */
     function getLotsTicketer()
     external
-    view
     override
-    returns (address) {
+    view
+    returns (address)
+    {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         return mcs.lotsTicketer;
     }
@@ -131,7 +131,8 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
     function setItemsTicketer(address _itemsTicketer)
     external
     override
-    onlyRole(ADMIN) {
+    onlyRole(ADMIN)
+    {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         mcs.itemsTicketer = _itemsTicketer;
         emit EscrowTicketerAddressChanged(mcs.itemsTicketer, Ticketer.Items);
@@ -142,9 +143,10 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
      */
     function getItemsTicketer()
     external
-    view
     override
-    returns (address) {
+    view
+    returns (address)
+    {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         return mcs.itemsTicketer;
     }
@@ -159,7 +161,8 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
     function setStaking(address payable _staking)
     external
     override
-    onlyRole(ADMIN) {
+    onlyRole(ADMIN)
+    {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         mcs.staking = _staking;
         emit StakingAddressChanged(mcs.staking);
@@ -170,9 +173,10 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
      */
     function getStaking()
     external
-    view
     override
-    returns (address payable) {
+    view
+    returns (address payable)
+    {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         return mcs.staking;
     }
@@ -187,7 +191,8 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
     function setMultisig(address payable _multisig)
     external
     override
-    onlyRole(ADMIN) {
+    onlyRole(ADMIN)
+    {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         mcs.multisig = _multisig;
         emit MultisigAddressChanged(mcs.multisig);
@@ -198,9 +203,10 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
      */
     function getMultisig()
     external
-    view
     override
-    returns (address payable) {
+    view
+    returns (address payable)
+    {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         return mcs.multisig;
     }
@@ -215,7 +221,8 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
     function setVipStakerAmount(uint256 _vipStakerAmount)
     external
     override
-    onlyRole(ADMIN) {
+    onlyRole(ADMIN)
+    {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         mcs.vipStakerAmount = _vipStakerAmount;
         emit VipStakerAmountChanged(mcs.vipStakerAmount);
@@ -226,9 +233,10 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
      */
     function getVipStakerAmount()
     external
-    view
     override
-    returns (uint256) {
+    view
+    returns (uint256)
+    {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         return mcs.vipStakerAmount;
     }
@@ -245,7 +253,8 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
     function setFeePercentage(uint16 _feePercentage)
     external
     override
-    onlyRole(ADMIN) {
+    onlyRole(ADMIN)
+    {
         require(_feePercentage > 0 && _feePercentage <= 10000,
             "Percentage representation must be between 1 and 10000");
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
@@ -258,9 +267,10 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
      */
     function getFeePercentage()
     external
-    view
     override
-    returns (uint16) {
+    view
+    returns (uint16)
+    {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         return mcs.feePercentage;
     }
@@ -278,7 +288,8 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
     function setMaxRoyaltyPercentage(uint16 _maxRoyaltyPercentage)
     external
     override
-    onlyRole(ADMIN) {
+    onlyRole(ADMIN)
+    {
         require(_maxRoyaltyPercentage > 0 && _maxRoyaltyPercentage <= 10000,
             "Percentage representation must be between 1 and 10000");
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
@@ -291,9 +302,10 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
      */
     function getMaxRoyaltyPercentage()
     external
-    view
     override
-    returns (uint16) {
+    view
+    returns (uint16)
+    {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         return mcs.maxRoyaltyPercentage;
     }
@@ -311,7 +323,8 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
     function setOutBidPercentage(uint16 _outBidPercentage)
     external
     override
-    onlyRole(ADMIN) {
+    onlyRole(ADMIN)
+    {
         require(_outBidPercentage > 0 && _outBidPercentage <= 10000,
             "Percentage representation must be between 1 and 10000");
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
@@ -324,9 +337,10 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
      */
     function getOutBidPercentage()
     external
-    view
     override
-    returns (uint16) {
+    view
+    returns (uint16)
+    {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         return mcs.outBidPercentage;
     }
@@ -344,7 +358,8 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
     function setDefaultTicketerType(Ticketer _ticketerType)
     external
     override
-    onlyRole(ADMIN) {
+    onlyRole(ADMIN)
+    {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         require(_ticketerType != Ticketer.Default, "Invalid ticketer type.");
         require(_ticketerType != mcs.defaultTicketerType, "Type is already default.");
@@ -357,9 +372,10 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
      */
     function getDefaultTicketerType()
     external
-    view
     override
-    returns (Ticketer) {
+    view
+    returns (Ticketer)
+    {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         return mcs.defaultTicketerType;
     }
@@ -377,10 +393,11 @@ contract MarketConfigFacet is MarketControllerBase, IMarketConfig {
      */
     function getEscrowTicketer(uint256 _consignmentId)
     external
-    view
     override
+    view
     consignmentExists(_consignmentId)
-    returns (address) {
+    returns (address)
+    {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         Ticketer specified = mcs.consignmentTicketers[_consignmentId];
         Ticketer ticketerType = (specified == Ticketer.Default) ? mcs.defaultTicketerType : specified;

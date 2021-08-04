@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.5;
+pragma solidity ^0.8.0;
+
+import { SeenConstants } from "../../domain/SeenConstants.sol";
+import { IDiamondCut } from "../../interfaces/IDiamondCut.sol";
+import { DiamondLib } from "../DiamondLib.sol";
+import { JewelerLib } from "../JewelerLib.sol";
 
 /**
  * @title DiamondCutFacet
@@ -11,12 +16,7 @@ pragma solidity ^0.8.5;
  * @author Nick Mudge
  * @author Cliff Hall
  */
-import { IDiamondCut } from "../../interfaces/IDiamondCut.sol";
-import { SeenTypes } from"../../domain/SeenTypes.sol";
-import {DiamondLib} from "../DiamondLib.sol";
-import {FacetLib} from "../FacetLib.sol";
-
-contract DiamondCutFacet is SeenTypes, IDiamondCut {
+contract DiamondCutFacet is SeenConstants, IDiamondCut {
 
     /**
      * @notice Cut facets of the Diamond
@@ -29,8 +29,9 @@ contract DiamondCutFacet is SeenTypes, IDiamondCut {
      * @param _init The address of the contract or facet to execute _calldata
      * @param _calldata A function call, including function selector and arguments
      */
-    function diamondCut( FacetCut[] calldata _facetCuts, address _init, bytes calldata _calldata)
-    external override
+    function diamondCut(FacetCut[] calldata _facetCuts, address _init, bytes calldata _calldata)
+    external
+    override
     {
         // Get the diamond storage slot
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
@@ -52,7 +53,7 @@ contract DiamondCutFacet is SeenTypes, IDiamondCut {
         
         // Cut the facets
         for (uint256 facetIndex; facetIndex < _facetCuts.length; facetIndex++) {
-            (selectorCount, selectorSlot) = FacetLib.addReplaceRemoveFacetSelectors(
+            (selectorCount, selectorSlot) = JewelerLib.addReplaceRemoveFacetSelectors(
                 selectorCount,
                 selectorSlot,
                 _facetCuts[facetIndex].facetAddress,
@@ -75,7 +76,7 @@ contract DiamondCutFacet is SeenTypes, IDiamondCut {
         emit DiamondCut(_facetCuts, _init, _calldata);
 
         // Initialize the facet
-        FacetLib.initializeDiamondCut(_init, _calldata);
+        JewelerLib.initializeDiamondCut(_init, _calldata);
 
     }
 }
