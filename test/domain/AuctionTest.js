@@ -313,7 +313,7 @@ describe("Auction", function() {
             expect(auction.isValid()).is.false;
 
             // Valid field value
-            auction.outcome = Outcome.PULLED;
+            auction.outcome = Outcome.CANCELED;
             expect(auction.outcomeIsValid()).is.true;
             expect(auction.isValid()).is.true;
 

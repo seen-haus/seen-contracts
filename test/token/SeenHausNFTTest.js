@@ -5,6 +5,9 @@ const Role = require("../../domain/Role");
 const Token = require("../../domain/Token");
 const Market = require("../../domain/Market");
 const Ticketer = require("../../domain/Ticketer");
+const { InterfaceIds } = require('../../scripts/util/diamond-utils.js')
+const { deployDiamond } = require('../../scripts/util/deploy-diamond.js');
+const { deployMarketControllerFacets } = require('../../scripts/util/deploy-market-controller-facets.js');
 
 describe("SeenHausNFT", function() {
 
@@ -42,15 +45,11 @@ describe("SeenHausNFT", function() {
         outBidPercentage = "500";             // 5%    = 500
         defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
 
-        // Deploy the AccessController contract
-        AccessController = await ethers.getContractFactory("AccessController");
-        accessController = await AccessController.deploy();
-        await accessController.deployed();
+        // Deploy the Diamond
+        [diamond, diamondLoupe, diamondCut, accessController] = await deployDiamond();
 
-        // Deploy the MarketController contract
-        MarketController = await ethers.getContractFactory("MarketController");
-        marketController = await MarketController.deploy(
-            accessController.address,
+        // Prepare MarketController initialization arguments
+        const marketConfig = [
             staking.address,
             multisig.address,
             vipStakerAmount,
@@ -58,8 +57,13 @@ describe("SeenHausNFT", function() {
             maxRoyaltyPercentage,
             outBidPercentage,
             defaultTicketerType
-        );
-        await marketController.deployed();
+        ];
+
+        // Cut the MarketController facet into the Diamond
+        await deployMarketControllerFacets(diamond, marketConfig);
+
+        // Cast Diamond to MarketController
+        marketController = await ethers.getContractAt('IMarketController', diamond.address);
 
         // Deploy the SeenHausNFT contract
         SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");

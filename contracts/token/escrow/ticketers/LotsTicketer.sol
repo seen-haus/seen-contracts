@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.5;
+pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "../../../interfaces/IEscrowTicketer.sol";
+import "../../../interfaces/ISeenHausNFT.sol";
 import "../../../access/AccessClient.sol";
 import "../../../market/MarketClient.sol";
 import "../../../util/StringUtils.sol";
-import "../../nft/ISeenHausNFT.sol";
-import "../IEscrowTicketer.sol";
 
 /**
  * @title LotsTicketer

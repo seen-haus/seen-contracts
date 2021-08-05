@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.5;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "../../../interfaces/IEscrowTicketer.sol";
+import "../../../interfaces/ISeenHausNFT.sol";
 import "../../../market/MarketClient.sol";
 import "../../../util/StringUtils.sol";
-import "../IEscrowTicketer.sol";
 
 /**
  * @title ItemsTicketer

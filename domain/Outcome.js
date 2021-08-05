@@ -7,10 +7,9 @@ class Outcome {}
 
 Outcome.PENDING = 0;
 Outcome.CLOSED = 1;
-Outcome.PULLED = 2;
-Outcome.CANCELED = 3;
+Outcome.CANCELED = 2;
 
-Outcome.Outcomes = [Outcome.PENDING, Outcome.CLOSED, Outcome.PULLED,Outcome.CANCELED];
+Outcome.Outcomes = [Outcome.PENDING, Outcome.CLOSED, Outcome.CANCELED];
 
 // Export
 if (NODE) {

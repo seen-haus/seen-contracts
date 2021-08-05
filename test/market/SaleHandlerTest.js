@@ -10,6 +10,9 @@ const Outcome = require("../../domain/Outcome");
 const Audience = require("../../domain/Audience");
 const Ticketer = require("../../domain/Ticketer");
 const Consignment = require("../../domain/Consignment");
+const { deployDiamond } = require('../../scripts/util/deploy-diamond.js');
+const { deployMarketControllerFacets } = require('../../scripts/util/deploy-market-controller-facets.js');
+const { deployMarketHandlerFacets } = require('../../scripts/util/deploy-market-handler-facets.js');
 
 describe("SaleHandler", function() {
 
@@ -65,15 +68,11 @@ describe("SaleHandler", function() {
         seenStaking = await SeenStaking.deploy();
         await seenStaking.deployed();
 
-        // Deploy the AccessController contract
-        AccessController = await ethers.getContractFactory("AccessController");
-        accessController = await AccessController.deploy();
-        await accessController.deployed();
+        // Deploy the Diamond
+        [diamond, diamondLoupe, diamondCut, accessController] = await deployDiamond();
 
-        // Deploy the MarketController contract
-        MarketController = await ethers.getContractFactory("MarketController");
-        marketController = await MarketController.deploy(
-            accessController.address,
+        // Prepare MarketController initialization arguments
+        const marketConfig = [
             seenStaking.address,
             multisig.address,
             vipStakerAmount,
@@ -81,8 +80,19 @@ describe("SaleHandler", function() {
             maxRoyaltyPercentage,
             outBidPercentage,
             defaultTicketerType
-        );
-        await marketController.deployed();
+        ];
+
+        // Cut the MarketController facet into the Diamond
+        await deployMarketControllerFacets(diamond, marketConfig);
+
+        // Cast Diamond to MarketController
+        marketController = await ethers.getContractAt('IMarketController', diamond.address);
+
+        // Cut the Market Handler facets into the Diamond
+        [auctionBuilderFacet, auctionRunnerFacet, saleBuilderFacet, saleRunnerFacet] = await deployMarketHandlerFacets(diamond);
+
+        // Cast Diamond to IAuctionHandler
+        saleHandler = await ethers.getContractAt('ISaleHandler', diamond.address);
 
         // Deploy the SeenHausNFT contract
         SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
@@ -91,14 +101,6 @@ describe("SaleHandler", function() {
             marketController.address,
         );
         await seenHausNFT.deployed();
-
-        // Deploy the SaleHandler contract
-        SaleHandler = await ethers.getContractFactory("SaleHandler");
-        saleHandler = await SaleHandler.deploy(
-            accessController.address,
-            marketController.address,
-        );
-        await saleHandler.deployed();
 
         // Deploy the ItemsTicketer contract
         ItemsTicketer = await ethers.getContractFactory('ItemsTicketer');
@@ -302,7 +304,7 @@ describe("SaleHandler", function() {
 
                     // non-ADMIN attempt
                     await expect(
-                        saleHandler.connect(associate).changeAudience(
+                        saleHandler.connect(associate).changeSaleAudience(
                             consignmentId,
                             Audience.VIP_STAKER
                         )
@@ -310,7 +312,7 @@ describe("SaleHandler", function() {
 
                     // ADMIN attempt
                     await expect (
-                        saleHandler.connect(admin).changeAudience(
+                        saleHandler.connect(admin).changeSaleAudience(
                             consignmentId,
                             Audience.VIP_STAKER
                         )
@@ -318,7 +320,7 @@ describe("SaleHandler", function() {
 
                 });
 
-                it("cancel() should require caller has ADMIN role", async function () {
+                it("cancelSale() should require caller has ADMIN role", async function () {
 
                     // Wait until sale starts and buy
                     await time.increaseTo(start);
@@ -326,12 +328,12 @@ describe("SaleHandler", function() {
 
                     // non-ADMIN attempt
                     await expect(
-                        saleHandler.connect(associate).cancel(consignmentId)
+                        saleHandler.connect(associate).cancelSale(consignmentId)
                     ).to.be.revertedWith("Access denied, caller doesn't have role");
 
                     // ADMIN attempt // TODO: Why does this crash now
                     await expect (
-                        saleHandler.connect(admin).cancel(consignmentId)
+                        saleHandler.connect(admin).cancelSale(consignmentId)
                     ).to.emit(saleHandler,"SaleEnded");
 
                 });
@@ -534,7 +536,7 @@ describe("SaleHandler", function() {
 
                         // ADMIN attempt
                         await expect(
-                            saleHandler.connect(admin).changeAudience(
+                            saleHandler.connect(admin).changeSaleAudience(
                                 consignmentId,
                                 Audience.OPEN
                             )
@@ -570,7 +572,7 @@ describe("SaleHandler", function() {
 
                 });
 
-                context("close()", async function () {
+                context("closeSale()", async function () {
 
                     beforeEach(async function () {
 
@@ -584,7 +586,7 @@ describe("SaleHandler", function() {
 
                         // Seller closes sale
                         await expect(
-                            saleHandler.connect(seller).close(consignmentId)
+                            saleHandler.connect(seller).closeSale(consignmentId)
                         ).to.emit(saleHandler, "SaleEnded")
                             .withArgs(
                                 consignmentId,
@@ -597,7 +599,7 @@ describe("SaleHandler", function() {
 
                         // Seller closes sale
                         await expect(
-                            saleHandler.connect(seller).close(consignmentId)
+                            saleHandler.connect(seller).closeSale(consignmentId)
                         ).to.emit(saleHandler, "PayoutDisbursed");
 
                     });
@@ -606,7 +608,7 @@ describe("SaleHandler", function() {
 
                         // Seller closes sale
                         await expect(
-                            saleHandler.connect(seller).close(consignmentId)
+                            saleHandler.connect(seller).closeSale(consignmentId)
                         ).to.emit(saleHandler, "FeeDisbursed");
 
                     });
@@ -615,14 +617,14 @@ describe("SaleHandler", function() {
 
                         // Seller closes sale
                         await expect(
-                            saleHandler.connect(seller).close(consignmentId)
+                            saleHandler.connect(seller).closeSale(consignmentId)
                         ).to.emit(saleHandler, "RoyaltyDisbursed");
 
                     });
 
                 });
 
-                context("cancel()", async function () {
+                context("cancelSale()", async function () {
 
                     beforeEach(async function () {
 
@@ -636,7 +638,7 @@ describe("SaleHandler", function() {
 
                         // Seller closes sale
                         await expect(
-                            saleHandler.connect(admin).cancel(consignmentId)
+                            saleHandler.connect(admin).cancelSale(consignmentId)
                         ).to.emit(saleHandler, "SaleEnded")
                             .withArgs(
                                 consignmentId,
@@ -686,7 +688,7 @@ describe("SaleHandler", function() {
                 it("should allow buy if audience is STAKER and buyer is a staker", async function () {
 
                     // Set the audience to STAKER
-                    saleHandler.connect(admin).changeAudience(
+                    saleHandler.connect(admin).changeSaleAudience(
                         consignmentId,
                         Audience.STAKER
                     );
@@ -704,7 +706,7 @@ describe("SaleHandler", function() {
                 it("should allow buy if audience is VIP_STAKER and buyer is not a VIP staker", async function () {
 
                     // Set the audience to STAKER
-                    saleHandler.connect(admin).changeAudience(
+                    saleHandler.connect(admin).changeSaleAudience(
                         consignmentId,
                         Audience.STAKER
                     );
@@ -920,7 +922,7 @@ describe("SaleHandler", function() {
 
                         // ADMIN attempts to set audience for nonexistent consignment
                         await expect(
-                            saleHandler.connect(admin).changeAudience(
+                            saleHandler.connect(admin).changeSaleAudience(
                                 consignmentId,
                                 Audience.OPEN
                             )
@@ -937,7 +939,7 @@ describe("SaleHandler", function() {
 
                         // ADMIN attempts to set audience for nonexistent sale
                         await expect(
-                            saleHandler.connect(admin).changeAudience(
+                            saleHandler.connect(admin).changeSaleAudience(
                                 consignmentId,
                                 Audience.OPEN
                             )
@@ -951,11 +953,11 @@ describe("SaleHandler", function() {
                         await time.increaseTo(start);
 
                         // Cancel the sale
-                        saleHandler.connect(admin).cancel(consignmentId);
+                        saleHandler.connect(admin).cancelSale(consignmentId);
 
                         // ADMIN attempts to set audience for already settled sale
                         await expect(
-                            saleHandler.connect(admin).changeAudience(
+                            saleHandler.connect(admin).changeSaleAudience(
                                 consignmentId,
                                 Audience.VIP_STAKER
                             )
@@ -1013,7 +1015,7 @@ describe("SaleHandler", function() {
                     it("should revert if audience is STAKER and buyer is not a staker", async function () {
 
                         // Set the audience to STAKER
-                        saleHandler.connect(admin).changeAudience(
+                        saleHandler.connect(admin).changeSaleAudience(
                             consignmentId,
                             Audience.STAKER
                         );
@@ -1028,7 +1030,7 @@ describe("SaleHandler", function() {
                     it("should revert if audience is VIP_STAKER and buyer is not a VIP staker", async function () {
 
                         // Set the audience to VIP_STAKER
-                        saleHandler.connect(admin).changeAudience(
+                        saleHandler.connect(admin).changeSaleAudience(
                             consignmentId,
                             Audience.VIP_STAKER
                         );
@@ -1062,7 +1064,7 @@ describe("SaleHandler", function() {
 
                 });
 
-                context("close()", async function () {
+                context("closeSale()", async function () {
 
                     beforeEach(async function () {
 
@@ -1078,7 +1080,7 @@ describe("SaleHandler", function() {
 
                         // ADMIN attempts to close a nonexistent consignment
                         await expect(
-                            saleHandler.connect(seller).close(consignmentId)
+                            saleHandler.connect(seller).closeSale(consignmentId)
                         ).to.be.revertedWith("Consignment does not exist");
 
                     });
@@ -1092,7 +1094,7 @@ describe("SaleHandler", function() {
 
                         // ADMIN attempts to set cancel when sale doesn't exist
                         await expect(
-                            saleHandler.connect(admin).close(consignmentId)
+                            saleHandler.connect(admin).closeSale(consignmentId)
                         ).to.be.revertedWith("Sale does not exist");
 
                     });
@@ -1100,11 +1102,11 @@ describe("SaleHandler", function() {
                     it("should revert if sale is already settled", async function () {
 
                         // Cancel the sale
-                        await saleHandler.connect(admin).cancel(consignmentId);
+                        await saleHandler.connect(admin).cancelSale(consignmentId);
 
                         // ADMIN attempts to close a sale that has been settled
                         await expect(
-                            saleHandler.connect(seller).close(consignmentId)
+                            saleHandler.connect(seller).closeSale(consignmentId)
                         ).to.be.revertedWith("Sale has already been settled");
 
                     });
@@ -1113,14 +1115,14 @@ describe("SaleHandler", function() {
 
                         // ADMIN attempts to close a sale that hasn't even started
                         await expect(
-                            saleHandler.connect(seller).close(consignmentId)
+                            saleHandler.connect(seller).closeSale(consignmentId)
                         ).to.be.revertedWith("Sale hasn't started");
 
                     });
 
                 });
 
-                context("cancel()", async function () {
+                context("cancelSale()", async function () {
 
                     beforeEach(async function () {
 
@@ -1136,7 +1138,7 @@ describe("SaleHandler", function() {
 
                         // ADMIN attempts to set audience for nonexistent consignment
                         await expect(
-                            saleHandler.connect(admin).cancel(consignmentId)
+                            saleHandler.connect(admin).cancelSale(consignmentId)
                         ).to.be.revertedWith("Consignment does not exist");
 
                     });
@@ -1150,7 +1152,7 @@ describe("SaleHandler", function() {
 
                         // ADMIN attempts to set cancel when sale doesn't exist
                         await expect(
-                            saleHandler.connect(admin).cancel(consignmentId)
+                            saleHandler.connect(admin).cancelSale(consignmentId)
                         ).to.be.revertedWith("Sale does not exist");
 
                     });
@@ -1158,11 +1160,11 @@ describe("SaleHandler", function() {
                     it("should revert if sale is already settled", async function () {
 
                         // Cancel the sale
-                        await saleHandler.connect(admin).cancel(consignmentId);
+                        await saleHandler.connect(admin).cancelSale(consignmentId);
 
                         // ADMIN attempts to cancel a sale that has been settled
                         await expect(
-                            saleHandler.connect(admin).cancel(consignmentId)
+                            saleHandler.connect(admin).cancelSale(consignmentId)
                         ).to.be.revertedWith("Sale has already been settled");
 
                     });
@@ -1206,7 +1208,7 @@ describe("SaleHandler", function() {
 
                     // Seller closes sale
                     await expect(
-                        saleHandler.connect(seller).close(consignmentId)
+                        saleHandler.connect(seller).closeSale(consignmentId)
                     ).to.emit(saleHandler, "FeeDisbursed")
                         .withArgs(consignmentId, multisig.address, multisigAmount);
 
@@ -1216,7 +1218,7 @@ describe("SaleHandler", function() {
 
                     // Seller closes sale
                     await expect(
-                        saleHandler.connect(seller).close(consignmentId)
+                        saleHandler.connect(seller).closeSale(consignmentId)
                     ).to.emit(saleHandler, "FeeDisbursed")
                         .withArgs(consignmentId, seenStaking.address, stakingAmount);
 
@@ -1226,7 +1228,7 @@ describe("SaleHandler", function() {
 
                     // Seller closes sale
                     await expect(
-                        saleHandler.connect(seller).close(consignmentId)
+                        saleHandler.connect(seller).closeSale(consignmentId)
                     ).to.emit(saleHandler, "PayoutDisbursed")
                         .withArgs(consignmentId, seller.address, sellerAmount);
 
@@ -1278,7 +1280,7 @@ describe("SaleHandler", function() {
 
                     // Seller closes sale
                     await expect(
-                        saleHandler.connect(seller).close(consignmentId)
+                        saleHandler.connect(seller).closeSale(consignmentId)
                     ).to.emit(saleHandler, "RoyaltyDisbursed")
                         .withArgs(consignmentId, creator.address, royaltyAmount);
 
@@ -1288,7 +1290,7 @@ describe("SaleHandler", function() {
 
                     // Seller closes sale
                     await expect(
-                        saleHandler.connect(seller).close(consignmentId)
+                        saleHandler.connect(seller).closeSale(consignmentId)
                     ).to.emit(saleHandler, "FeeDisbursed")
                         .withArgs(consignmentId, multisig.address, multisigAmount);
 
@@ -1298,7 +1300,7 @@ describe("SaleHandler", function() {
 
                     // Seller closes sale
                     await expect(
-                        saleHandler.connect(seller).close(consignmentId)
+                        saleHandler.connect(seller).closeSale(consignmentId)
                     ).to.emit(saleHandler, "FeeDisbursed")
                         .withArgs(consignmentId, seenStaking.address, stakingAmount);
 
@@ -1308,7 +1310,7 @@ describe("SaleHandler", function() {
 
                     // Seller closes sale
                     await expect(
-                        saleHandler.connect(seller).close(consignmentId)
+                        saleHandler.connect(seller).closeSale(consignmentId)
                     ).to.emit(saleHandler, "PayoutDisbursed")
                         .withArgs(consignmentId, seller.address, sellerAmount);
 
@@ -1372,7 +1374,7 @@ describe("SaleHandler", function() {
 
                 });
 
-                context("close()", async function () {
+                context("closeSale()", async function () {
 
                     beforeEach(async function () {
 
@@ -1389,7 +1391,7 @@ describe("SaleHandler", function() {
                         contractBalance = await marketController.getSupply(tokenId);
 
                         // Seller closes sale
-                        await saleHandler.connect(seller).close(consignmentId);
+                        await saleHandler.connect(seller).closeSale(consignmentId);
 
                         // Get contract's new balance of token
                         newBalance = await marketController.getSupply(tokenId);
@@ -1410,7 +1412,7 @@ describe("SaleHandler", function() {
                         contractBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
 
                         // Seller closes sale
-                        await saleHandler.connect(seller).close(physicalConsignmentId);
+                        await saleHandler.connect(seller).closeSale(physicalConsignmentId);
 
                         // Get contract's new balance of token
                         newBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
@@ -1431,7 +1433,7 @@ describe("SaleHandler", function() {
                         contractBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
 
                         // Seller closes sale
-                        await saleHandler.connect(seller).close(physicalConsignmentId);
+                        await saleHandler.connect(seller).closeSale(physicalConsignmentId);
 
                         // Get contract's new balance of escrow ticket
                         buyerBalance = await seenHausNFT.balanceOf(seenHausNFT.address, physicalTokenId);
@@ -1445,7 +1447,7 @@ describe("SaleHandler", function() {
 
                 });
 
-                context("cancel()", async function () {
+                context("cancelSale()", async function () {
 
                     beforeEach(async function () {
 
@@ -1458,7 +1460,7 @@ describe("SaleHandler", function() {
                     it("should transfer consigned balance of token to seller if digital", async function () {
 
                         // Admin pulls sale with no bids
-                        await saleHandler.connect(admin).cancel(consignmentId);
+                        await saleHandler.connect(admin).cancelSale(consignmentId);
 
                         // Get contract's new balance of token
                         newBalance = await marketController.getSupply(tokenId);
@@ -1473,7 +1475,7 @@ describe("SaleHandler", function() {
                     it("should transfer consigned balance of token to seller if physical", async function () {
 
                         // Admin pulls sale with no bids
-                        await saleHandler.connect(admin).cancel(physicalConsignmentId);
+                        await saleHandler.connect(admin).cancelSale(physicalConsignmentId);
 
                         // Get contract's new balance of token
                         newBalance = await marketController.getSupply(physicalTokenId);

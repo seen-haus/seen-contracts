@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.5;
+pragma solidity ^0.8.0;
 
-import "../../domain/SeenTypes.sol";
+import "../domain/SeenTypes.sol";
 
 /**
  * @title IEscrowTicketer

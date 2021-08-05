@@ -4,6 +4,8 @@ const { expect } = require("chai");
 const Role = require("../../domain/Role");
 const EscrowTicket = require("../../domain/EscrowTicket");
 const Ticketer = require("../../domain/Ticketer");
+const { deployDiamond } = require('../../scripts/util/deploy-diamond.js');
+const { deployMarketControllerFacets } = require('../../scripts/util/deploy-market-controller-facets.js');
 
 describe("ItemsTicketer", function() {
 
@@ -14,7 +16,7 @@ describe("ItemsTicketer", function() {
     let SeenHausNFT, seenHausNFT;
     let ItemsTicketer, itemsTicketer;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
-    let ticketId, tokenId, tokenURI, counter, supply, half, balance, royaltyPercentage, consignmentId, support;
+    let ticketId, tokenId, tokenURI, counter, supply, half, balance, royaltyPercentage, consignmentId, support, interfaces;
     let ticketURI, ticketURIBase = "https://seen.haus/ticket/metadata/";
 
     beforeEach( async function () {
@@ -39,15 +41,11 @@ describe("ItemsTicketer", function() {
         outBidPercentage = "500";             // 5%    = 500
         defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
 
-        // Deploy the AccessController contract
-        AccessController = await ethers.getContractFactory("AccessController");
-        accessController = await AccessController.deploy();
-        await accessController.deployed();
+        // Deploy the Diamond
+        [diamond, diamondLoupe, diamondCut, accessController] = await deployDiamond();
 
-        // Deploy the MarketController contract
-        MarketController = await ethers.getContractFactory("MarketController");
-        marketController = await MarketController.deploy(
-            accessController.address,
+        // Prepare MarketController initialization arguments
+        const marketConfig = [
             staking.address,
             multisig.address,
             vipStakerAmount,
@@ -55,8 +53,13 @@ describe("ItemsTicketer", function() {
             maxRoyaltyPercentage,
             outBidPercentage,
             defaultTicketerType
-        );
-        await marketController.deployed();
+        ];
+
+        // Cut the MarketController facet into the Diamond
+        await deployMarketControllerFacets(diamond, marketConfig);
+
+        // Cast Diamond to MarketController
+        marketController = await ethers.getContractAt('IMarketController', diamond.address);
 
         // Deploy the SeenHausNFT contract
         SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
