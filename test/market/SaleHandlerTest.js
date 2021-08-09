@@ -331,7 +331,7 @@ describe("SaleHandler", function() {
                         saleHandler.connect(associate).cancelSale(consignmentId)
                     ).to.be.revertedWith("Access denied, caller doesn't have role");
 
-                    // ADMIN attempt // TODO: Why does this crash now
+                    // ADMIN attempt
                     await expect (
                         saleHandler.connect(admin).cancelSale(consignmentId)
                     ).to.emit(saleHandler,"SaleEnded");

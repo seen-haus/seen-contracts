@@ -14,7 +14,7 @@ pragma solidity ^0.8.0;
 
 // Libraries
 import { DiamondLib } from "./DiamondLib.sol";
-import {JewelerLib} from "./JewelerLib.sol";
+import { JewelerLib } from "./JewelerLib.sol";
 
 // Interfaces
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
@@ -53,7 +53,6 @@ contract Diamond {
         // Add supported interfaces
         if (_interfaceIds.length > 0) {
             for (uint8 x = 0; x < _interfaceIds.length; x++) {
-                //ds.supportedInterfaces[_interfaceIds[x]] = true;
                 DiamondLib.addSupportedInterface(_interfaceIds[x]);
             }
         }

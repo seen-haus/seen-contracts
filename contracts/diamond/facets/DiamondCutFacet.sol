@@ -44,7 +44,6 @@ contract DiamondCutFacet is SeenConstants, IDiamondCut {
         uint256 selectorCount = originalSelectorCount;
         bytes32 selectorSlot;
 
-        // TODO: Demystify these operations. @mudgen?
         // Check if last selector slot is full
         if (selectorCount & 7 > 0) {
             // get last selectorSlot

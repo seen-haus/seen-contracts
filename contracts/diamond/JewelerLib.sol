@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 /**
- * @title FacetLib
+ * @title JewelerLib
  *
  * Facet management functions
  *
@@ -222,7 +222,6 @@ library JewelerLib {
                     bytes32 oldFacet = ds.facets[selector];
                     require(address(bytes20(oldFacet)) != address(0), "LibDiamondCut: Can't remove function that doesn't exist");
 
-                    // TODO @mudgen ??? how are immutable functions marked/declared
                     // only useful if immutable functions exist
                     require(address(bytes20(oldFacet)) != address(this), "LibDiamondCut: Can't remove immutable function");
 
