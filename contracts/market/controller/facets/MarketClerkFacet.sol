@@ -20,9 +20,9 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder {
      */
     modifier onlyUnInitialized() {
 
-        MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
-        require(!mcs.clerkFacetInitialized, "Initializer: contract is already initialized");
-        mcs.clerkFacetInitialized = true;
+        MarketControllerLib.MarketControllerInitializers storage mci = MarketControllerLib.marketControllerInitializers();
+        require(!mci.clerkFacet, "Initializer: contract is already initialized");
+        mci.clerkFacet = true;
         _;
     }
 
