@@ -13,15 +13,14 @@ import "../MarketHandlerBase.sol";
  */
 contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
 
-
     /**
      * @dev Modifier to protect initializer function from being invoked twice.
      */
-    modifier onlyUnInitialized() {
-
-        MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
-        require(!mhs.auctionBuilderFacetInitialized, "Initializer: contract is already initialized");
-        mhs.auctionBuilderFacetInitialized = true;
+    modifier onlyUnInitialized()
+    {
+        MarketHandlerLib.MarketHandlerInitializers storage mhi = MarketHandlerLib.marketHandlerInitializers();
+        require(!mhi.auctionBuilderFacet, "Initializer: contract is already initialized");
+        mhi.auctionBuilderFacet = true;
         _;
     }
 

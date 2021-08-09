@@ -19,9 +19,9 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
      */
     modifier onlyUnInitialized()
     {
-        MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
-        require(!mcs.configFacetInitialized, "Initializer: contract is already initialized");
-        mcs.configFacetInitialized = true;
+        MarketControllerLib.MarketControllerInitializers storage mci = MarketControllerLib.marketControllerInitializers();
+        require(!mci.configFacet, "Initializer: contract is already initialized");
+        mci.configFacet = true;
         _;
     }
 

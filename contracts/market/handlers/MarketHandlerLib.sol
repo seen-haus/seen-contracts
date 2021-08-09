@@ -15,12 +15,10 @@ import "../../domain/SeenTypes.sol";
  */
 library MarketHandlerLib {
 
-    bytes32 constant MARKET_HANDLER_STORAGE_POSITION = keccak256("haus.seen.market.handler.storage");
+    bytes32 constant MARKET_HANDLER_STORAGE_POSITION = keccak256("seen.haus.market.handler.storage");
+    bytes32 constant MARKET_HANDLER_INITIALIZERS_POSITION = keccak256("seen.haus.market.handler.initializers");
 
     struct MarketHandlerStorage {
-
-        // the Seen.Haus MarketController
-        IMarketController marketController;
 
         // map a consignment id to an audience
         mapping(uint256 => SeenTypes.Audience) audiences;
@@ -31,17 +29,21 @@ library MarketHandlerLib {
         // @dev map a consignment id to an auction
         mapping(uint256 => SeenTypes.Auction) auctions;
 
+    }
+
+    struct MarketHandlerInitializers {
+
         // AuctionBuilderFacet initialization state
-        bool auctionBuilderFacetInitialized;
+        bool auctionBuilderFacet;
 
         // AuctionRunnerFacet initialization state
-        bool auctionRunnerFacetInitialized;
+        bool auctionRunnerFacet;
 
         // SaleBuilderFacet initialization state
-        bool saleBuilderFacetInitialized;
+        bool saleBuilderFacet;
 
         // SaleRunnerFacet initialization state
-        bool saleRunnerFacetInitialized;
+        bool saleRunnerFacet;
 
     }
 
@@ -49,6 +51,13 @@ library MarketHandlerLib {
         bytes32 position = MARKET_HANDLER_STORAGE_POSITION;
         assembly {
             mhs.slot := position
+        }
+    }
+
+    function marketHandlerInitializers() internal pure returns (MarketHandlerInitializers storage mhi) {
+        bytes32 position = MARKET_HANDLER_INITIALIZERS_POSITION;
+        assembly {
+            mhi.slot := position
         }
     }
 

@@ -22,10 +22,9 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
      */
     modifier onlyUnInitialized()
     {
-
-        MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
-        require(!mhs.saleRunnerFacetInitialized, "Initializer: contract is already initialized");
-        mhs.saleRunnerFacetInitialized = true;
+        MarketHandlerLib.MarketHandlerInitializers storage mhi = MarketHandlerLib.marketHandlerInitializers();
+        require(!mhi.saleRunnerFacet, "Initializer: contract is already initialized");
+        mhi.saleRunnerFacet = true;
         _;
     }
 

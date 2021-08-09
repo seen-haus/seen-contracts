@@ -12,7 +12,8 @@ import "../../domain/SeenTypes.sol";
  */
 library MarketControllerLib {
 
-    bytes32 constant MARKET_CONTROLLER_STORAGE_POSITION = keccak256("haus.seen.market.controller.storage");
+    bytes32 constant MARKET_CONTROLLER_STORAGE_POSITION = keccak256("seen.haus.market.controller.storage");
+    bytes32 constant MARKET_CONTROLLER_INITIALIZERS_POSITION = keccak256("seen.haus.market.controller.initializers");
 
     struct MarketControllerStorage {
 
@@ -58,11 +59,15 @@ library MarketControllerLib {
         // consignment id => ticketer type
         mapping(uint256 => SeenTypes.Ticketer) consignmentTicketers;
 
+    }
+
+    struct MarketControllerInitializers {
+
         // MarketConfigFacet initialization state
-        bool configFacetInitialized;
+        bool configFacet;
 
         // MarketClerkFacet initialization state
-        bool clerkFacetInitialized;
+        bool clerkFacet;
 
     }
 
@@ -70,6 +75,13 @@ library MarketControllerLib {
         bytes32 position = MARKET_CONTROLLER_STORAGE_POSITION;
         assembly {
             mcs.slot := position
+        }
+    }
+
+    function marketControllerInitializers() internal pure returns (MarketControllerInitializers storage mci) {
+        bytes32 position = MARKET_CONTROLLER_INITIALIZERS_POSITION;
+        assembly {
+            mci.slot := position
         }
     }
 

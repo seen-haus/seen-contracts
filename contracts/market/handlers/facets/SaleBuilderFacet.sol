@@ -19,11 +19,11 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
     /**
      * @dev Modifier to protect initializer function from being invoked twice.
      */
-    modifier onlyUnInitialized() {
-
-        MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
-        require(!mhs.saleBuilderFacetInitialized, "Initializer: contract is already initialized");
-        mhs.saleBuilderFacetInitialized = true;
+    modifier onlyUnInitialized()
+    {
+        MarketHandlerLib.MarketHandlerInitializers storage mhi = MarketHandlerLib.marketHandlerInitializers();
+        require(!mhi.saleBuilderFacet, "Initializer: contract is already initialized");
+        mhi.saleBuilderFacet = true;
         _;
     }
 

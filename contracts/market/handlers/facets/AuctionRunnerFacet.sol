@@ -20,11 +20,12 @@ contract AuctionRunnerFacet is IAuctionRunner, MarketHandlerBase {
     /**
      * @dev Modifier to protect initializer function from being invoked twice.
      */
-    modifier onlyUnInitialized() {
+    modifier onlyUnInitialized()
+    {
 
-        MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
-        require(!mhs.auctionRunnerFacetInitialized, "Initializer: contract is already initialized");
-        mhs.auctionRunnerFacetInitialized = true;
+        MarketHandlerLib.MarketHandlerInitializers storage mhi = MarketHandlerLib.marketHandlerInitializers();
+        require(!mhi.auctionRunnerFacet, "Initializer: contract is already initialized");
+        mhi.auctionRunnerFacet = true;
         _;
     }
 
