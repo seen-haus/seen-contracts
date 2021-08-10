@@ -13,7 +13,7 @@ import "../MarketControllerLib.sol";
  * @author Cliff Hall
  * @notice Manages consignments for the Seen.Haus contract suite.
  */
-contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder {
+contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder, ERC721Holder {
 
     /**
      * @dev Modifier to protect initializer function from being invoked twice.

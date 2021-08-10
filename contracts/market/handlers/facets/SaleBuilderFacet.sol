@@ -32,12 +32,12 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
      *
      * Register supported interfaces
      */
-    function initialize ()
+    function initialize()
     public
     onlyUnInitialized
     {
-        DiamondLib.supportsInterface(type(ISaleBuilder).interfaceId);   // when combined with ISaleRunner ...
-        DiamondLib.supportsInterface(type(ISaleHandler).interfaceId);   // ... Diamond supports ISaleHandler
+        DiamondLib.addSupportedInterface(type(ISaleBuilder).interfaceId);   // when combined with ISaleRunner ...
+        DiamondLib.addSupportedInterface(type(ISaleHandler).interfaceId);   // ... Diamond supports ISaleHandler
     }
 
     /**

@@ -36,7 +36,7 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
      * @param _outBidPercentage - minimum percentage a Seen.Haus auction bid must be above the previous bid to prevail
      * @param _defaultTicketerType - which ticketer type to use if none has been specified for a given consignment
      */
-    function initialize (
+    function initialize(
         address payable _staking,
         address payable _multisig,
         uint256 _vipStakerAmount,
@@ -49,8 +49,8 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
     onlyUnInitialized
     {
         // Register supported interfaces
-        DiamondLib.supportsInterface(type(IMarketConfig).interfaceId);     // when combined with IMarketClerk ...
-        DiamondLib.supportsInterface(type(IMarketController).interfaceId); // ... supports IMarketController
+        DiamondLib.addSupportedInterface(type(IMarketConfig).interfaceId);     // when combined with IMarketClerk ...
+        DiamondLib.addSupportedInterface(type(IMarketController).interfaceId); // ... supports IMarketController
 
         // Initialize market config params
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();

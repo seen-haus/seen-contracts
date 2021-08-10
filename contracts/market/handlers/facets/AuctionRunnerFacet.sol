@@ -34,11 +34,11 @@ contract AuctionRunnerFacet is IAuctionRunner, MarketHandlerBase {
      *
      * Register supported interfaces
      */
-    function initialize ()
+    function initialize()
     public
     onlyUnInitialized
     {
-        DiamondLib.supportsInterface(type(IAuctionRunner).interfaceId);
+        DiamondLib.addSupportedInterface(type(IAuctionRunner).interfaceId);
     }
 
     /**

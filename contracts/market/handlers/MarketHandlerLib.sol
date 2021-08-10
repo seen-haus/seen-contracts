@@ -9,7 +9,7 @@ import "../../domain/SeenTypes.sol";
 /**
  * @title MarketHandlerLib
  *
- * @dev Provides access to the the MarketController Storage slot for MarketHandler facets
+ * @dev Provides access to the the MarketHandler Storage and Intitializer slots for MarketHandler facets
  *
  * @author Cliff Hall
  */

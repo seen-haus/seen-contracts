@@ -29,12 +29,12 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
      *
      * Register supported interfaces
      */
-    function initialize ()
+    function initialize()
     public
     onlyUnInitialized
     {
-        DiamondLib.supportsInterface(type(IAuctionBuilder).interfaceId);   // when combined with IAuctionRunner ...
-        DiamondLib.supportsInterface(type(IAuctionHandler).interfaceId);   // ... Diamond supports IAuctionHandler
+        DiamondLib.addSupportedInterface(type(IAuctionBuilder).interfaceId);   // when combined with IAuctionRunner ...
+        DiamondLib.addSupportedInterface(type(IAuctionHandler).interfaceId);   // ... Diamond supports IAuctionHandler
     }
 
     /**
