@@ -59,8 +59,8 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155 {
     }
 
     /**
-    * @notice Get info about the ticket
-    */
+     * @notice Get info about the ticket
+     */
     function getTicket(uint256 _ticketId)
     external
     view

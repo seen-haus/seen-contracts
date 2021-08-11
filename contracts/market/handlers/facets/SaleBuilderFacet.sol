@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "../../../interfaces/IEscrowTicketer.sol";
 import "../../../interfaces/ISaleBuilder.sol";
@@ -65,9 +66,9 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
      * for the duration of the sale.
      *
      * Reverts if:
+     *  - Sale starts in the past
      *  - Sale exists for consignment
      *  - Consignment has already been marketed
-     *  - Sale starts in the past
      *
      * Emits a SalePending event.
      *
@@ -101,8 +102,8 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
         // Get the storage location for the sale
         Sale storage sale = mhs.sales[consignment.id];
 
-        // Make sure auction doesn't exist
-        require(sale.consignmentId == 0, "Sale exists");
+        // Make sure sale doesn't exist (start would always be non-zero on an actual sale)
+        require(sale.start == 0, "Sale exists");
 
         // Make sure start time isn't in the past
         require (_start >= block.timestamp, "Time runs backward?");
@@ -132,9 +133,11 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
      * for the duration of the sale.
      *
      * Reverts if:
-     *  - Sale exists for consignment
      *  - Sale starts in the past
+     *  - Supply is zero
+     *  - Sale exists for consignment
      *  - This contract isn't approved to transfer seller's tokens
+     *  - Token contract does not implement either IERC1155 or IERC721
      *
      * Emits a SalePending event.
      *
@@ -167,20 +170,44 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
         // Make sure start time isn't in the past
         require (_start >= block.timestamp, "Time runs backward?");
 
+        // Make sure supply is non-zero
+        require (_supply > 0, "Supply must be non-zero");
+
         // Make sure this contract is approved to transfer the token
+        // N.B. The following will work because isApprovedForAll has the same signature on both IERC721 and IERC1155
         require(IERC1155(_tokenAddress).isApprovedForAll(_seller, address(this)), "Not approved to transfer seller's tokens");
 
-        // Ensure seller owns sufficient supply of token
-        require(IERC1155(_tokenAddress).balanceOf(_seller, _tokenId) >= _supply, "Seller has insufficient balance of token");
-
         // To register the consignment, tokens must first be in MarketController's possession
-        IERC1155(_tokenAddress).safeTransferFrom(
-            _seller,
-            address(getMarketController()),
-            _tokenId,
-            _supply,
-            new bytes(0x0)
-        );
+        if (IERC165(_tokenAddress).supportsInterface(type(IERC1155).interfaceId)) {
+
+            // Ensure seller owns sufficient supply of token
+            require(IERC1155(_tokenAddress).balanceOf(_seller, _tokenId) >= _supply, "Seller has insufficient balance of token");
+
+            // Transfer supply to MarketController
+            IERC1155(_tokenAddress).safeTransferFrom(
+                _seller,
+                address(getMarketController()),
+                _tokenId,
+                _supply,
+                new bytes(0x0)
+            );
+
+        } else {
+
+            // Token must be a single token NFT
+            require(IERC165(_tokenAddress).supportsInterface(type(IERC721).interfaceId), "Invalid token type");
+
+            // Ensure the consigned token has been transferred to this contract
+            require(IERC721(_tokenAddress).ownerOf(_tokenId) == (address(this)));
+
+            // Transfer tokenId to MarketController
+            IERC721(_tokenAddress).safeTransferFrom(
+                _seller,
+                address(getMarketController()),
+                _tokenId
+            );
+
+        }
 
         // Register consignment (Secondaries are automatically marketed upon registration)
         Consignment memory consignment = getMarketController().registerConsignment(Market.Secondary, msg.sender, _seller, _tokenAddress, _tokenId, _supply);

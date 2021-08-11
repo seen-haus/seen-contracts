@@ -927,7 +927,9 @@ describe("MarketController", function() {
                         response.tokenId.toString(),
                         response.supply.toString(),
                         response.id.toString(),
-                        response.marketed
+                        response.multiToken,
+                        response.marketed,
+                        response.released
                     );
 
                     // Test validity
@@ -943,7 +945,9 @@ describe("MarketController", function() {
                     expect(consignment.tokenId === tokenId.toString()).is.true;
                     expect(consignment.supply === supply.toString()).is.true;
                     expect(consignment.id === id).is.true;
+                    expect(consignment.multiToken).is.true;
                     expect(consignment.marketed).is.false;
+                    expect(consignment.released).is.false;
                 });
 
             });

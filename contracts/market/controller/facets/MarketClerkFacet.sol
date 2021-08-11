@@ -2,7 +2,9 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "../../../interfaces/IMarketClerk.sol";
 import "../../../diamond/DiamondLib.sol";
 import "../MarketControllerBase.sol";
@@ -35,8 +37,9 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder, 
     public
     onlyUnInitialized
     {
-        DiamondLib.supportsInterface(type(IMarketClerk).interfaceId);
-        DiamondLib.supportsInterface(type(IERC1155Receiver).interfaceId);
+        DiamondLib.addSupportedInterface(type(IMarketClerk).interfaceId);
+        DiamondLib.addSupportedInterface(type(IERC1155Receiver).interfaceId);
+        DiamondLib.addSupportedInterface(type(IERC721Receiver).interfaceId);
     }
 
     /**
@@ -89,7 +92,10 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder, 
     {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         Consignment storage consignment = mcs.consignments[_consignmentId];
-        return IERC1155(consignment.tokenAddress).balanceOf(address(this), consignment.tokenId);
+        return consignment.multiToken
+            ? IERC1155(consignment.tokenAddress).balanceOf(address(this), consignment.tokenId)
+            : consignment.released ? 0 : 1;
+
     }
 
     /**
@@ -117,6 +123,12 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder, 
      *
      * Emits a ConsignmentRegistered event.
      *
+     * Reverts if:
+     *  - Token is multi-token and supply hasn't been transferred to this contract
+     *  - Token is not multi-token and contract doesn't implement ERC-721
+     *  - Token is not multi-token and this contract is not owner of tokenId
+     *  - Token is not multi-token and the supply is not 1
+     *
      * @param _market - the market for the consignment. See {SeenTypes.Market}
      * @param _consignor - the address executing the consignment transaction
      * @param _seller - the seller of the consignment
@@ -141,10 +153,29 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder, 
     {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
 
-        // Ensure the consigned token has been transferred to this contract
-        require(IERC1155(_tokenAddress).balanceOf(address(this), _tokenId) == _supply);
+        // Check whether this is a multi token NFT
+        bool multiToken = IERC165(_tokenAddress).supportsInterface(type(IERC1155).interfaceId);
 
-        // Get the id for the new consignment
+        // Ensure consigned asset has been transferred to this this contract
+        if (multiToken)  {
+
+            // Ensure the consigned token supply has been transferred to this contract
+            require( IERC1155(_tokenAddress).balanceOf(address(this), _tokenId) == _supply );
+
+        } else {
+
+            // Token must be a single token NFT
+            require(IERC165(_tokenAddress).supportsInterface(type(IERC721).interfaceId), "Invalid token type");
+
+            // Ensure the consigned token has been transferred to this contract
+            require(IERC721(_tokenAddress).ownerOf(_tokenId) == (address(this)));
+
+            // Ensure the supply is set to 1
+            require(_supply == 1, "Invalid supply for token");
+
+        }
+
+        // Get the id for the new consignment and increment counter
         uint256 id = mcs.nextConsignment++;
 
         // Primary market NFTs (minted here) are not automatically marketed.
@@ -159,7 +190,9 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder, 
             _tokenId,
             _supply,
             id,
-            marketed
+            multiToken,
+            marketed,
+            false
         );
         mcs.consignments[id] = consignment;
 
@@ -178,7 +211,8 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder, 
      *
      * Emits a ConsignmentMarketed event.
      *
-     * Reverts if consignment has already been marketed.
+     * Reverts if:
+     *  - consignment has already been marketed.
      *
      * @param _consignmentId - the id of the consignment
      */
@@ -211,11 +245,14 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder, 
      *
      * Emits a ConsignmentReleased event.
      *
-     * Reverts if caller is does not have MARKET_HANDLER role.     *
-     * Reverts if consignment doesn't exist     *
+     * Reverts if:
+     *  - caller is does not have MARKET_HANDLER role.
+     *  - consignment doesn't exist
+     *  - consignment has already been released
+     *  - consignment is multi-token and supply is not adequate
      *
      * @param _consignmentId - the id of the consignment
-     * @param _amount - the amount of the consigned supply
+     * @param _amount - the amount of the consigned supply (must be 1 for ERC721 tokens)
      * @param _releaseTo - the address to transfer the consigned token balance to
      */
     function releaseConsignment(uint256 _consignmentId, uint256 _amount, address _releaseTo)
@@ -227,25 +264,45 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder, 
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
 
         // Get the consignment into memory
-        Consignment memory consignment = mcs.consignments[_consignmentId];
+        Consignment storage consignment = mcs.consignments[_consignmentId];
 
-        // Get the current supply
-        uint256 supply = IERC1155(consignment.tokenAddress).balanceOf(address(this), consignment.tokenId);
+        // Ensure the consignment has not been released
+        require(!consignment.released, "Consigned token has already been released");
 
-        // Ensure this contract holds enough supply
-        require(supply >= _amount, "Consigned token supply less than amount");
+        // Handle transfer, marking of consignment
+        if (consignment.multiToken) {
 
-        // Remove the consignment when the entire supply has been released
-        //if (supply == _amount) delete consignments[_consignmentId];
+            // Get the current supply
+            uint256 supply = IERC1155(consignment.tokenAddress).balanceOf(address(this), consignment.tokenId);
 
-        // Transfer a balance of the token from the MarketController to the recipient
-        IERC1155(consignment.tokenAddress).safeTransferFrom(
-            address(this),
-            _releaseTo,
-            consignment.tokenId,
-            _amount,
-            new bytes(0x0)
-        );
+            // Ensure this contract holds enough supply
+            require(supply >= _amount, "Consigned token supply less than amount");
+
+            // Mark the consignment when the entire supply has been released
+            if (supply == _amount) consignment.released = true;
+
+            // Transfer a balance of the token from the MarketController to the recipient
+            IERC1155(consignment.tokenAddress).safeTransferFrom(
+                address(this),
+                _releaseTo,
+                consignment.tokenId,
+                _amount,
+                new bytes(0x0)
+            );
+
+        } else {
+
+            // Mark the single-token consignment released
+            consignment.released = true;
+
+            // Transfer the token from the MarketController to the recipient
+            IERC721(consignment.tokenAddress).safeTransferFrom(
+                address(this),
+                _releaseTo,
+                consignment.tokenId
+            );
+
+        }
 
         // Notify watchers about state change
         emit ConsignmentReleased(consignment.id, _amount, _releaseTo);

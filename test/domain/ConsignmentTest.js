@@ -6,7 +6,7 @@ describe("Consignment", function() {
 
     // Suite-wide scope
     let accounts, consignment;
-    let market, seller, tokenAddress, tokenId, supply, id, marketed;
+    let market, seller, tokenAddress, tokenId, supply, id, multiToken, marketed, released;
 
     before( async function () {
 
@@ -20,7 +20,9 @@ describe("Consignment", function() {
         tokenId = "100";
         supply = "50";
         id = "1";
+        multiToken = true;
         marketed = false;
+        released = false;
 
     });
 
@@ -28,13 +30,14 @@ describe("Consignment", function() {
 
         it("Should allow creation of valid, fully populated Consignment instance", async function () {
 
-            consignment = new Consignment(market, seller, tokenAddress, tokenId, supply, id, marketed);
+            consignment = new Consignment(market, seller, tokenAddress, tokenId, supply, id,  multiToken, marketed, released);
             expect(consignment.marketIsValid()).is.true;
             expect(consignment.sellerIsValid()).is.true;
             expect(consignment.tokenAddressIsValid()).is.true;
             expect(consignment.tokenIdIsValid()).is.true;
             expect(consignment.idIsValid()).is.true;
             expect(consignment.marketedIsValid()).is.true;
+            expect(consignment.multiTokenIsValid()).is.true;
             expect(consignment.isValid()).is.true;
 
         });
@@ -46,7 +49,7 @@ describe("Consignment", function() {
         beforeEach( async function () {
 
             // Create a valid consignment, then set fields in tests directly
-            consignment = new Consignment(market, seller, tokenAddress, tokenId, supply, id, marketed);
+            consignment = new Consignment(market, seller, tokenAddress, tokenId, supply, id,  multiToken, marketed, released);
         });
 
         it("Always present, market must be equal to a Market enum value", async function() {
@@ -193,6 +196,25 @@ describe("Consignment", function() {
 
         });
 
+        it("Always present, multiToken must be a boolean", async function() {
+
+            // Invalid field value
+            consignment.multiToken = 12;
+            expect(consignment.multiTokenIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Invalid field value
+            consignment.multiToken = "zedzdeadbaby";
+            expect(consignment.multiTokenIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Valid field value
+            consignment.multiToken = false;
+            expect(consignment.multiTokenIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+        });
+
         it("Always present, marketed must be a boolean", async function() {
 
             // Invalid field value
@@ -212,6 +234,25 @@ describe("Consignment", function() {
 
         });
 
+        it("Always present, released must be a boolean", async function() {
+
+            // Invalid field value
+            consignment.released = 12;
+            expect(consignment.releasedIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Invalid field value
+            consignment.released = "zedzdeadbaby";
+            expect(consignment.releasedIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Valid field value
+            consignment.released = false;
+            expect(consignment.releasedIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+        });
+
     })
 
     context("Utility functions", async function () {
@@ -219,7 +260,7 @@ describe("Consignment", function() {
         beforeEach( async function () {
 
             // Create a valid Consignment instance, then operate on its methods in the tests
-            consignment = new Consignment(market, seller, tokenAddress, tokenId, supply, id, marketed);
+            consignment = new Consignment(market, seller, tokenAddress, tokenId, supply, id,  multiToken, marketed, released);
 
         })
 
@@ -227,7 +268,7 @@ describe("Consignment", function() {
 
             // Get plain object
             const object = {
-                market, seller, tokenAddress: tokenAddress, tokenId, supply, id, marketed
+                market, seller, tokenAddress: tokenAddress, tokenId, supply, id,  multiToken, marketed, released
             }
 
             // Promote to instance
