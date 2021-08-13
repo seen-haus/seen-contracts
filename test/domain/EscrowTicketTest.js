@@ -1,6 +1,11 @@
 const { expect } = require("chai");
 const EscrowTicket = require("../../domain/EscrowTicket");
 
+/**
+ *  Test the EscrowTicket domain object
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
 describe("EscrowTicket", function() {
 
     // Suite-wide scope

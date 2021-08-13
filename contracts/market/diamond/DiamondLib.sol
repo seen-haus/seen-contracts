@@ -1,21 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import { IDiamondCut } from "../../interfaces/IDiamondCut.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
 /**
  * @title DiamondLib
  *
- * Diamond storage slot and supported interfaces
+ * @notice Diamond storage slot and supported interfaces
  *
- * @notice Diamond library based on Nick Mudge's gas-optimized diamond-2 reference.
+ * @notice Based on Nick Mudge's gas-optimized diamond-2 reference.
  * Reference Implementation  : https://github.com/mudgen/diamond-2-hardhat
  * EIP-2535 Diamond Standard : https://eips.ethereum.org/EIPS/eip-2535
  *
- * @author Nick Mudge
- * @author Cliff Hall
+ * N.B. Facet management functions from original `DiamondLib` were refactor/extracted
+ * to JewelerLib, since business facets also use this library for access control and
+ * managing supported interfaces.
+ *
+ * @author Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
-
 library DiamondLib {
 
     bytes32 constant DIAMOND_STORAGE_POSITION = keccak256("diamond.standard.diamond.storage");

@@ -6,14 +6,16 @@ import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "../../../interfaces/IMarketClerk.sol";
-import "../../../diamond/DiamondLib.sol";
+import "../../diamond/DiamondLib.sol";
 import "../MarketControllerBase.sol";
 import "../MarketControllerLib.sol";
 
 /**
  * @title MarketClerkFacet
- * @author Cliff Hall
+ *
  * @notice Manages consignments for the Seen.Haus contract suite.
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder, ERC721Holder {
 

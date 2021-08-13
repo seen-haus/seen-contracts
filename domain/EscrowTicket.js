@@ -1,10 +1,11 @@
-/**
- * Domain Entity: EscrowTicket
- * @author Cliff Hall <cliff@futurescale.com>
- */
 const NODE = (typeof module !== 'undefined' && typeof module.exports !== 'undefined');
 const ethers = require("ethers");
 
+/**
+ * Domain Entity: EscrowTicket
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
 class EscrowTicket {
 
     constructor (id, consignmentId, amount, itemURI) {

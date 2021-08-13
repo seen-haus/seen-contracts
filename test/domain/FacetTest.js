@@ -1,6 +1,11 @@
 const { expect } = require("chai");
 const Facet = require("../../domain/Facet");
 
+/**
+ *  Test the Facet domain object
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
 describe("Facet", function() {
 
     // Suite-wide scope

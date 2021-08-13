@@ -5,15 +5,20 @@ const Role = require("../../domain/Role");
 const Market = require("../../domain/Market");
 const Consignment = require("../../domain/Consignment");
 const Ticketer = require("../../domain/Ticketer");
-const { deployDiamond } = require('../../scripts/util/deploy-diamond.js');
+const { InterfaceIds } = require('../../scripts/util/supported-interfaces.js');
+const { deployMarketDiamond } = require('../../scripts/util/deploy-market-diamond.js');
 const { deployMarketControllerFacets } = require('../../scripts/util/deploy-market-controller-facets.js');
 
+/**
+ *  Test the MarketController facets (MarketClerk, MarketConfig)
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
 describe("MarketController", function() {
 
     // Common vars
     let accounts, deployer, admin, marketHandler, associate, seller, escrowAgent, minter;
-    let AccessController, accessController;
-    let MarketConfig, marketConfig, MarketClerk, marketClerk, marketController;
+    let accessController, marketController, marketDiamond;
     let SeenHausNFT, seenHausNFT;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let lotsTicketer, itemsTicketer, tokenURI, royaltyPercentage;
@@ -47,7 +52,7 @@ describe("MarketController", function() {
         defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
 
         // Deploy the Diamond
-        [diamond, diamondLoupe, diamondCut, accessController] = await deployDiamond();
+        [marketDiamond, diamondLoupe, diamondCut, accessController] = await deployMarketDiamond();
 
         // Prepare MarketController initialization arguments
         const marketConfig = [
@@ -61,16 +66,16 @@ describe("MarketController", function() {
         ];
 
         // Cut the MarketController facet into the Diamond
-        await deployMarketControllerFacets(diamond, marketConfig);
+        await deployMarketControllerFacets(marketDiamond, marketConfig);
 
         // Cast Diamond to MarketController
-        marketController = await ethers.getContractAt('IMarketController', diamond.address);
+        marketController = await ethers.getContractAt('IMarketController', marketDiamond.address);
 
         // Deploy the SeenHausNFT contract
         SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
         seenHausNFT = await SeenHausNFT.deploy(
             accessController.address,
-            diamond.address
+            marketDiamond.address
         );
         await seenHausNFT.deployed();
 
@@ -86,6 +91,92 @@ describe("MarketController", function() {
 
         // Grant MARKET_HANDLER to SeenHausNFT
         await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
+
+    });
+
+    context("Interfaces", async function () {
+
+        context("supportsInterface()", async function () {
+
+            it("should indicate support for ERC-165 interface", async function () {
+
+                // See https://eips.ethereum.org/EIPS/eip-165#how-a-contract-will-publish-the-interfaces-it-implements
+                support = await marketController.supportsInterface(InterfaceIds.IERC165);
+
+                // Test
+                await expect(
+                    support,
+                    "ERC-165 interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for IERC1155Receiver interface", async function () {
+
+                // Current interfaceId for IERC1155Receiver
+                support = await marketController.supportsInterface(InterfaceIds.IERC1155Receiver);
+
+                // Test
+                await expect(
+                    support,
+                    "IERC1155Receiver interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for IERC721Receiver interface", async function () {
+
+                // Current interfaceId for IERC721Receiver
+                support = await marketController.supportsInterface(InterfaceIds.IERC721Receiver);
+
+                // Test
+                await expect(
+                    support,
+                    "IERC721Receiver interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for IMarketController interface", async function () {
+
+                // Current interfaceId for IMarketController
+                support = await marketController.supportsInterface(InterfaceIds.IMarketController);
+
+                // Test
+                await expect(
+                    support,
+                    "IMarketController interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for IMarketConfig interface", async function () {
+
+                // Current interfaceId for IMarketConfig
+                support = await marketController.supportsInterface(InterfaceIds.IMarketConfig);
+
+                // Test
+                await expect(
+                    support,
+                    "IMarketConfig interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for IMarketClerk interface", async function () {
+
+                // Current interfaceId for IMarketClerk
+                support = await marketController.supportsInterface(InterfaceIds.IMarketClerk);
+
+                // Test
+                await expect(
+                    support,
+                    "IMarketClerk interface not supported"
+                ).is.true;
+
+            });
+
+        });
 
     });
 
@@ -237,39 +328,6 @@ describe("MarketController", function() {
         });
 
         context("Privileged Access", async function () {
-
-            xit("setAccessController() should require ADMIN to set the accessController address", async function () {
-
-                // N.B. There is no separate test suite for AccessClient.sol, which is an abstract contract.
-                //      Functionality not covered elsewhere will be tested here in the MarketController test suite.
-
-                // non-ADMIN attempt
-                await expect(
-                    marketController.connect(associate).setAccessController(replacementAddress)
-                ).to.be.revertedWith("Access denied, caller doesn't have role");
-
-                // Get address
-                address = await marketController.getAccessController();
-
-                // Test
-                expect(
-                    address !== replacementAddress,
-                    "non-ADMIN can set accessController address"
-                ).is.true;
-
-                // ADMIN attempt
-                await marketController.connect(admin).setAccessController(replacementAddress);
-
-                // Get address
-                address = await marketController.getAccessController();
-
-                // Test
-                expect(
-                    address === replacementAddress,
-                    "ADMIN can't set accessController address"
-                ).is.true;
-
-            });
 
             it("setStaking() should require ADMIN to set the staking address", async function () {
 
@@ -1038,40 +1096,6 @@ describe("MarketController", function() {
                     ).to.be.revertedWith("Consignment does not exist");
 
                 });
-
-            });
-
-        });
-
-    });
-
-    context("Interfaces", async function () {
-
-        context("supportsInterface()", async function () {
-
-            it("should indicate support for ERC-165 interface", async function () {
-
-                // See https://eips.ethereum.org/EIPS/eip-165#how-a-contract-will-publish-the-interfaces-it-implements
-                support = await marketController.supportsInterface("0x01ffc9a7");
-
-                // Test
-                await expect(
-                    support,
-                    "ERC-165 interface not supported"
-                ).is.true;
-
-            });
-
-            xit("should indicate support for IMarketController interface", async function () {
-
-                // Current interfaceId for IMarketController
-                support = await marketController.supportsInterface("0xe5f2f941");
-
-                // Test
-                await expect(
-                    support,
-                    "IMarketController interface not supported"
-                ).is.true;
 
             });
 

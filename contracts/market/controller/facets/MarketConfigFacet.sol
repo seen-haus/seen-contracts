@@ -3,14 +3,17 @@ pragma solidity ^0.8.0;
 
 import "../../../interfaces/IMarketController.sol";
 import "../../../interfaces/IMarketConfig.sol";
-import "../../../diamond/DiamondLib.sol";
+import "../../../interfaces/IMarketClerk.sol";
+import "../../diamond/DiamondLib.sol";
 import "../MarketControllerBase.sol";
 import "../MarketControllerLib.sol";
 
 /**
  * @title MarketConfigFacet
- * @author Cliff Hall
+ *
  * @notice Provides centralized management of various market-related settings.
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
 
@@ -49,8 +52,8 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
     onlyUnInitialized
     {
         // Register supported interfaces
-        DiamondLib.addSupportedInterface(type(IMarketConfig).interfaceId);     // when combined with IMarketClerk ...
-        DiamondLib.addSupportedInterface(type(IMarketController).interfaceId); // ... supports IMarketController
+        DiamondLib.addSupportedInterface(type(IMarketConfig).interfaceId);  // when combined with IMarketClerk ...
+        DiamondLib.addSupportedInterface(type(IMarketConfig).interfaceId ^ type(IMarketClerk).interfaceId); // ... supports IMarketController
 
         // Initialize market config params
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();

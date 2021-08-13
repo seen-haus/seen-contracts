@@ -9,8 +9,10 @@ import "../MarketHandlerBase.sol";
 
 /**
  * @title AuctionOperatorFacet
- * @author Cliff Hall
+ *
  * @notice Handles the operation of Seen.Haus auctions.
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract AuctionRunnerFacet is IAuctionRunner, MarketHandlerBase {
 

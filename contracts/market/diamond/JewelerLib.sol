@@ -1,25 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import { DiamondLib } from "./DiamondLib.sol";
+import { IDiamondCut } from "../../interfaces/IDiamondCut.sol";
+import { IAccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
+
 /**
  * @title JewelerLib
  *
- * Facet management functions
+ * @notice Facet management functions
  *
- * @notice Diamond library based on Nick Mudge's gas-optimized diamond-2 reference.
+ * Based on Nick Mudge's gas-optimized diamond-2 reference.
  * Reference Implementation  : https://github.com/mudgen/diamond-2-hardhat
  * EIP-2535 Diamond Standard : https://eips.ethereum.org/EIPS/eip-2535
  *
- * @author Nick Mudge
- * @author Cliff Hall
+ * N.B. The original `LibDiamond` contract used single-owner security scheme,
+ * but this one uses role-based access via the Seen.Haus AccessController.
+ *
+ * @author Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-
-// Libraries
-import { DiamondLib } from "./DiamondLib.sol";
-
-// Interfaces
-import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
-import { IAccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 
 library JewelerLib {
 

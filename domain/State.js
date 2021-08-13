@@ -1,8 +1,12 @@
+const NODE = (typeof module !== 'undefined' && typeof module.exports !== 'undefined');
+
 /**
  * Domain Enum: State
- * @author Cliff Hall <cliff@futurescale.com>
+ *
+ * See: {SeenTypes.State}
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-const NODE = (typeof module !== 'undefined' && typeof module.exports !== 'undefined');
 class State {}
 
 State.PENDING = 0;

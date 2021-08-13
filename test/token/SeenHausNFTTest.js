@@ -5,10 +5,15 @@ const Role = require("../../domain/Role");
 const Token = require("../../domain/Token");
 const Market = require("../../domain/Market");
 const Ticketer = require("../../domain/Ticketer");
-const { InterfaceIds } = require('../../scripts/util/diamond-utils.js')
-const { deployDiamond } = require('../../scripts/util/deploy-diamond.js');
+const { InterfaceIds } = require('../../scripts/util/supported-interfaces.js');
+const { deployMarketDiamond } = require('../../scripts/util/deploy-market-diamond.js');
 const { deployMarketControllerFacets } = require('../../scripts/util/deploy-market-controller-facets.js');
 
+/**
+ *  Test the SeenHausNFT contract
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
 describe("SeenHausNFT", function() {
 
     // Common vars
@@ -46,7 +51,7 @@ describe("SeenHausNFT", function() {
         defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
 
         // Deploy the Diamond
-        [diamond, diamondLoupe, diamondCut, accessController] = await deployDiamond();
+        [marketDiamond, diamondLoupe, diamondCut, accessController] = await deployMarketDiamond();
 
         // Prepare MarketController initialization arguments
         const marketConfig = [
@@ -60,10 +65,10 @@ describe("SeenHausNFT", function() {
         ];
 
         // Cut the MarketController facet into the Diamond
-        await deployMarketControllerFacets(diamond, marketConfig);
+        await deployMarketControllerFacets(marketDiamond, marketConfig);
 
         // Cast Diamond to MarketController
-        marketController = await ethers.getContractAt('IMarketController', diamond.address);
+        marketController = await ethers.getContractAt('IMarketController', marketDiamond.address);
 
         // Deploy the SeenHausNFT contract
         SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
@@ -83,6 +88,66 @@ describe("SeenHausNFT", function() {
 
         // Grant MARKET_HANDLER to SeenHausNFT
         await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
+
+    });
+
+    context("Interfaces", async function () {
+
+        context("supportsInterface()", async function () {
+
+            it("should indicate support for ERC-165 interface", async function () {
+
+                // See https://eips.ethereum.org/EIPS/eip-165#how-a-contract-will-publish-the-interfaces-it-implements
+                support = await seenHausNFT.supportsInterface("0x01ffc9a7");
+
+                // Test
+                await expect(
+                    support,
+                    "ERC-165 interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for ERC-1155 interface", async function () {
+
+                // See https://eips.ethereum.org/EIPS/eip-1155#specification
+                support = await seenHausNFT.supportsInterface("0xd9b67a26");
+
+                // Test
+                await expect(
+                    support,
+                    "ERC-1155 interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for ERC-2981 interface", async function () {
+
+                // See https://eips.ethereum.org/EIPS/eip-2981#specification
+                support = await seenHausNFT.supportsInterface("0x2a55205a");
+
+                // Test
+                await expect(
+                    support,
+                    "ERC-2981 interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for ISeenHausNFT interface", async function () {
+
+                // Current ISeenHausNFT interfaceId
+                support = await seenHausNFT.supportsInterface(InterfaceIds.ISeenHausNFT);
+
+                // Test
+                await expect(
+                    support,
+                    "ISeenHausNFT interface not supported"
+                ).is.true;
+
+            });
+
+        });
 
     });
 
@@ -574,66 +639,6 @@ describe("SeenHausNFT", function() {
                 await expect(
                     seenHausNFT.connect(escrowAgent).mintPhysical(supply, creator.address, tokenURI, invalidRoyaltyPercentage)
                 ).to.be.revertedWith("Royalty percentage exceeds marketplace maximum")
-
-            });
-
-        });
-
-    });
-
-    context("Interfaces", async function () {
-
-        context("supportsInterface()", async function () {
-
-            it("should indicate support for ERC-165 interface", async function () {
-
-                // See https://eips.ethereum.org/EIPS/eip-165#how-a-contract-will-publish-the-interfaces-it-implements
-                support = await seenHausNFT.supportsInterface("0x01ffc9a7");
-
-                // Test
-                await expect(
-                    support,
-                    "ERC-165 interface not supported"
-                ).is.true;
-
-            });
-
-            it("should indicate support for ERC-1155 interface", async function () {
-
-                // See https://eips.ethereum.org/EIPS/eip-1155#specification
-                support = await seenHausNFT.supportsInterface("0xd9b67a26");
-
-                // Test
-                await expect(
-                    support,
-                    "ERC-1155 interface not supported"
-                ).is.true;
-
-            });
-
-            it("should indicate support for ERC-2981 interface", async function () {
-
-                // See https://eips.ethereum.org/EIPS/eip-2981#specification
-                support = await seenHausNFT.supportsInterface("0x2a55205a");
-
-                // Test
-                await expect(
-                    support,
-                    "ERC-2981 interface not supported"
-                ).is.true;
-
-            });
-
-            it("should indicate support for ISeenHausNFT interface", async function () {
-
-                // Current ISeenHausNFT interfaceId
-                support = await seenHausNFT.supportsInterface("0x3ade32fd");
-
-                // Test
-                await expect(
-                    support,
-                    "ISeenHausNFT interface not supported"
-                ).is.true;
 
             });
 

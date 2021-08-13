@@ -1,11 +1,14 @@
-/**
- * Domain Entity: Token
- * @author Cliff Hall <cliff@futurescale.com>
- */
 const NODE = (typeof module !== 'undefined' && typeof module.exports !== 'undefined');
 const ethers = require("ethers");
 const eip55 = require("eip55");
 
+/**
+ * Domain Entity: Token
+ *
+ * See: {SeenTypes.Token}
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
 class Token {
 
     constructor (creator, royaltyPercentage, isPhysical, id, supply, uri) {

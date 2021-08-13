@@ -9,10 +9,12 @@ import "./IAuctionRunner.sol";
 
 /**
  * @title IAuctionHandler
- * @author Cliff Hall
+ *
  * @notice Handles the creation, running, and disposition of Seen.Haus auctions.
  *
- * The ERC-165 identifier for this interface is: // TODO: find interface id
+ * The ERC-165 identifier for this interface is: 0x1dc277f5
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 interface IAuctionHandler is IAuctionBuilder, IAuctionRunner {
 

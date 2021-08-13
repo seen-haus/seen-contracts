@@ -1,15 +1,17 @@
-// eslint-disable-next-line no-unused-vars
-/* eslint prefer-const: "off" */
+const { getFacetAddCut } = require('./diamond-utils.js')
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { getFacetAddCut } = require('./diamond-utils.js')
 
 /**
  * Cut the Market Controller facets
  *
+ * Reused between deployment script and unit tests for consistency
+ *
  * @param diamond
- * @param config
+ * @param marketConfig
  * @returns {Promise<(*|*|*)[]>}
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 async function deployMarketControllerFacets(diamond, marketConfig) {
 

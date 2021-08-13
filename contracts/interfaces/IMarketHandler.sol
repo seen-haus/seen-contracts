@@ -5,7 +5,12 @@ import "../domain/SeenTypes.sol";
 
 /**
  * @title IMarketHandler
- * @author Cliff Hall
+ *
+ * @notice Provides no functions, only common events to market handler facets.
+ *
+ * No ERC-165 identifier for this interface, not checked or supported.
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 interface IMarketHandler {
 

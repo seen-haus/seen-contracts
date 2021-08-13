@@ -1,8 +1,12 @@
+const NODE = (typeof module !== 'undefined' && typeof module.exports !== 'undefined');
+
 /**
  * Domain Enum: Market
- * @author Cliff Hall <cliff@futurescale.com>
+ *
+ * See: {SeenTypes.Market}
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-const NODE = (typeof module !== 'undefined' && typeof module.exports !== 'undefined');
 class Market {}
 
 Market.PRIMARY = 0;

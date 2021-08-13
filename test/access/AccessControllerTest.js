@@ -1,6 +1,11 @@
 const { expect } = require("chai");
 const Role = require("../../domain/Role");
 
+/**
+ *  Test the AccessController contract
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
 describe("AccessController", function() {
 
     // Shared args

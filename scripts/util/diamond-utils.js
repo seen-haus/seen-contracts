@@ -1,5 +1,12 @@
-/* global ethers */
+const hre = require("hardhat");
+const ethers = hre.ethers;
 
+/**
+ * Utilities for testing and interacting with Diamond
+ *
+ * @author Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
 const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 }
 
 // get function selectors from ABI
@@ -88,13 +95,6 @@ function getFacetRemoveCut(facet, omitFunctions= []) {
   let selectors = omitFunctions.length ? getSelectors(facet).remove(omitFunctions) : getSelectors(facet);
   return [facet.address, FacetCutAction.Remove, selectors];
 }
-
-exports.InterfaceIds = {
-  DiamondLoupe: "0x48e2b093",
-  DiamondCut: "0x1f931c1c",
-  ERC165: "0x01ffc9a7",
-  IMarketController: "0xe5f2f941" // TODO find out if this interface has changed
-};
 
 exports.getSelectors = getSelectors;
 exports.getSelector = getSelector;

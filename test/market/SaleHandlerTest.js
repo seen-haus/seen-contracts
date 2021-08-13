@@ -10,17 +10,21 @@ const Outcome = require("../../domain/Outcome");
 const Audience = require("../../domain/Audience");
 const Ticketer = require("../../domain/Ticketer");
 const Consignment = require("../../domain/Consignment");
-const { deployDiamond } = require('../../scripts/util/deploy-diamond.js');
+const { InterfaceIds } = require('../../scripts/util/supported-interfaces.js');
+const { deployMarketDiamond } = require('../../scripts/util/deploy-market-diamond.js');
 const { deployMarketControllerFacets } = require('../../scripts/util/deploy-market-controller-facets.js');
 const { deployMarketHandlerFacets } = require('../../scripts/util/deploy-market-handler-facets.js');
 
+/**
+ *  Test the SaleHandler facets (SaleBuilder, SaleRunner)
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
 describe("SaleHandler", function() {
 
     // Common vars
     let accounts, deployer, admin, creator, associate, seller, minter, buyer, escrowAgent;
-    let AccessController, accessController;
-    let MarketController, marketController;
-    let SaleHandler, saleHandler;
+    let accessController, marketController, saleHandler;
     let LotsTicketer, lotsTicketer;
     let ItemsTicketer, itemsTicketer;
     let SeenHausNFT, seenHausNFT;
@@ -69,7 +73,7 @@ describe("SaleHandler", function() {
         await seenStaking.deployed();
 
         // Deploy the Diamond
-        [diamond, diamondLoupe, diamondCut, accessController] = await deployDiamond();
+        [marketDiamond, diamondLoupe, diamondCut, accessController] = await deployMarketDiamond();
 
         // Prepare MarketController initialization arguments
         const marketConfig = [
@@ -83,16 +87,16 @@ describe("SaleHandler", function() {
         ];
 
         // Cut the MarketController facet into the Diamond
-        await deployMarketControllerFacets(diamond, marketConfig);
+        await deployMarketControllerFacets(marketDiamond, marketConfig);
 
         // Cast Diamond to MarketController
-        marketController = await ethers.getContractAt('IMarketController', diamond.address);
+        marketController = await ethers.getContractAt('IMarketController', marketDiamond.address);
 
         // Cut the Market Handler facets into the Diamond
-        [auctionBuilderFacet, auctionRunnerFacet, saleBuilderFacet, saleRunnerFacet] = await deployMarketHandlerFacets(diamond);
+        [auctionBuilderFacet, auctionRunnerFacet, saleBuilderFacet, saleRunnerFacet] = await deployMarketHandlerFacets(marketDiamond);
 
         // Cast Diamond to IAuctionHandler
-        saleHandler = await ethers.getContractAt('ISaleHandler', diamond.address);
+        saleHandler = await ethers.getContractAt('ISaleHandler', marketDiamond.address);
 
         // Deploy the SeenHausNFT contract
         SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
@@ -131,6 +135,66 @@ describe("SaleHandler", function() {
         // Grant MARKET_HANDLER to SeenHausNFT and SaleHandler
         await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
         await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, saleHandler.address);
+
+    });
+
+    context("Interfaces", async function () {
+
+        context("supportsInterface()", async function () {
+
+            it("should indicate support for ERC-165 interface", async function () {
+
+                // See https://eips.ethereum.org/EIPS/eip-165#how-a-contract-will-publish-the-interfaces-it-implements
+                support = await marketController.supportsInterface(InterfaceIds.IERC165);
+
+                // Test
+                await expect(
+                    support,
+                    "ERC-165 interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for ISaleHandler interface", async function () {
+
+                // Current interfaceId for ISaleHandler
+                support = await marketController.supportsInterface(InterfaceIds.ISaleHandler);
+
+                // Test
+                await expect(
+                    support,
+                    "ISaleHandler interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for ISaleBuilder interface", async function () {
+
+                // Current interfaceId for ISaleBuilder
+                support = await marketController.supportsInterface(InterfaceIds.ISaleBuilder);
+
+                // Test
+                await expect(
+                    support,
+                    "ISaleBuilder interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for ISaleRunner interface", async function () {
+
+                // Current interfaceId for ISaleRunner
+                support = await marketController.supportsInterface(InterfaceIds.ISaleRunner);
+
+                // Test
+                await expect(
+                    support,
+                    "ISaleRunner interface not supported"
+                ).is.true;
+
+            });
+
+        });
 
     });
 

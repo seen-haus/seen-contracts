@@ -4,6 +4,11 @@ const Clock = require("../../domain/Clock");
 const State = require("../../domain/State");
 const Outcome = require("../../domain/Outcome");
 
+/**
+ *  Test the Auction domain object
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
 describe("Auction", function() {
 
     // Suite-wide scope

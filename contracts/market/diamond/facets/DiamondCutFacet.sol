@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { SeenConstants } from "../../domain/SeenConstants.sol";
-import { IDiamondCut } from "../../interfaces/IDiamondCut.sol";
+import { SeenConstants } from "../../../domain/SeenConstants.sol";
+import { IDiamondCut } from "../../../interfaces/IDiamondCut.sol";
 import { DiamondLib } from "../DiamondLib.sol";
 import { JewelerLib } from "../JewelerLib.sol";
 
@@ -13,8 +13,8 @@ import { JewelerLib } from "../JewelerLib.sol";
  * Reference Implementation  : https://github.com/mudgen/diamond-2-hardhat
  * EIP-2535 Diamond Standard : https://eips.ethereum.org/EIPS/eip-2535
  *
- * @author Nick Mudge
- * @author Cliff Hall
+ * @author Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract DiamondCutFacet is SeenConstants, IDiamondCut {
 

@@ -5,12 +5,15 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "../../../interfaces/IAuctionHandler.sol";
 import "../../../interfaces/IAuctionBuilder.sol";
+import "../../../interfaces/IAuctionRunner.sol";
 import "../MarketHandlerBase.sol";
 
 /**
  * @title AuctionBuilderFacet
- * @author Cliff Hall
+ *
  * @notice Handles the creation of Seen.Haus auctions.
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
 
@@ -35,7 +38,7 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
     onlyUnInitialized
     {
         DiamondLib.addSupportedInterface(type(IAuctionBuilder).interfaceId);   // when combined with IAuctionRunner ...
-        DiamondLib.addSupportedInterface(type(IAuctionHandler).interfaceId);   // ... Diamond supports IAuctionHandler
+        DiamondLib.addSupportedInterface(type(IAuctionBuilder).interfaceId ^ type(IAuctionRunner).interfaceId);  // ... supports IAuctionHandler
     }
 
     /**

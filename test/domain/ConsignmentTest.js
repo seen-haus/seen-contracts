@@ -2,6 +2,11 @@ const { expect } = require("chai");
 const Consignment = require("../../domain/Consignment");
 const Market = require("../../domain/Market");
 
+/**
+ *  Test the Consignment domain object
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
 describe("Consignment", function() {
 
     // Suite-wide scope

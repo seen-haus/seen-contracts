@@ -1,13 +1,16 @@
-/**
- * Domain Entity: Sale
- * @author Cliff Hall <cliff@futurescale.com>
- */
 const NODE = (typeof module !== 'undefined' && typeof module.exports !== 'undefined');
 const ethers = require("ethers");
 const eip55 = require("eip55");
 const State = require("./State");
 const Outcome = require("./Outcome");
 
+/**
+ * Domain Entity: Sale
+ *
+ * See: {SeenTypes.Sale}
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
 class Sale {
 
     constructor (consignmentId, start, price, perTxCap, state, outcome) {

@@ -3,6 +3,11 @@ const Sale = require("../../domain/Sale");
 const State = require("../../domain/State");
 const Outcome = require("../../domain/Outcome");
 
+/**
+ *  Test the Sale domain object
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
 describe("Sale", function() {
 
     // Suite-wide scope

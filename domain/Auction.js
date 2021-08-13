@@ -1,7 +1,3 @@
-/**
- * Domain Entity: Auction
- * @author Cliff Hall <cliff@futurescale.com>
- */
 const NODE = (typeof module !== 'undefined' && typeof module.exports !== 'undefined');
 const ethers = require("ethers");
 const eip55 = require("eip55");
@@ -9,6 +5,13 @@ const Clock = require("./Clock");
 const State = require("./State");
 const Outcome = require("./Outcome");
 
+/**
+ * Domain Entity: Auction
+ *
+ * See: {SeenTypes.Auction}
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
 class Auction {
 
     constructor (buyer, consignmentId, start, duration, reserve, bid, clock, state, outcome) {

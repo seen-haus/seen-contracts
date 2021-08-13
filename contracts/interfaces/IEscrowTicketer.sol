@@ -5,10 +5,12 @@ import "../domain/SeenTypes.sol";
 
 /**
  * @title IEscrowTicketer
- * @author Cliff Hall
+ *
  * @notice Manages the issue and claim of escrow tickets.
  *
  * The ERC-165 identifier for this interface is: 0x84200a73
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 interface IEscrowTicketer {
 

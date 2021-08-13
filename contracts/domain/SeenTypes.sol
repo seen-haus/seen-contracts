@@ -3,8 +3,10 @@ pragma solidity ^0.8.0;
 
 /**
  * @title SeenTypes
- * @author Cliff Hall
+ *
  * @notice Enums and structs used by the Seen.Haus contract ecosystem.
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract SeenTypes {
 

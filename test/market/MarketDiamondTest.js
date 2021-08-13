@@ -3,16 +3,22 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 
 const { getSelectors, FacetCutAction, removeSelectors } = require('../../scripts/util/diamond-utils.js')
-const { deployDiamond } = require('../../scripts/util/deploy-diamond.js');
+const { deployMarketDiamond } = require('../../scripts/util/deploy-market-diamond.js');
 const Facet = require("../../domain/Facet");
 
-describe('Diamond', async function () {
+/**
+ *  Test the Market Diamond contract and its core facets
+ *
+ * @author Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
+describe('MarketDiamond', async function () {
 
   // Common constants
   const gasLimit = 1600000;
 
   // Common vars
-  let diamond, diamondLoupe, diamondCut;
+  let marketDiamond, diamondLoupe, diamondCut;
   let loupeFacetViaDiamond, cutFacetViaDiamond;
   let Test1Facet, test1Facet, test1ViaDiamond, Test2Facet, test2Facet, test2ViaDiamond;
   let tx, receipt, addresses, address, selectors, interfaces, facets, facet, facetCuts, result, keepers;
@@ -20,13 +26,13 @@ describe('Diamond', async function () {
   beforeEach(async function () {
 
     // Deploy the Diamond
-    [diamond, diamondLoupe, diamondCut, accessController] = await deployDiamond();
+    [marketDiamond, diamondLoupe, diamondCut, accessController] = await deployMarketDiamond();
 
     // Cast Diamond to DiamondLoupeFacet
-    loupeFacetViaDiamond = await ethers.getContractAt('DiamondLoupeFacet', diamond.address);
+    loupeFacetViaDiamond = await ethers.getContractAt('DiamondLoupeFacet', marketDiamond.address);
 
     // Cast Diamond to DiamondCutFacet
-    cutFacetViaDiamond = await ethers.getContractAt('DiamondCutFacet', diamond.address);
+    cutFacetViaDiamond = await ethers.getContractAt('DiamondCutFacet', marketDiamond.address);
 
     // Get the facet addresses
     addresses = Object.assign([], await loupeFacetViaDiamond.facetAddresses());
@@ -185,10 +191,10 @@ describe('Diamond', async function () {
       addresses.push(test2Facet.address);
 
       // Cast Diamond to Test1Facet
-      test1ViaDiamond = await ethers.getContractAt('Test1Facet', diamond.address);
+      test1ViaDiamond = await ethers.getContractAt('Test1Facet', marketDiamond.address);
 
       // Cast Diamond to Test2Facet
-      test2ViaDiamond = await ethers.getContractAt('Test2Facet', diamond.address);
+      test2ViaDiamond = await ethers.getContractAt('Test2Facet', marketDiamond.address);
 
     });
 

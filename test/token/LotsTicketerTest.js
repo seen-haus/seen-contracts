@@ -4,15 +4,20 @@ const { expect } = require("chai");
 const Role = require("../../domain/Role");
 const EscrowTicket = require("../../domain/EscrowTicket");
 const Ticketer = require("../../domain/Ticketer");
-const { deployDiamond } = require('../../scripts/util/deploy-diamond.js');
+const { InterfaceIds } = require('../../scripts/util/supported-interfaces.js');
+const { deployMarketDiamond } = require('../../scripts/util/deploy-market-diamond.js');
 const { deployMarketControllerFacets } = require('../../scripts/util/deploy-market-controller-facets.js');
 
+/**
+ *  Test the LotsTicketer contract
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
 describe("LotsTicketer", function() {
 
     // Common vars
     let accounts, deployer, admin, escrowAgent, associate, creator, marketHandler, buyer;
-    let AccessController, accessController;
-    let MarketController, marketController;
+    let accessController, marketController;
     let SeenHausNFT, seenHausNFT;
     let LotsTicketer, lotsTicketer;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
@@ -43,7 +48,7 @@ describe("LotsTicketer", function() {
         defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
 
         // Deploy the Diamond
-        [diamond, diamondLoupe, diamondCut, accessController] = await deployDiamond();
+        [marketDiamond, diamondLoupe, diamondCut, accessController] = await deployMarketDiamond();
 
         // Prepare MarketController initialization arguments
         const marketConfig = [
@@ -57,10 +62,10 @@ describe("LotsTicketer", function() {
         ];
 
         // Cut the MarketController facet into the Diamond
-        await deployMarketControllerFacets(diamond, marketConfig);
+        await deployMarketControllerFacets(marketDiamond, marketConfig);
 
         // Cast Diamond to MarketController
-        marketController = await ethers.getContractAt('IMarketController', diamond.address);
+        marketController = await ethers.getContractAt('IMarketController', marketDiamond.address);
 
         // Deploy the SeenHausNFT contract
         SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
@@ -89,6 +94,53 @@ describe("LotsTicketer", function() {
         // Grant MARKET_HANDLER to SeenHausNFT and LotsTicketer
         await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
         await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, lotsTicketer.address);
+
+    });
+
+    context("Interfaces", async function () {
+
+        context("supportsInterface()", async function () {
+
+            it("should indicate support for ERC-165 interface", async function () {
+
+                // See https://eips.ethereum.org/EIPS/eip-165#how-a-contract-will-publish-the-interfaces-it-implements
+                support = await lotsTicketer.supportsInterface(InterfaceIds.IERC165);
+
+                // Test
+                await expect(
+                    support,
+                    "ERC-165 interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for IERC721 interface", async function () {
+
+                // Current interfaceId for IERC1155
+                support = await lotsTicketer.supportsInterface(InterfaceIds.IERC721);
+
+                // Test
+                await expect(
+                    support,
+                    "IERC721 interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for IEscrowTicketer interface", async function () {
+
+                // Current interfaceId for IEscrowTicketer
+                support = await lotsTicketer.supportsInterface(InterfaceIds.IEscrowTicketer);
+
+                // Test
+                await expect(
+                    support,
+                    "IEscrowTicketer interface not supported"
+                ).is.true;
+
+            });
+
+        });
 
     });
 
@@ -372,53 +424,6 @@ describe("LotsTicketer", function() {
                     ).is.true;
 
                 });
-
-            });
-
-        });
-
-    });
-
-    context("Interfaces", async function () {
-
-        context("supportsInterface()", async function () {
-
-            it("should indicate support for ERC-165 interface", async function () {
-
-                // See https://eips.ethereum.org/EIPS/eip-165#how-a-contract-will-publish-the-interfaces-it-implements
-                support = await lotsTicketer.supportsInterface("0x01ffc9a7");
-
-                // Test
-                await expect(
-                    support,
-                    "ERC-165 interface not supported"
-                ).is.true;
-
-            });
-
-            it("should indicate support for ERC-721 interface", async function () {
-
-                // See https://eips.ethereum.org/EIPS/eip-721#specification
-                support = await lotsTicketer.supportsInterface("0x80ac58cd");
-
-                // Test
-                await expect(
-                    support,
-                    "ERC-721 interface not supported"
-                ).is.true;
-
-            });
-
-            it("should indicate support for IEscrowTicketer interface", async function () {
-
-                // Current interfaceId for IEscrowTicketer
-                support = await lotsTicketer.supportsInterface("0x84200a73");
-
-                // Test
-                await expect(
-                    support,
-                    "IEscrowTicketer interface not supported"
-                ).is.true;
 
             });
 

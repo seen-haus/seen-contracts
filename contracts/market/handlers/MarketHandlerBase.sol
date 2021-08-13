@@ -13,8 +13,10 @@ import "./MarketHandlerLib.sol";
 
 /**
  * @title MarketHandlerBase
- * @author Cliff Hall
+ *
  * @notice Provides base functionality for common actions taken by market handlers.
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants {
 

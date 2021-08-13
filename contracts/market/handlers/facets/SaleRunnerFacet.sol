@@ -9,8 +9,10 @@ import "../MarketHandlerBase.sol";
 
 /**
  * @title SaleRunnerFacet
- * @author Cliff Hall
+ *
  * @notice Handles the operation of Seen.Haus sales.
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
 

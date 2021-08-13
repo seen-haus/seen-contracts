@@ -1,21 +1,25 @@
-// eslint-disable-next-line no-unused-vars
-/* eslint prefer-const: "off" */
+const { getFacetAddCut } = require('./diamond-utils.js')
+const { InterfaceIds } = require('./supported-interfaces.js')
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { getFacetAddCut, InterfaceIds } = require('./diamond-utils.js')
 
 /**
- * Deploy the Diamond
+ * Deploy the MarketDiamond
+ *
+ * Reused between deployment script and unit tests for consistency
+ *
  * @param accessController - the AccessController
  * @returns {Promise<(*|*|*)[]>}
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-async function deployDiamond () {
+async function deployMarketDiamond () {
 
   // Core interfaces that will be supported at the Diamond address
   const interfaces = [
-    InterfaceIds.DiamondLoupe,
-    InterfaceIds.DiamondCut,
-    InterfaceIds.ERC165
+    InterfaceIds.IDiamondLoupe,
+    InterfaceIds.IDiamondCut,
+    InterfaceIds.IERC165
   ];
 
   // Deploy the AccessController contract
@@ -39,17 +43,17 @@ async function deployDiamond () {
     [getFacetAddCut(dlf), getFacetAddCut(dcf)],
     interfaces];
 
-  // Deploy Diamond
-  const Diamond = await ethers.getContractFactory('Diamond');
-  const diamond = await Diamond.deploy(...diamondArgs);
-  await diamond.deployed()
+  // Deploy Market Diamond
+  const MarketDiamond = await ethers.getContractFactory('MarketDiamond');
+  const marketDiamond = await MarketDiamond.deploy(...diamondArgs);
+  await marketDiamond.deployed()
 
-  return [diamond, dlf, dcf, accessController, diamondArgs];
+  return [marketDiamond, dlf, dcf, accessController, diamondArgs];
 
 }
 
 if (require.main === module) {
-  deployDiamond()
+  deployMarketDiamond()
       .then(() => process.exit(0))
       .catch(error => {
         console.error(error)
@@ -57,4 +61,4 @@ if (require.main === module) {
       })
 }
 
-exports.deployDiamond = deployDiamond
+exports.deployMarketDiamond = deployMarketDiamond

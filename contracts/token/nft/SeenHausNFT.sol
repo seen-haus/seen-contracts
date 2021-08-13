@@ -9,8 +9,7 @@ import "../../interfaces/ISeenHausNFT.sol";
 
 /**
  * @title SeenHausNFT
- * @author Cliff Hall
- * @notice This is the Seen.House ERC-1155 NFT contract.
+ * @notice This is the Seen.Haus ERC-1155 NFT contract.
  *
  * Key features:
  * - Supports the ERC-2981 NFT Royalty Standard
@@ -19,6 +18,9 @@ import "../../interfaces/ISeenHausNFT.sol";
  * - Logically capped token supplies; a token's supply cannot be increased after minting.
  * - Only ESCROW_AGENT-roled addresses can mint physical NFTs.
  * - Only MINTER-roled addresses can mint digital NFTs, e.g., Seen.Haus staff, whitelisted artists.
+ * - Newly minted NFTs are automatically transferred to the MarketController and consigned
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
 

@@ -1,12 +1,15 @@
-/**
- * Domain Entity: Consignment
- * @author Cliff Hall <cliff@futurescale.com>
- */
 const NODE = (typeof module !== 'undefined' && typeof module.exports !== 'undefined');
 const ethers = require("ethers");
 const Market = require("./Market");
 const eip55 = require("eip55");
 
+/**
+ * Domain Entity: Consignment
+ *
+ * See: {SeenTypes.Consignment}
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
 class Consignment {
 
     constructor (market, seller, tokenAddress, tokenId, supply, id, multiToken, marketed, released) {

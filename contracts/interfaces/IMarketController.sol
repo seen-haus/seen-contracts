@@ -6,10 +6,11 @@ import "./IMarketClerk.sol";
 
 /**
  * @title IMarketController
- * @author Cliff Hall
  *
  * @notice Manages configuration and consignments used by the Seen.Haus contract suite.
  *
- * The ERC-165 identifier for this interface is: 0xe5f2f941 // TODO make sure this is still correct
+ * The ERC-165 identifier for this interface is: 0xe5f2f941
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-interface IMarketController is IMarketConfig, IMarketClerk {}
+interface IMarketController is IMarketClerk, IMarketConfig {}

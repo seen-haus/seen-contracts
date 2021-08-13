@@ -1,11 +1,12 @@
 /**
  * Seen.Haus contract suite deployment script
+ *
  * @author Cliff Hall <cliff@futurescale.com>
  */
 const Role = require("../domain/Role");
 const hre = require("hardhat");
 const Ticketer = require("../domain/Ticketer");
-const { deployDiamond } = require('./util/deploy-diamond.js');
+const { deployMarketDiamond } = require('./util/deploy-market-diamond.js');
 const { deployMarketControllerFacets } = require('./util/deploy-market-controller-facets.js');
 const { deployMarketHandlerFacets } = require('./util/deploy-market-handler-facets.js');
 
@@ -68,16 +69,16 @@ async function main() {
     console.log("🔱 Deployer account: ", deployer ? deployer : "not found" && process.exit());
     console.log(divider);
 
-    console.log(`💎 Deploying Diamond and Jeweler's Facets...`);
+    console.log(`💎 Deploying AccessController, MarketDiamond, and core facets...`);
 
     // Deploy the Diamond
-    [diamond, dlf, dcf, accessController, diamondArgs] = await deployDiamond();
+    [marketDiamond, dlf, dcf, accessController, diamondArgs] = await deployMarketDiamond();
 
     // Report completion of Diamond and its core facets
     deploymentComplete('AccessController', accessController.address, []);
     deploymentComplete('DiamondLoupeFacet', dlf.address, []);
     deploymentComplete('DiamondCutFacet', dcf.address, []);
-    deploymentComplete('Diamond', diamond.address, diamondArgs);
+    deploymentComplete('MarketDiamond', marketDiamond.address, diamondArgs);
 
     // Prepare MarketController initialization arguments
     const marketConfig = [
@@ -90,15 +91,15 @@ async function main() {
         config.defaultTicketerType
     ];
 
-    console.log(`\n💎 Deploying Marketplace Facets...`);
+    console.log(`\n💎 Deploying and initializing Marketplace facets...`);
 
     // Cut the MarketController facet into the Diamond
-    [marketConfigFacet, marketClerkFacet] = await deployMarketControllerFacets(diamond, marketConfig);
+    [marketConfigFacet, marketClerkFacet] = await deployMarketControllerFacets(marketDiamond, marketConfig);
     deploymentComplete('MarketConfigFacet', marketConfigFacet.address, []);
     deploymentComplete('MarketClerkFacet', marketClerkFacet.address, []);
 
     // Cut the Market Handler facets into the Diamond
-    [auctionBuilderFacet, auctionRunnerFacet, saleBuilderFacet, saleRunnerFacet] = await deployMarketHandlerFacets(diamond);
+    [auctionBuilderFacet, auctionRunnerFacet, saleBuilderFacet, saleRunnerFacet] = await deployMarketHandlerFacets(marketDiamond);
     deploymentComplete('AuctionBuilderFacet', auctionBuilderFacet.address, []);
     deploymentComplete('AuctionRunnerFacet', auctionRunnerFacet.address, []);
     deploymentComplete('SaleBuilderFacet', saleBuilderFacet.address, []);
@@ -110,24 +111,24 @@ async function main() {
     const LotsTicketer = await ethers.getContractFactory("LotsTicketer");
     const lotsTicketer = await LotsTicketer.deploy(
         accessController.address,
-        diamond.address
+        marketDiamond.address
     );
     await lotsTicketer.deployed();
     deploymentComplete("LotsTicketer", lotsTicketer.address, [
         accessController.address,
-        diamond.address
+        marketDiamond.address
     ]);
 
     // Deploy the chosen ItemsTicketer IEscrowTicketer implementation
     const ItemsTicketer = await ethers.getContractFactory("ItemsTicketer");
     const itemsTicketer = await ItemsTicketer.deploy(
         accessController.address,
-        diamond.address
+        marketDiamond.address
     );
     await itemsTicketer.deployed();
     deploymentComplete("ItemsTicketer", itemsTicketer.address, [
         accessController.address,
-        diamond.address
+        marketDiamond.address
     ]);
 
     console.log(`\n🖼 Deploying Seen Haus NFT contract...`);
@@ -136,31 +137,31 @@ async function main() {
     const SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
     const seenHausNFT = await SeenHausNFT.deploy(
         accessController.address,
-        diamond.address,
+        marketDiamond.address,
     );
     await seenHausNFT.deployed();
     deploymentComplete('SeenHausNFT', seenHausNFT.address, [
         accessController.address,
-        diamond.address
+        marketDiamond.address
     ]);
 
     console.log(`\n🌐️Configuring and granting roles...`);
 
     // Cast Diamond to the supported interfaces we need to interact with it
-    const marketController = await ethers.getContractAt('IMarketController', diamond.address);
+    const marketController = await ethers.getContractAt('IMarketController', marketDiamond.address);
 
     // Add Escrow Ticketer and NFT addresses to MarketController
     await marketController.setNft(seenHausNFT.address);
     await marketController.setLotsTicketer(lotsTicketer.address);
     await marketController.setItemsTicketer(itemsTicketer.address);
-    console.log(`✅ MarketController updated with NFT and Escrow Ticketer addresses.`);
+    console.log(`✅ MarketController updated with remaining post-initialization config.`);
 
-    // Add MARKET_HANDLER role to contracts that need it
-    await accessController.grantRole(Role.MARKET_HANDLER, diamond.address); // Market handlers live behind diamond now
+    // Add roles to contracts and addresses that need it
+    await accessController.grantRole(Role.MARKET_HANDLER, marketDiamond.address); // Market handlers live behind MarketDiamond now
     await accessController.grantRole(Role.MARKET_HANDLER, itemsTicketer.address);
     await accessController.grantRole(Role.MARKET_HANDLER, lotsTicketer.address);
     await accessController.grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
-    console.log(`✅ Granted MARKET_HANDLER role to appropriate contracts.`);
+    console.log(`✅ Granted roles to appropriate contract and addresses.`);
 
     // Bail now if deploying locally
     if (hre.network.name === 'hardhat') process.exit();

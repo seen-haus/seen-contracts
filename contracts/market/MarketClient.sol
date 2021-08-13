@@ -5,9 +5,11 @@ import "../interfaces/IMarketController.sol";
 import "../access/AccessClient.sol";
 
 /**
- * @title MarketClientFacet
- * @author Cliff Hall
+ * @title MarketClient
+ *
  * @notice Extended by non-facet contracts that need to communicate with the MarketController.
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 abstract contract MarketClient is AccessClient {
 

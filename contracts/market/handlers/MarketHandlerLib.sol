@@ -3,15 +3,15 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "../../interfaces/IMarketController.sol";
-import "../../diamond/DiamondLib.sol";
 import "../../domain/SeenTypes.sol";
+import "../diamond/DiamondLib.sol";
 
 /**
  * @title MarketHandlerLib
  *
  * @dev Provides access to the the MarketHandler Storage and Intitializer slots for MarketHandler facets
  *
- * @author Cliff Hall
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 library MarketHandlerLib {
 

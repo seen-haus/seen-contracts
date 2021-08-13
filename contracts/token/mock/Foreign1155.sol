@@ -6,8 +6,11 @@ import "../../interfaces/IERC2981.sol";
 import "../../domain/SeenTypes.sol";
 
 /**
- * @title Mock ERC-(1155/2981) NFT for Unit Testing
- * @author Cliff Hall
+ * @title Foreign1155
+ *
+ * @notice Mock ERC-(1155/2981) NFT for Unit Testing
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract Foreign1155 is SeenTypes, IERC2981, ERC1155 {
 

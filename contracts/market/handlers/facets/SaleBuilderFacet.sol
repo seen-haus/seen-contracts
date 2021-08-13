@@ -7,13 +7,16 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "../../../interfaces/IEscrowTicketer.sol";
 import "../../../interfaces/ISaleBuilder.sol";
 import "../../../interfaces/ISaleHandler.sol";
+import "../../../interfaces/ISaleRunner.sol";
 import "../../../interfaces/ISeenHausNFT.sol";
 import "../MarketHandlerBase.sol";
 
 /**
  * @title SaleBuilderFacet
- * @author Cliff Hall
+ *
  * @notice Handles the operation of Seen.Haus sales.
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
 
@@ -37,8 +40,8 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
     public
     onlyUnInitialized
     {
-        DiamondLib.addSupportedInterface(type(ISaleBuilder).interfaceId);   // when combined with ISaleRunner ...
-        DiamondLib.addSupportedInterface(type(ISaleHandler).interfaceId);   // ... Diamond supports ISaleHandler
+        DiamondLib.addSupportedInterface(type(ISaleBuilder).interfaceId);  // when combined with ISaleRunner ...
+        DiamondLib.addSupportedInterface(type(ISaleBuilder).interfaceId ^ type(ISaleRunner).interfaceId); // ... supports ISaleHandler
     }
 
     /**
