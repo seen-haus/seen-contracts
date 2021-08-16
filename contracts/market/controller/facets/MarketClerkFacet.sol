@@ -162,7 +162,7 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder, 
         if (multiToken)  {
 
             // Ensure the consigned token supply has been transferred to this contract
-            require( IERC1155(_tokenAddress).balanceOf(address(this), _tokenId) == _supply );
+            require( IERC1155(_tokenAddress).balanceOf(address(this), _tokenId) == _supply, "MarketController must own token" );
 
         } else {
 
@@ -170,7 +170,7 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder, 
             require(IERC165(_tokenAddress).supportsInterface(type(IERC721).interfaceId), "Invalid token type");
 
             // Ensure the consigned token has been transferred to this contract
-            require(IERC721(_tokenAddress).ownerOf(_tokenId) == (address(this)));
+            require(IERC721(_tokenAddress).ownerOf(_tokenId) == (address(this)), "MarketController must own token");
 
             // Ensure the supply is set to 1
             require(_supply == 1, "Invalid supply for token");

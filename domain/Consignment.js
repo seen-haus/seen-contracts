@@ -167,7 +167,6 @@ class Consignment {
             valid = (
                 typeof multiToken === "boolean"
             );
-            console.log(valid);
         } catch (e) {}
         return valid;
     }

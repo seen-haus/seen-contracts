@@ -30,6 +30,7 @@ describe("AuctionHandler", function() {
     let LotsTicketer, lotsTicketer;
     let ItemsTicketer, itemsTicketer;
     let SeenHausNFT, seenHausNFT;
+    let Foreign721, foreign721;
     let Foreign1155, foreign1155;
     let SeenStaking, seenStaking;
     let multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
@@ -66,6 +67,11 @@ describe("AuctionHandler", function() {
         maxRoyaltyPercentage = "5000";        // 50%   = 5000
         outBidPercentage = "500";             // 5%    = 500
         defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
+
+        // Deploy the Foreign721 mock contract
+        Foreign721 = await ethers.getContractFactory("Foreign721");
+        foreign721 = await Foreign721.deploy();
+        await foreign721.deployed();
 
         // Deploy the Foreign1155 mock contract
         Foreign1155 = await ethers.getContractFactory("Foreign1155");
@@ -219,6 +225,7 @@ describe("AuctionHandler", function() {
 
             // Seller approves AuctionHandler contract to transfer their tokens
             await seenHausNFT.connect(seller).setApprovalForAll(auctionHandler.address, true);
+            await foreign721.connect(seller).setApprovalForAll(auctionHandler.address, true);
             await foreign1155.connect(seller).setApprovalForAll(auctionHandler.address, true);
 
             // Mint a balance of one token for auctioning
@@ -237,6 +244,9 @@ describe("AuctionHandler", function() {
             await seenHausNFT.connect(escrowAgent).mintPhysical(supply, seller.address, tokenURI, royaltyPercentage);
 
             // Create foreign token for secondary market sales
+            await foreign721.connect(seller).mint(creator.address, tokenId, royaltyPercentage);
+
+            // Create foreign multi-token for secondary market sales
             await foreign1155.connect(seller).mint(creator.address, tokenId, supply, royaltyPercentage);
 
             // Setup values
@@ -511,123 +521,213 @@ describe("AuctionHandler", function() {
 
                 context("createSecondaryAuction()", async function () {
 
-                    it("should emit an AuctionPending event", async function () {
+                    context("Foreign ERC-721", async function () {
 
-                        // Creator transfers all their tokens to seller
-                        await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
+                        beforeEach( async function () {
 
-                        // Get the next consignment id
-                        consignmentId = await marketController.getNextConsignment();
+                            // Creator transfers all their tokens to seller
+                            await foreign721.connect(creator).transferFrom(creator.address, seller.address, tokenId);
 
-                        // Token is on a foreign contract
-                        tokenAddress = foreign1155.address;
+                            // Get the next consignment id
+                            consignmentId = await marketController.getNextConsignment();
 
-                        // Give associate SELLER role
-                        await accessController.connect(admin).grantRole(Role.SELLER, associate.address);
+                            // Token is on a foreign contract
+                            tokenAddress = foreign721.address;
 
-                        // Make change, test event
-                        await expect(
-                            auctionHandler.connect(associate).createSecondaryAuction(
-                                seller.address,
-                                tokenAddress,
-                                tokenId,
-                                start,
-                                duration,
-                                reserve,
-                                audience,
-                                clock
-                            )
-                        ).to.emit(auctionHandler, 'AuctionPending')
-                            .withArgs(
-                                associate.address,
-                                seller.address,
-                                [ // Auction
-                                    ethers.constants.AddressZero,
-                                    consignmentId,
-                                    start,
-                                    duration,
-                                    reserve,
-                                    ethers.BigNumber.from("0"),
-                                    ethers.BigNumber.from(clock),
-                                    ethers.BigNumber.from(State.PENDING),
-                                    ethers.BigNumber.from(Outcome.PENDING)
-                                ]
-                            );
-                    });
+                            // Give associate SELLER role
+                            await accessController.connect(admin).grantRole(Role.SELLER, associate.address);
 
-                    it("should trigger a ConsignmentRegistered event on MarketController", async function () {
+                        });
 
-                        // Creator transfers all their tokens to seller
-                        await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
+                        it("should emit an AuctionPending event", async function () {
 
-                        // Get the next consignment id
-                        consignmentId = await marketController.getNextConsignment();
-
-                        // Token is on a foreign contract
-                        tokenAddress = foreign1155.address;
-
-                        // Give associate SELLER role
-                        await accessController.connect(admin).grantRole(Role.SELLER, associate.address);
-
-                        // Create auction, test event
-                        await expect(
-                            auctionHandler.connect(associate).createSecondaryAuction(
-                                seller.address,
-                                tokenAddress,
-                                tokenId,
-                                start,
-                                duration,
-                                reserve,
-                                audience,
-                                clock
-                            )
-                        ).emit(marketController, 'ConsignmentRegistered')
-                            .withArgs(
-                                associate.address, // consignor
-                                seller.address,    // seller
-                                [ // Consignment
-                                    Market.SECONDARY,
+                            // Make change, test event
+                            await expect(
+                                auctionHandler.connect(associate).createSecondaryAuction(
                                     seller.address,
                                     tokenAddress,
                                     tokenId,
-                                    supply,
+                                    start,
+                                    duration,
+                                    reserve,
+                                    audience,
+                                    clock
+                                )
+                            ).to.emit(auctionHandler, 'AuctionPending')
+                                .withArgs(
+                                    associate.address,
+                                    seller.address,
+                                    [ // Auction
+                                        ethers.constants.AddressZero,
+                                        consignmentId,
+                                        start,
+                                        duration,
+                                        reserve,
+                                        ethers.BigNumber.from("0"),
+                                        ethers.BigNumber.from(clock),
+                                        ethers.BigNumber.from(State.PENDING),
+                                        ethers.BigNumber.from(Outcome.PENDING)
+                                    ]
+                                );
+                        });
+
+                        it("should trigger a ConsignmentRegistered event on MarketController", async function () {
+
+                            // Create auction, test event
+                            await expect(
+                                auctionHandler.connect(associate).createSecondaryAuction(
+                                    seller.address,
+                                    tokenAddress,
+                                    tokenId,
+                                    start,
+                                    duration,
+                                    reserve,
+                                    audience,
+                                    clock
+                                )
+                            ).emit(marketController, 'ConsignmentRegistered')
+                                .withArgs(
+                                    associate.address, // consignor
+                                    seller.address,    // seller
+                                    [ // Consignment
+                                        Market.SECONDARY,
+                                        seller.address,
+                                        tokenAddress,
+                                        tokenId,
+                                        supply,
+                                        consignmentId
+                                    ]
+                                )
+                        });
+
+                        it("should trigger an ConsignmentMarketed event on MarketController", async function () {
+
+                            // Make change, test event
+                            await expect(
+                                auctionHandler.connect(associate).createSecondaryAuction(
+                                    seller.address,
+                                    tokenAddress,
+                                    tokenId,
+                                    start,
+                                    duration,
+                                    reserve,
+                                    audience,
+                                    clock
+                                )
+                            ).to.emit(marketController, 'ConsignmentMarketed')
+                                .withArgs(
+                                    associate.address,
+                                    seller.address,
                                     consignmentId
-                                ]
-                            )
+                                );
+                        });
+
                     });
 
-                    it("should trigger an ConsignmentMarketed event on MarketController", async function () {
+                    context("Foreign ERC-1155", async function () {
 
-                        // Creator transfers all their tokens to seller
-                        await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
+                        beforeEach( async function () {
 
-                        // Get the next consignment id
-                        consignmentId = await marketController.getNextConsignment();
+                            // Creator transfers all their tokens to seller
+                            await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
 
-                        // Token is on a foreign contract
-                        tokenAddress = foreign1155.address;
+                            // Get the next consignment id
+                            consignmentId = await marketController.getNextConsignment();
 
-                        // Give associate SELLER role
-                        await accessController.connect(admin).grantRole(Role.SELLER, associate.address);
+                            // Token is on a foreign contract
+                            tokenAddress = foreign1155.address;
 
-                        // Make change, test event
-                        await expect(
-                            auctionHandler.connect(associate).createSecondaryAuction(
-                                seller.address,
-                                tokenAddress,
-                                tokenId,
-                                start,
-                                duration,
-                                reserve,
-                                audience,
-                                clock
-                            )
-                        ).to.emit(marketController, 'ConsignmentMarketed')
-                            .withArgs(
-                                associate.address,
-                                seller.address,
-                                consignmentId
-                            );
+                            // Give associate SELLER role
+                            await accessController.connect(admin).grantRole(Role.SELLER, associate.address);
+
+                        });
+
+                        it("should emit an AuctionPending event", async function () {
+
+                            // Give associate SELLER role
+                            await accessController.connect(admin).grantRole(Role.SELLER, associate.address);
+
+                            // Make change, test event
+                            await expect(
+                                auctionHandler.connect(associate).createSecondaryAuction(
+                                    seller.address,
+                                    tokenAddress,
+                                    tokenId,
+                                    start,
+                                    duration,
+                                    reserve,
+                                    audience,
+                                    clock
+                                )
+                            ).to.emit(auctionHandler, 'AuctionPending')
+                                .withArgs(
+                                    associate.address,
+                                    seller.address,
+                                    [ // Auction
+                                        ethers.constants.AddressZero,
+                                        consignmentId,
+                                        start,
+                                        duration,
+                                        reserve,
+                                        ethers.BigNumber.from("0"),
+                                        ethers.BigNumber.from(clock),
+                                        ethers.BigNumber.from(State.PENDING),
+                                        ethers.BigNumber.from(Outcome.PENDING)
+                                    ]
+                                );
+                        });
+
+                        it("should trigger a ConsignmentRegistered event on MarketController", async function () {
+
+                            // Create auction, test event
+                            await expect(
+                                auctionHandler.connect(associate).createSecondaryAuction(
+                                    seller.address,
+                                    tokenAddress,
+                                    tokenId,
+                                    start,
+                                    duration,
+                                    reserve,
+                                    audience,
+                                    clock
+                                )
+                            ).emit(marketController, 'ConsignmentRegistered')
+                                .withArgs(
+                                    associate.address, // consignor
+                                    seller.address,    // seller
+                                    [ // Consignment
+                                        Market.SECONDARY,
+                                        seller.address,
+                                        tokenAddress,
+                                        tokenId,
+                                        supply,
+                                        consignmentId
+                                    ]
+                                )
+                        });
+
+                        it("should trigger an ConsignmentMarketed event on MarketController", async function () {
+
+                            // Make change, test event
+                            await expect(
+                                auctionHandler.connect(associate).createSecondaryAuction(
+                                    seller.address,
+                                    tokenAddress,
+                                    tokenId,
+                                    start,
+                                    duration,
+                                    reserve,
+                                    audience,
+                                    clock
+                                )
+                            ).to.emit(marketController, 'ConsignmentMarketed')
+                                .withArgs(
+                                    associate.address,
+                                    seller.address,
+                                    consignmentId
+                                );
+                        });
+
                     });
 
                 });

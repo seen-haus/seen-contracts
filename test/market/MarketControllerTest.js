@@ -14,18 +14,20 @@ const { deployMarketControllerFacets } = require('../../scripts/util/deploy-mark
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-describe("MarketController", function() {
+describe("IMarketController", function() {
 
     // Common vars
     let accounts, deployer, admin, marketHandler, associate, seller, escrowAgent, minter;
     let accessController, marketController, marketDiamond;
+    let Foreign721, foreign721;
+    let Foreign1155, foreign1155;
     let SeenHausNFT, seenHausNFT;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let lotsTicketer, itemsTicketer, tokenURI, royaltyPercentage;
     let address, amount, percentage, counter, market, token, tokenId, id, consignment, nextConsignment, escrowTicketer, escrowTicketerType;
-    let replacementAmount, replacementPercentage, supply, support, interfaces;
+    let replacementAmount, replacementPercentage, supply, support, owner, balance;
     let replacementAddress = "0x2d36143CC2E0E74E007E7600F341dC9D37D81C07";
-    let tooLittle, tooMuch, revertReason;
+    let tooLittle, tooMuch, revertReason, result;
 
     beforeEach( async function () {
 
@@ -50,6 +52,16 @@ describe("MarketController", function() {
         maxRoyaltyPercentage = "5000";        // 50%   = 5000
         outBidPercentage = "500";             // 5%    = 500
         defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
+
+        // Deploy the Foreign721 mock contract
+        Foreign721 = await ethers.getContractFactory("Foreign721");
+        foreign721 = await Foreign721.deploy();
+        await foreign721.deployed();
+
+        // Deploy the Foreign1155 mock contract
+        Foreign1155 = await ethers.getContractFactory("Foreign1155");
+        foreign1155 = await Foreign1155.deploy();
+        await foreign1155.deployed();
 
         // Deploy the Diamond
         [marketDiamond, diamondLoupe, diamondCut, accessController] = await deployMarketDiamond();
@@ -823,8 +835,9 @@ describe("MarketController", function() {
             royaltyPercentage = maxRoyaltyPercentage;
             token = seenHausNFT;
 
-            // Mint token to be consigned
+            // Mint SeenHaus 1155 token to be consigned
             await seenHausNFT.connect(minter).mintDigital(supply, minter.address, tokenURI, royaltyPercentage);
+
         });
 
         context("Privileged Access", async function () {
@@ -917,6 +930,25 @@ describe("MarketController", function() {
 
             });
 
+            it("marketConsignment() should emit a ConsignmentMarketed event", async function () {
+
+                // Get the expected consignment id
+                nextConsignment = await marketController.getNextConsignment();
+
+                // Make change, test event
+                await marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply);
+
+                // Make change, test event
+                await expect(
+                    marketController.connect(marketHandler).marketConsignment(nextConsignment)
+                ).to.emit(marketController, 'ConsignmentMarketed')
+                    .withArgs(
+                        associate.address,
+                        seller.address,
+                        nextConsignment
+                    );
+            });
+
             it("setConsignmentTicketer() should emit a ConsignmentTicketerChanged event", async function () {
 
                 // Get the next consignment id
@@ -932,6 +964,26 @@ describe("MarketController", function() {
                     .withArgs(nextConsignment, Ticketer.ITEMS);
             });
 
+            it("releaseConsignment() should emit a ConsignmentReleased event", async function () {
+
+                // Get the expected consignment id
+                nextConsignment = await marketController.getNextConsignment();
+
+                // Consign the item
+                marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply)
+
+                // Make change, test event
+                await expect(
+                    marketController.connect(marketHandler).releaseConsignment(nextConsignment, supply, associate.address)
+                ).to.emit(marketController, 'ConsignmentReleased')
+                    .withArgs(
+                        nextConsignment,
+                        supply,
+                        associate.address
+                    );
+
+            });
+
         });
 
         context("Revert Reasons", async function () {
@@ -945,6 +997,7 @@ describe("MarketController", function() {
                 await expect(
                     marketController.connect(escrowAgent).setConsignmentTicketer(nextConsignment, Ticketer.ITEMS)
                 ).to.be.revertedWith("Consignment does not exist");
+
             });
 
         });
@@ -1097,6 +1150,246 @@ describe("MarketController", function() {
 
                 });
 
+            });
+
+        });
+
+        context("Foreign NFTs", async function () {
+
+            beforeEach( async function () {
+
+                // Get the expected consignment id
+                nextConsignment = await marketController.getNextConsignment();
+
+            });
+
+            context("Foreign ERC-721", async function () {
+
+                beforeEach( async function () {
+
+                    // Token setup
+                    token = foreign721;
+                    tokenId = ethers.BigNumber.from("12");
+                    supply = 1;
+
+                    // Mint Foreign 721 token to be consigned
+                    await foreign721.mint(minter.address, tokenId, maxRoyaltyPercentage);
+
+                    // Transfer token balance to MarketController
+                    // N.B. Using transferFrom instead of safeTransferFrom because of an
+                    // apparent ethers issue handling overloaded methods
+                    // (which safeTransferFrom is on ERC-721).
+                    // https://github.com/ethers-io/ethers.js/issues/407
+                    await foreign721.connect(minter).transferFrom(
+                        minter.address,
+                        marketController.address,
+                        tokenId
+                    );
+
+                });
+
+                context("registerConsignment()", async function () {
+
+                    it("should emit a ConsignmentRegistered event", async function () {
+
+                        // Make change, test event
+                        await expect(
+                            marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply)
+                        ).to.emit(marketController, 'ConsignmentRegistered')
+                            .withArgs(
+                                associate.address,
+                                seller.address,
+                                [
+                                    market,
+                                    seller.address,
+                                    token.address,
+                                    tokenId,
+                                    supply,
+                                    nextConsignment
+                                ]
+                            );
+
+                    });
+
+                    it("subsequent getSupply() should return correct amount", async function () {
+
+                        // Register consignment
+                        await marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply);
+
+                        // Get supply
+                        result = await marketController.getSupply(nextConsignment)
+
+                        // Get supply
+                        await expect(result).to.equal(supply);
+
+                    });
+
+                });
+
+                context("releaseConsignment()", async function () {
+
+                    beforeEach( async function () {
+
+                        // Consign the item
+                        await marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply)
+
+                    });
+
+                    it("should emit a ConsignmentReleased event", async function () {
+
+                        // Make change, test event
+                        await expect(
+                            marketController.connect(marketHandler).releaseConsignment(nextConsignment, supply, associate.address)
+                        ).to.emit(marketController, 'ConsignmentReleased')
+                            .withArgs(
+                                nextConsignment,
+                                supply,
+                                associate.address
+                            );
+
+                    });
+
+                    it("asset should be transferred to new owner", async function () {
+
+                        // Release the consignment
+                        await marketController.connect(marketHandler).releaseConsignment(nextConsignment, supply, associate.address)
+
+                        // Get the owner of the given token
+                        owner = await foreign721.ownerOf(tokenId);
+
+                        // Make sure associate received the asset
+                        expect(owner).to.equal(associate.address);
+
+                    });
+
+                    it("subsequent getSupply() should return correct amount", async function () {
+
+                        // Release the consignment
+                        await marketController.connect(marketHandler).releaseConsignment(nextConsignment, supply, associate.address)
+
+                        // Get supply
+                        result = await marketController.getSupply(nextConsignment)
+
+                        // Get supply
+                        await expect(result).to.equal("0");
+
+                    });
+
+                });
+
+            });
+
+            context("Foreign ERC-1155", async function () {
+
+                beforeEach( async function () {
+
+                    // Token setup
+                    token = foreign1155;
+                    tokenId = 12;
+                    supply = 10;
+
+                    // Mint Foreign 1155 token to be consigned
+                    await foreign1155.mint(minter.address, tokenId, supply, maxRoyaltyPercentage);
+
+                    // Transfer token balance to MarketController
+                    await foreign1155.connect(minter).safeTransferFrom(
+                        minter.address,
+                        marketController.address,
+                        tokenId,
+                        supply,
+                        []
+                    );
+
+                });
+
+                context("registerConsignment()", async function () {
+
+                    it("should emit a ConsignmentRegistered event", async function () {
+
+                    // Make change, test event
+                    await expect(
+                        marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply)
+                    ).to.emit(marketController, 'ConsignmentRegistered')
+                        .withArgs(
+                            associate.address,
+                            seller.address,
+                            [
+                                market,
+                                seller.address,
+                                token.address,
+                                tokenId,
+                                supply,
+                                nextConsignment
+                            ]
+                        );
+
+                });
+
+                    it("subsequent getSupply() should return correct amount", async function () {
+
+                        // Register consignment
+                        await marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply)
+
+                        // Get supply
+                        result = await marketController.getSupply(nextConsignment)
+
+                        // Get supply
+                        await expect(result).to.equal(supply);
+
+                    });
+
+                });
+
+                context("releaseConsignment()", async function () {
+
+                    beforeEach( async function () {
+
+                        // Consign the item
+                        marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply)
+
+                    });
+
+                    it("should emit a ConsignmentReleased event", async function () {
+
+                        // Make change, test event
+                        await expect(
+                            marketController.connect(marketHandler).releaseConsignment(nextConsignment, supply, associate.address)
+                        ).to.emit(marketController, 'ConsignmentReleased')
+                            .withArgs(
+                                nextConsignment,
+                                supply,
+                                associate.address
+                            );
+
+                    });
+
+                    it("asset should be transferred to new owner", async function () {
+
+                        // Release the consignment
+                        await marketController.connect(marketHandler).releaseConsignment(nextConsignment, supply, associate.address)
+
+                        // Get the associate's balance of the given token
+                        balance = await foreign1155.balanceOf(associate.address, tokenId);
+
+                        // Make sure associate received the asset
+                        expect(balance).to.equal(supply);
+
+                    });
+
+                    it("subsequent getSupply() should return correct amount", async function () {
+
+                        // Release the consignment
+                        await marketController.connect(marketHandler).releaseConsignment(nextConsignment, supply, associate.address);
+
+                        // Get supply
+                        result = await marketController.getSupply(nextConsignment)
+
+                        // Get supply
+                        await expect(result).to.equal("0");
+
+                    });
+
+                });
             });
 
         });

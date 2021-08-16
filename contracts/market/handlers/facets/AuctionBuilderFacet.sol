@@ -188,9 +188,6 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
             // Token must be a single token NFT
             require(IERC165(_tokenAddress).supportsInterface(type(IERC721).interfaceId), "Invalid token type");
 
-            // Ensure the consigned token has been transferred to this contract
-            require(IERC721(_tokenAddress).ownerOf(_tokenId) == (address(this)));
-
             // Transfer tokenId to MarketController
             IERC721(_tokenAddress).safeTransferFrom(
                 _seller,
