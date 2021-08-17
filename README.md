@@ -14,8 +14,12 @@
 ## Digital vs Physical
 ![digital-vs-physical-nfts](docs/images/SeenHausDigitalVsPhysicalNFTs.png)
 
+## Market Diamond
+![market-diamond](docs/images/SeenHausMarketDiamond.png)
+
 ## Sequences: Mint + Market
 ![digital-vs-physical-nfts](docs/images/SeenHausSequencesMintMarket.png)
+
 
 # Developer Setup
 ## Prerequisites
