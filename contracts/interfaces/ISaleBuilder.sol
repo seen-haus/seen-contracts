@@ -6,8 +6,12 @@ import "./IMarketHandler.sol";
 
 /**
  * @title ISaleBuilder
- * @author Cliff Hall
+ *
  * @notice Handles the creation of Seen.Haus sales.
+ *
+ * The ERC-165 identifier for this interface is: 0x4811411a
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 interface ISaleBuilder is IMarketHandler {
 

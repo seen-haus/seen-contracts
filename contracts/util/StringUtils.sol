@@ -3,7 +3,10 @@ pragma solidity ^0.8.0;
 
 /**
  * @title String Utils
- * @author Cliff Hall
+ *
+ * Functions for converting numbers to strings and concatenating strings.
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract StringUtils {
 

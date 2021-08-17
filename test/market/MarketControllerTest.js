@@ -5,22 +5,29 @@ const Role = require("../../domain/Role");
 const Market = require("../../domain/Market");
 const Consignment = require("../../domain/Consignment");
 const Ticketer = require("../../domain/Ticketer");
-const { deployDiamond } = require('../../scripts/util/deploy-diamond.js');
+const { InterfaceIds } = require('../../scripts/util/supported-interfaces.js');
+const { deployMarketDiamond } = require('../../scripts/util/deploy-market-diamond.js');
 const { deployMarketControllerFacets } = require('../../scripts/util/deploy-market-controller-facets.js');
 
-describe("MarketController", function() {
+/**
+ *  Test the MarketController facets (MarketClerk, MarketConfig)
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
+describe("IMarketController", function() {
 
     // Common vars
     let accounts, deployer, admin, marketHandler, associate, seller, escrowAgent, minter;
-    let AccessController, accessController;
-    let MarketConfig, marketConfig, MarketClerk, marketClerk, marketController;
+    let accessController, marketController, marketDiamond;
+    let Foreign721, foreign721;
+    let Foreign1155, foreign1155;
     let SeenHausNFT, seenHausNFT;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let lotsTicketer, itemsTicketer, tokenURI, royaltyPercentage;
     let address, amount, percentage, counter, market, token, tokenId, id, consignment, nextConsignment, escrowTicketer, escrowTicketerType;
-    let replacementAmount, replacementPercentage, supply, support, interfaces;
+    let replacementAmount, replacementPercentage, supply, support, owner, balance;
     let replacementAddress = "0x2d36143CC2E0E74E007E7600F341dC9D37D81C07";
-    let tooLittle, tooMuch, revertReason;
+    let tooLittle, tooMuch, revertReason, result;
 
     beforeEach( async function () {
 
@@ -46,8 +53,18 @@ describe("MarketController", function() {
         outBidPercentage = "500";             // 5%    = 500
         defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
 
+        // Deploy the Foreign721 mock contract
+        Foreign721 = await ethers.getContractFactory("Foreign721");
+        foreign721 = await Foreign721.deploy();
+        await foreign721.deployed();
+
+        // Deploy the Foreign1155 mock contract
+        Foreign1155 = await ethers.getContractFactory("Foreign1155");
+        foreign1155 = await Foreign1155.deploy();
+        await foreign1155.deployed();
+
         // Deploy the Diamond
-        [diamond, diamondLoupe, diamondCut, accessController] = await deployDiamond();
+        [marketDiamond, diamondLoupe, diamondCut, accessController] = await deployMarketDiamond();
 
         // Prepare MarketController initialization arguments
         const marketConfig = [
@@ -61,16 +78,16 @@ describe("MarketController", function() {
         ];
 
         // Cut the MarketController facet into the Diamond
-        await deployMarketControllerFacets(diamond, marketConfig);
+        await deployMarketControllerFacets(marketDiamond, marketConfig);
 
         // Cast Diamond to MarketController
-        marketController = await ethers.getContractAt('IMarketController', diamond.address);
+        marketController = await ethers.getContractAt('IMarketController', marketDiamond.address);
 
         // Deploy the SeenHausNFT contract
         SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
         seenHausNFT = await SeenHausNFT.deploy(
             accessController.address,
-            diamond.address
+            marketDiamond.address
         );
         await seenHausNFT.deployed();
 
@@ -86,6 +103,92 @@ describe("MarketController", function() {
 
         // Grant MARKET_HANDLER to SeenHausNFT
         await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
+
+    });
+
+    context("Interfaces", async function () {
+
+        context("supportsInterface()", async function () {
+
+            it("should indicate support for ERC-165 interface", async function () {
+
+                // See https://eips.ethereum.org/EIPS/eip-165#how-a-contract-will-publish-the-interfaces-it-implements
+                support = await marketController.supportsInterface(InterfaceIds.IERC165);
+
+                // Test
+                await expect(
+                    support,
+                    "ERC-165 interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for IERC1155Receiver interface", async function () {
+
+                // Current interfaceId for IERC1155Receiver
+                support = await marketController.supportsInterface(InterfaceIds.IERC1155Receiver);
+
+                // Test
+                await expect(
+                    support,
+                    "IERC1155Receiver interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for IERC721Receiver interface", async function () {
+
+                // Current interfaceId for IERC721Receiver
+                support = await marketController.supportsInterface(InterfaceIds.IERC721Receiver);
+
+                // Test
+                await expect(
+                    support,
+                    "IERC721Receiver interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for IMarketController interface", async function () {
+
+                // Current interfaceId for IMarketController
+                support = await marketController.supportsInterface(InterfaceIds.IMarketController);
+
+                // Test
+                await expect(
+                    support,
+                    "IMarketController interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for IMarketConfig interface", async function () {
+
+                // Current interfaceId for IMarketConfig
+                support = await marketController.supportsInterface(InterfaceIds.IMarketConfig);
+
+                // Test
+                await expect(
+                    support,
+                    "IMarketConfig interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for IMarketClerk interface", async function () {
+
+                // Current interfaceId for IMarketClerk
+                support = await marketController.supportsInterface(InterfaceIds.IMarketClerk);
+
+                // Test
+                await expect(
+                    support,
+                    "IMarketClerk interface not supported"
+                ).is.true;
+
+            });
+
+        });
 
     });
 
@@ -237,39 +340,6 @@ describe("MarketController", function() {
         });
 
         context("Privileged Access", async function () {
-
-            xit("setAccessController() should require ADMIN to set the accessController address", async function () {
-
-                // N.B. There is no separate test suite for AccessClient.sol, which is an abstract contract.
-                //      Functionality not covered elsewhere will be tested here in the MarketController test suite.
-
-                // non-ADMIN attempt
-                await expect(
-                    marketController.connect(associate).setAccessController(replacementAddress)
-                ).to.be.revertedWith("Access denied, caller doesn't have role");
-
-                // Get address
-                address = await marketController.getAccessController();
-
-                // Test
-                expect(
-                    address !== replacementAddress,
-                    "non-ADMIN can set accessController address"
-                ).is.true;
-
-                // ADMIN attempt
-                await marketController.connect(admin).setAccessController(replacementAddress);
-
-                // Get address
-                address = await marketController.getAccessController();
-
-                // Test
-                expect(
-                    address === replacementAddress,
-                    "ADMIN can't set accessController address"
-                ).is.true;
-
-            });
 
             it("setStaking() should require ADMIN to set the staking address", async function () {
 
@@ -765,8 +835,9 @@ describe("MarketController", function() {
             royaltyPercentage = maxRoyaltyPercentage;
             token = seenHausNFT;
 
-            // Mint token to be consigned
+            // Mint SeenHaus 1155 token to be consigned
             await seenHausNFT.connect(minter).mintDigital(supply, minter.address, tokenURI, royaltyPercentage);
+
         });
 
         context("Privileged Access", async function () {
@@ -859,6 +930,25 @@ describe("MarketController", function() {
 
             });
 
+            it("marketConsignment() should emit a ConsignmentMarketed event", async function () {
+
+                // Get the expected consignment id
+                nextConsignment = await marketController.getNextConsignment();
+
+                // Make change, test event
+                await marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply);
+
+                // Make change, test event
+                await expect(
+                    marketController.connect(marketHandler).marketConsignment(nextConsignment)
+                ).to.emit(marketController, 'ConsignmentMarketed')
+                    .withArgs(
+                        associate.address,
+                        seller.address,
+                        nextConsignment
+                    );
+            });
+
             it("setConsignmentTicketer() should emit a ConsignmentTicketerChanged event", async function () {
 
                 // Get the next consignment id
@@ -874,6 +964,26 @@ describe("MarketController", function() {
                     .withArgs(nextConsignment, Ticketer.ITEMS);
             });
 
+            it("releaseConsignment() should emit a ConsignmentReleased event", async function () {
+
+                // Get the expected consignment id
+                nextConsignment = await marketController.getNextConsignment();
+
+                // Consign the item
+                marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply)
+
+                // Make change, test event
+                await expect(
+                    marketController.connect(marketHandler).releaseConsignment(nextConsignment, supply, associate.address)
+                ).to.emit(marketController, 'ConsignmentReleased')
+                    .withArgs(
+                        nextConsignment,
+                        supply,
+                        associate.address
+                    );
+
+            });
+
         });
 
         context("Revert Reasons", async function () {
@@ -887,6 +997,7 @@ describe("MarketController", function() {
                 await expect(
                     marketController.connect(escrowAgent).setConsignmentTicketer(nextConsignment, Ticketer.ITEMS)
                 ).to.be.revertedWith("Consignment does not exist");
+
             });
 
         });
@@ -927,7 +1038,9 @@ describe("MarketController", function() {
                         response.tokenId.toString(),
                         response.supply.toString(),
                         response.id.toString(),
-                        response.marketed
+                        response.multiToken,
+                        response.marketed,
+                        response.released
                     );
 
                     // Test validity
@@ -943,7 +1056,9 @@ describe("MarketController", function() {
                     expect(consignment.tokenId === tokenId.toString()).is.true;
                     expect(consignment.supply === supply.toString()).is.true;
                     expect(consignment.id === id).is.true;
+                    expect(consignment.multiToken).is.true;
                     expect(consignment.marketed).is.false;
+                    expect(consignment.released).is.false;
                 });
 
             });
@@ -1039,36 +1154,242 @@ describe("MarketController", function() {
 
         });
 
-    });
+        context("Foreign NFTs", async function () {
 
-    context("Interfaces", async function () {
+            beforeEach( async function () {
 
-        context("supportsInterface()", async function () {
-
-            it("should indicate support for ERC-165 interface", async function () {
-
-                // See https://eips.ethereum.org/EIPS/eip-165#how-a-contract-will-publish-the-interfaces-it-implements
-                support = await marketController.supportsInterface("0x01ffc9a7");
-
-                // Test
-                await expect(
-                    support,
-                    "ERC-165 interface not supported"
-                ).is.true;
+                // Get the expected consignment id
+                nextConsignment = await marketController.getNextConsignment();
 
             });
 
-            xit("should indicate support for IMarketController interface", async function () {
+            context("Foreign ERC-721", async function () {
 
-                // Current interfaceId for IMarketController
-                support = await marketController.supportsInterface("0xe5f2f941");
+                beforeEach( async function () {
 
-                // Test
-                await expect(
-                    support,
-                    "IMarketController interface not supported"
-                ).is.true;
+                    // Token setup
+                    token = foreign721;
+                    tokenId = ethers.BigNumber.from("12");
+                    supply = 1;
 
+                    // Mint Foreign 721 token to be consigned
+                    await foreign721.mint(minter.address, tokenId, maxRoyaltyPercentage);
+
+                    // Transfer token balance to MarketController
+                    // N.B. Using transferFrom instead of safeTransferFrom because of an
+                    // apparent ethers issue handling overloaded methods
+                    // (which safeTransferFrom is on ERC-721).
+                    // https://github.com/ethers-io/ethers.js/issues/407
+                    await foreign721.connect(minter).transferFrom(
+                        minter.address,
+                        marketController.address,
+                        tokenId
+                    );
+
+                });
+
+                context("registerConsignment()", async function () {
+
+                    it("should emit a ConsignmentRegistered event", async function () {
+
+                        // Make change, test event
+                        await expect(
+                            marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply)
+                        ).to.emit(marketController, 'ConsignmentRegistered')
+                            .withArgs(
+                                associate.address,
+                                seller.address,
+                                [
+                                    market,
+                                    seller.address,
+                                    token.address,
+                                    tokenId,
+                                    supply,
+                                    nextConsignment
+                                ]
+                            );
+
+                    });
+
+                    it("subsequent getSupply() should return correct amount", async function () {
+
+                        // Register consignment
+                        await marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply);
+
+                        // Get supply
+                        result = await marketController.getSupply(nextConsignment)
+
+                        // Get supply
+                        await expect(result).to.equal(supply);
+
+                    });
+
+                });
+
+                context("releaseConsignment()", async function () {
+
+                    beforeEach( async function () {
+
+                        // Consign the item
+                        await marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply)
+
+                    });
+
+                    it("should emit a ConsignmentReleased event", async function () {
+
+                        // Make change, test event
+                        await expect(
+                            marketController.connect(marketHandler).releaseConsignment(nextConsignment, supply, associate.address)
+                        ).to.emit(marketController, 'ConsignmentReleased')
+                            .withArgs(
+                                nextConsignment,
+                                supply,
+                                associate.address
+                            );
+
+                    });
+
+                    it("asset should be transferred to new owner", async function () {
+
+                        // Release the consignment
+                        await marketController.connect(marketHandler).releaseConsignment(nextConsignment, supply, associate.address)
+
+                        // Get the owner of the given token
+                        owner = await foreign721.ownerOf(tokenId);
+
+                        // Make sure associate received the asset
+                        expect(owner).to.equal(associate.address);
+
+                    });
+
+                    it("subsequent getSupply() should return correct amount", async function () {
+
+                        // Release the consignment
+                        await marketController.connect(marketHandler).releaseConsignment(nextConsignment, supply, associate.address)
+
+                        // Get supply
+                        result = await marketController.getSupply(nextConsignment)
+
+                        // Get supply
+                        await expect(result).to.equal("0");
+
+                    });
+
+                });
+
+            });
+
+            context("Foreign ERC-1155", async function () {
+
+                beforeEach( async function () {
+
+                    // Token setup
+                    token = foreign1155;
+                    tokenId = 12;
+                    supply = 10;
+
+                    // Mint Foreign 1155 token to be consigned
+                    await foreign1155.mint(minter.address, tokenId, supply, maxRoyaltyPercentage);
+
+                    // Transfer token balance to MarketController
+                    await foreign1155.connect(minter).safeTransferFrom(
+                        minter.address,
+                        marketController.address,
+                        tokenId,
+                        supply,
+                        []
+                    );
+
+                });
+
+                context("registerConsignment()", async function () {
+
+                    it("should emit a ConsignmentRegistered event", async function () {
+
+                    // Make change, test event
+                    await expect(
+                        marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply)
+                    ).to.emit(marketController, 'ConsignmentRegistered')
+                        .withArgs(
+                            associate.address,
+                            seller.address,
+                            [
+                                market,
+                                seller.address,
+                                token.address,
+                                tokenId,
+                                supply,
+                                nextConsignment
+                            ]
+                        );
+
+                });
+
+                    it("subsequent getSupply() should return correct amount", async function () {
+
+                        // Register consignment
+                        await marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply)
+
+                        // Get supply
+                        result = await marketController.getSupply(nextConsignment)
+
+                        // Get supply
+                        await expect(result).to.equal(supply);
+
+                    });
+
+                });
+
+                context("releaseConsignment()", async function () {
+
+                    beforeEach( async function () {
+
+                        // Consign the item
+                        marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply)
+
+                    });
+
+                    it("should emit a ConsignmentReleased event", async function () {
+
+                        // Make change, test event
+                        await expect(
+                            marketController.connect(marketHandler).releaseConsignment(nextConsignment, supply, associate.address)
+                        ).to.emit(marketController, 'ConsignmentReleased')
+                            .withArgs(
+                                nextConsignment,
+                                supply,
+                                associate.address
+                            );
+
+                    });
+
+                    it("asset should be transferred to new owner", async function () {
+
+                        // Release the consignment
+                        await marketController.connect(marketHandler).releaseConsignment(nextConsignment, supply, associate.address)
+
+                        // Get the associate's balance of the given token
+                        balance = await foreign1155.balanceOf(associate.address, tokenId);
+
+                        // Make sure associate received the asset
+                        expect(balance).to.equal(supply);
+
+                    });
+
+                    it("subsequent getSupply() should return correct amount", async function () {
+
+                        // Release the consignment
+                        await marketController.connect(marketHandler).releaseConsignment(nextConsignment, supply, associate.address);
+
+                        // Get supply
+                        result = await marketController.getSupply(nextConsignment)
+
+                        // Get supply
+                        await expect(result).to.equal("0");
+
+                    });
+
+                });
             });
 
         });

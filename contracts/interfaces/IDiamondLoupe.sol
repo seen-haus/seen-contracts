@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-/******************************************************************************\
-* Author: Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
-* EIP-2535 Diamonds: https://eips.ethereum.org/EIPS/eip-2535
-*
-* The EIP-165 id for this interface is: 0x48e2b093
-/******************************************************************************/
-
-// A loupe is a small magnifying glass used to look at diamonds.
-// These functions look at diamonds
+/**
+ * @title IDiamondLoupe
+ *
+ * @notice Diamond Facet inspection
+ *
+ * Reference Implementation  : https://github.com/mudgen/diamond-2-hardhat
+ * EIP-2535 Diamond Standard : https://eips.ethereum.org/EIPS/eip-2535
+ *
+ * The ERC-165 identifier for this interface is: 0x48e2b093
+ *
+ * @author Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
+ */
 interface IDiamondLoupe {
-    /// These functions are expected to be called frequently
-    /// by tools.
 
     struct Facet {
         address facetAddress;

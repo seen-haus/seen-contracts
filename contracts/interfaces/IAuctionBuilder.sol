@@ -6,10 +6,12 @@ import "./IMarketHandler.sol";
 
 /**
  * @title IAuctionBuilder
- * @author Cliff Hall
+ *
  * @notice Handles the creation of Seen.Haus auctions.
  *
- * The ERC-165 identifier for this interface is: // TODO: find interface id
+ * The ERC-165 identifier for this interface is: 0xb147a90b
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 interface IAuctionBuilder is IMarketHandler {
 

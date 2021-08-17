@@ -2,14 +2,18 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "../../../interfaces/IAuctionHandler.sol";
 import "../../../interfaces/IAuctionBuilder.sol";
+import "../../../interfaces/IAuctionRunner.sol";
 import "../MarketHandlerBase.sol";
 
 /**
  * @title AuctionBuilderFacet
- * @author Cliff Hall
+ *
  * @notice Handles the creation of Seen.Haus auctions.
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
 
@@ -34,7 +38,7 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
     onlyUnInitialized
     {
         DiamondLib.addSupportedInterface(type(IAuctionBuilder).interfaceId);   // when combined with IAuctionRunner ...
-        DiamondLib.addSupportedInterface(type(IAuctionHandler).interfaceId);   // ... Diamond supports IAuctionHandler
+        DiamondLib.addSupportedInterface(type(IAuctionBuilder).interfaceId ^ type(IAuctionRunner).interfaceId);  // ... supports IAuctionHandler
     }
 
     /**
@@ -97,8 +101,8 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
         // Get the storage location for the auction
         Auction storage auction = mhs.auctions[consignment.id];
 
-        // Make sure auction doesn't exist
-        require(auction.consignmentId == 0, "Auction exists");
+        // Make sure auction doesn't exist (start would always be non-zero on an actual auction)
+        require(auction.start == 0, "Auction exists");
 
         // Make sure start time isn't in the past
         require(_start >= block.timestamp, "Time runs backward?");
@@ -126,9 +130,10 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
      * Emits an AuctionPending event.
      *
      * Reverts if:
-     *  - Contract no approved to transfer seller's tokens
-     *  - Seller doesn't own the token balance to be auctioned
      *  - Start time is in the past
+     *  - This contract not approved to transfer seller's tokens
+     *  - Seller doesn't own the asset(s) to be auctioned
+     *  - Token contract does not implement either IERC1155 or IERC721
      *
      * @param _seller - the current owner of the consignment
      * @param _tokenAddress - the contract address issuing the NFT behind the consignment
@@ -160,19 +165,37 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
         require (_start >= block.timestamp, "Time runs backward?");
 
         // Make sure this contract is approved to transfer the token
+        // N.B. The following will work because isApprovedForAll has the same signature on both IERC721 and IERC1155
         require(IERC1155(_tokenAddress).isApprovedForAll(_seller, address(this)), "Not approved to transfer seller's tokens");
 
-        // Ensure seller a positive number of tokens
-        require(IERC1155(_tokenAddress).balanceOf(_seller, _tokenId) > 0, "Seller has zero balance of consigned token");
-
         // To register the consignment, tokens must first be in MarketController's possession
-        IERC1155(_tokenAddress).safeTransferFrom(
-            _seller,
-            address(getMarketController()),
-            _tokenId,
-            1, // Supply always 1 for auction
-            new bytes(0x0)
-        );
+        if (IERC165(_tokenAddress).supportsInterface(type(IERC1155).interfaceId)) {
+
+            // Ensure seller a positive number of tokens
+            require(IERC1155(_tokenAddress).balanceOf(_seller, _tokenId) > 0, "Seller has zero balance of consigned token");
+
+            // Transfer supply to MarketController
+            IERC1155(_tokenAddress).safeTransferFrom(
+                _seller,
+                address(getMarketController()),
+                _tokenId,
+                1, // Supply is always 1 for auction
+                new bytes(0x0)
+            );
+
+        } else {
+
+            // Token must be a single token NFT
+            require(IERC165(_tokenAddress).supportsInterface(type(IERC721).interfaceId), "Invalid token type");
+
+            // Transfer tokenId to MarketController
+            IERC721(_tokenAddress).safeTransferFrom(
+                _seller,
+                address(getMarketController()),
+                _tokenId
+            );
+
+        }
 
         // Register consignment (Secondaries are automatically marketed upon registration)
         Consignment memory consignment = getMarketController().registerConsignment(Market.Secondary, msg.sender, _seller, _tokenAddress, _tokenId, 1);
@@ -190,6 +213,7 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
 
         // Notify listeners of state change
         emit AuctionPending(msg.sender, consignment.seller, auction);
+
     }
 
 }

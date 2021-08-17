@@ -10,7 +10,7 @@ import "../../../util/StringUtils.sol";
 
 /**
  * @title LotsTicketer
- * @author Cliff Hall
+ *
  * @notice An escrow ticketer contract implemented with ERC-721.
  *
  * Holders of this ticket have the right to transfer or claim a
@@ -23,6 +23,8 @@ import "../../../util/StringUtils.sol";
  * N.B.: This contract disincentivizes whale behavior, e.g., a person
  * scooping up a bunch of the available items in a multi-edition
  * sale must flip or claim them all at once, not individually.
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract LotsTicketer is IEscrowTicketer, StringUtils, MarketClient, ERC721 {
 

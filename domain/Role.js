@@ -1,10 +1,13 @@
-/**
- * Domain Enum: Role
- * @author Cliff Hall <cliff@futurescale.com>
- */
 const ethers = require('ethers');
 const NODE = (typeof module !== 'undefined' && typeof module.exports !== 'undefined');
 
+/**
+ * Domain Enum: Role
+ *
+ * See: {SeenTypes.Role}
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
 class Role {}
 function getRoleBytes(role) {
     let utils = ethers.utils;

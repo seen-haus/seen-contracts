@@ -6,8 +6,10 @@ import "../domain/SeenConstants.sol";
 
 /**
  * @title AccessController
- * @author Cliff Hall
+ *
  * @notice Implements centralized role-based access for Seen.Haus contracts.
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract AccessController is AccessControl, SeenConstants  {
 

@@ -6,9 +6,9 @@ import "../../domain/SeenTypes.sol";
 /**
  * @title MarketControllerLib
  *
- * @dev Provides access to the the MarketController Storage slot for MarketController facets
+ * @dev Provides access to the the MarketController Storage and Intializer slots for MarketController facets
  *
- * @author Cliff Hall
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 library MarketControllerLib {
 

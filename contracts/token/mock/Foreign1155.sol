@@ -3,15 +3,15 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "../../interfaces/IERC2981.sol";
-import "../../domain/SeenTypes.sol";
 
 /**
- * @title Mock ERC-(1155/2981) NFT for Unit Testing
- * @author Cliff Hall
+ * @title Foreign1155
+ *
+ * @notice Mock ERC-(1155/2981) NFT for Unit Testing
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-contract Foreign1155 is SeenTypes, IERC2981, ERC1155 {
-
-    address constant zeroAddress = 0x0000000000000000000000000000000000000000;
+contract Foreign1155 is IERC2981, ERC1155 {
 
     mapping(uint256 => address) public creators;
     mapping(uint256 => uint256) public royaltyPercentage;
@@ -20,9 +20,10 @@ contract Foreign1155 is SeenTypes, IERC2981, ERC1155 {
 
     /**
      * Mint a Sample NFT
-     * @param _creator the address that will own the token and get royalties
-     * @param _tokenId the token ID to mint an amount of
-     * @param _amount the amount of tokens to mint
+     * @param _creator - the address that will own the token and get royalties
+     * @param _tokenId - the token ID to mint an amount of
+     * @param _amount - the amount of tokens to mint
+     * @param _royaltyPercentage - the percentage of royalty expected on secondary market sales
      */
     function mint(address _creator, uint256 _tokenId, uint256 _amount, uint256 _royaltyPercentage) public {
         creators[_tokenId] = _creator;
@@ -40,7 +41,7 @@ contract Foreign1155 is SeenTypes, IERC2981, ERC1155 {
      *
      * @return _receiver - address of who should be sent the royalty payment
      * @return _royaltyAmount - the royalty payment amount for _value sale price
- */
+     */
     function royaltyInfo(uint256 _tokenId, uint256 _salePrice)
     external view override
     returns (address _receiver, uint256 _royaltyAmount)

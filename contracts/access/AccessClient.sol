@@ -8,9 +8,11 @@ import "./AccessController.sol";
 
 /**
  * @title AccessClient
- * @author Cliff Hall
+ *
  * @notice Extended by Seen.Haus contracts that need centralized role-based access.
  * See {AccessController}
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 abstract contract AccessClient is SeenTypes, SeenConstants  {
 

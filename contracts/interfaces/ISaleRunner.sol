@@ -6,8 +6,12 @@ import "./IMarketHandler.sol";
 
 /**
  * @title ISaleRunner
- * @author Cliff Hall
+ *
  * @notice Handles the operation of Seen.Haus sales.
+ *
+ * The ERC-165 identifier for this interface is: 0x6164b6a0
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 interface ISaleRunner is IMarketHandler {
 

@@ -2,17 +2,19 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "../domain/SeenTypes.sol";
 
 /**
  * @title IMarketClerk
- * @author Cliff Hall
  *
  * @notice Manages consignments for the Seen.Haus contract suite.
  *
- * The ERC-165 identifier for this interface is: // TODO Find interface id
+ * The ERC-165 identifier for this interface is: 0xab572e9c
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-interface IMarketClerk is IERC1155Receiver {
+interface IMarketClerk is IERC1155Receiver, IERC721Receiver {
 
     /// Events
     event ConsignmentTicketerChanged(uint256 consignmentId, SeenTypes.Ticketer indexed ticketerType);

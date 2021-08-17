@@ -9,7 +9,7 @@ import "../../../util/StringUtils.sol";
 
 /**
  * @title ItemsTicketer
- * @author Cliff Hall
+ *
  * @notice An IEscrowTicketer contract implemented with ERC-1155.
  *
  * Holders of this style of ticket have the right to transfer or
@@ -24,6 +24,8 @@ import "../../../util/StringUtils.sol";
  * e.g., an entity scooping up a bunch of the available items
  * in a multi-edition sale with the purpose of flipping each
  * item individually to make maximum profit.
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155 {
 
@@ -59,8 +61,8 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155 {
     }
 
     /**
-    * @notice Get info about the ticket
-    */
+     * @notice Get info about the ticket
+     */
     function getTicket(uint256 _ticketId)
     external
     view

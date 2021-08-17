@@ -1,28 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-/**
- * @title Diamond
- *
- * @notice Diamond Proxy based on Nick Mudge's gas-optimized diamond-2 reference.
- * Reference Implementation  : https://github.com/mudgen/diamond-2-hardhat
- * EIP-2535 Diamond Standard : https://eips.ethereum.org/EIPS/eip-2535
- *
- * @author Nick Mudge
- * @author Cliff Hall
- */
-
-// Libraries
+import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import { IAccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
+import { IDiamondLoupe } from "../../interfaces/IDiamondLoupe.sol";
+import { IDiamondCut } from "../../interfaces/IDiamondCut.sol";
 import { DiamondLib } from "./DiamondLib.sol";
 import { JewelerLib } from "./JewelerLib.sol";
 
-// Interfaces
-import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import { IAccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
-import { IDiamondLoupe } from "../interfaces/IDiamondLoupe.sol";
-import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
-
-contract Diamond {
+/**
+ * @title MarketDiamond
+ *
+ * @notice Based on Nick Mudge's gas-optimized diamond-2 reference.
+ * Reference Implementation  : https://github.com/mudgen/diamond-2-hardhat
+ * EIP-2535 Diamond Standard : https://eips.ethereum.org/EIPS/eip-2535
+ *
+ * @author Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
+contract MarketDiamond {
 
     /**
      * @notice Constructor

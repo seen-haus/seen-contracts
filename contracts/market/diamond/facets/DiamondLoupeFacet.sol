@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { IDiamondLoupe } from "../../interfaces/IDiamondLoupe.sol";
+import { IDiamondLoupe } from "../../../interfaces/IDiamondLoupe.sol";
 import { DiamondLib } from  "../DiamondLib.sol";
 
 /**
@@ -11,7 +11,7 @@ import { DiamondLib } from  "../DiamondLib.sol";
  * Reference Implementation  : https://github.com/mudgen/diamond-2-hardhat
  * EIP-2535 Diamond Standard : https://eips.ethereum.org/EIPS/eip-2535
  *
- * @author Nick Mudge
+ * @author Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
  */
 contract DiamondLoupeFacet is IDiamondLoupe {
 

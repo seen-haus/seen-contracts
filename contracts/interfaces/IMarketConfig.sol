@@ -6,13 +6,13 @@ import "../domain/SeenTypes.sol";
 
 /**
  * @title IMarketController
- * @author Cliff Hall
  *
  * @notice Manages configuration and consignments used by the Seen.Haus contract suite.
- *
  * @dev Contributes its events and functions to the IMarketController interface
  *
- * The ERC-165 identifier for this interface is: // TODO: find interface id
+ * The ERC-165 identifier for this interface is: 0x4ea5d7dd
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 interface IMarketConfig {
 

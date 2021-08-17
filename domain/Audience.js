@@ -1,8 +1,12 @@
+const NODE = (typeof module !== 'undefined' && typeof module.exports !== 'undefined');
+
 /**
  * Domain Enum: Audience
- * @author Cliff Hall <cliff@futurescale.com>
+ *
+ * See: {SeenTypes.Audience}
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-const NODE = (typeof module !== 'undefined' && typeof module.exports !== 'undefined');
 class Audience {}
 
 Audience.OPEN = 0;

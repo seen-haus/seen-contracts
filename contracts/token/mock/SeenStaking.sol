@@ -2,8 +2,11 @@
 pragma solidity ^0.8.0;
 
 /**
- * @title Mock Seen staking contract for Unit Testing
- * @author Cliff Hall
+ * @title SeenStaking
+ *
+ * @notice Mock Seen staking contract for Unit Testing
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract SeenStaking {
 

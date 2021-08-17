@@ -2,14 +2,16 @@
 pragma solidity ^0.8.0;
 
 import "./MarketControllerLib.sol";
-import "../../diamond/DiamondLib.sol";
+import "../diamond/DiamondLib.sol";
 import "../../domain/SeenTypes.sol";
 import "../../domain/SeenConstants.sol";
 
 /**
  * @title MarketControllerBase
- * @author Cliff Hall
+ *
  * @notice Provides domain and common modifiers to MarketController facets
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 abstract contract MarketControllerBase is SeenTypes, SeenConstants {
 

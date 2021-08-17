@@ -10,20 +10,25 @@ const Outcome = require("../../domain/Outcome");
 const Audience = require("../../domain/Audience");
 const Ticketer = require("../../domain/Ticketer");
 const Consignment = require("../../domain/Consignment");
-const { deployDiamond } = require('../../scripts/util/deploy-diamond.js');
+const { InterfaceIds } = require('../../scripts/util/supported-interfaces.js');
+const { deployMarketDiamond } = require('../../scripts/util/deploy-market-diamond.js');
 const { deployMarketControllerFacets } = require('../../scripts/util/deploy-market-controller-facets.js');
 const { deployMarketHandlerFacets } = require('../../scripts/util/deploy-market-handler-facets.js');
 
+/**
+ *  Test the SaleHandler facets (SaleBuilder, SaleRunner)
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
 describe("SaleHandler", function() {
 
     // Common vars
     let accounts, deployer, admin, creator, associate, seller, minter, buyer, escrowAgent;
-    let AccessController, accessController;
-    let MarketController, marketController;
-    let SaleHandler, saleHandler;
+    let accessController, marketController, saleHandler;
     let LotsTicketer, lotsTicketer;
     let ItemsTicketer, itemsTicketer;
     let SeenHausNFT, seenHausNFT;
+    let Foreign721, foreign721;
     let Foreign1155, foreign1155;
     let SeenStaking, seenStaking;
     let multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
@@ -58,6 +63,11 @@ describe("SaleHandler", function() {
         outBidPercentage = "500";             // 5%    = 500
         defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
 
+        // Deploy the Foreign721 mock contract
+        Foreign721 = await ethers.getContractFactory("Foreign721");
+        foreign721 = await Foreign721.deploy();
+        await foreign721.deployed();
+
         // Deploy the Foreign1155 mock contract
         Foreign1155 = await ethers.getContractFactory("Foreign1155");
         foreign1155 = await Foreign1155.deploy();
@@ -69,7 +79,7 @@ describe("SaleHandler", function() {
         await seenStaking.deployed();
 
         // Deploy the Diamond
-        [diamond, diamondLoupe, diamondCut, accessController] = await deployDiamond();
+        [marketDiamond, diamondLoupe, diamondCut, accessController] = await deployMarketDiamond();
 
         // Prepare MarketController initialization arguments
         const marketConfig = [
@@ -83,16 +93,16 @@ describe("SaleHandler", function() {
         ];
 
         // Cut the MarketController facet into the Diamond
-        await deployMarketControllerFacets(diamond, marketConfig);
+        await deployMarketControllerFacets(marketDiamond, marketConfig);
 
         // Cast Diamond to MarketController
-        marketController = await ethers.getContractAt('IMarketController', diamond.address);
+        marketController = await ethers.getContractAt('IMarketController', marketDiamond.address);
 
         // Cut the Market Handler facets into the Diamond
-        [auctionBuilderFacet, auctionRunnerFacet, saleBuilderFacet, saleRunnerFacet] = await deployMarketHandlerFacets(diamond);
+        [auctionBuilderFacet, auctionRunnerFacet, saleBuilderFacet, saleRunnerFacet] = await deployMarketHandlerFacets(marketDiamond);
 
         // Cast Diamond to IAuctionHandler
-        saleHandler = await ethers.getContractAt('ISaleHandler', diamond.address);
+        saleHandler = await ethers.getContractAt('ISaleHandler', marketDiamond.address);
 
         // Deploy the SeenHausNFT contract
         SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
@@ -134,6 +144,66 @@ describe("SaleHandler", function() {
 
     });
 
+    context("Interfaces", async function () {
+
+        context("supportsInterface()", async function () {
+
+            it("should indicate support for ERC-165 interface", async function () {
+
+                // See https://eips.ethereum.org/EIPS/eip-165#how-a-contract-will-publish-the-interfaces-it-implements
+                support = await marketController.supportsInterface(InterfaceIds.IERC165);
+
+                // Test
+                await expect(
+                    support,
+                    "ERC-165 interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for ISaleHandler interface", async function () {
+
+                // Current interfaceId for ISaleHandler
+                support = await marketController.supportsInterface(InterfaceIds.ISaleHandler);
+
+                // Test
+                await expect(
+                    support,
+                    "ISaleHandler interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for ISaleBuilder interface", async function () {
+
+                // Current interfaceId for ISaleBuilder
+                support = await marketController.supportsInterface(InterfaceIds.ISaleBuilder);
+
+                // Test
+                await expect(
+                    support,
+                    "ISaleBuilder interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for ISaleRunner interface", async function () {
+
+                // Current interfaceId for ISaleRunner
+                support = await marketController.supportsInterface(InterfaceIds.ISaleRunner);
+
+                // Test
+                await expect(
+                    support,
+                    "ISaleRunner interface not supported"
+                ).is.true;
+
+            });
+
+        });
+
+    });
+
     context("Managing Sales", async function () {
 
         beforeEach( async function () {
@@ -149,8 +219,9 @@ describe("SaleHandler", function() {
             await accessController.connect(admin).grantRole(Role.ESCROW_AGENT, escrowAgent.address);
 
             // Seller approves SaleHandler contract to transfer their tokens
-            await seenHausNFT.connect(seller).setApprovalForAll(saleHandler.address, true);
+            await foreign721.connect(seller).setApprovalForAll(saleHandler.address, true);
             await foreign1155.connect(seller).setApprovalForAll(saleHandler.address, true);
+            await seenHausNFT.connect(seller).setApprovalForAll(saleHandler.address, true);
 
             // Mint a balance of 50 of the token for sale
             tokenURI = "ipfs://QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
@@ -168,6 +239,9 @@ describe("SaleHandler", function() {
             await seenHausNFT.connect(escrowAgent).mintPhysical(supply, seller.address, tokenURI, royaltyPercentage);
 
             // Create foreign token for secondary market sales
+            await foreign721.connect(seller).mint(creator.address, tokenId, royaltyPercentage);
+
+            // Create foreign multi-token for secondary market sales
             await foreign1155.connect(seller).mint(creator.address, tokenId, supply, royaltyPercentage);
 
             // Setup values
@@ -381,121 +455,210 @@ describe("SaleHandler", function() {
 
                 context("createSecondarySale()", async function () {
 
-                    it("should emit a SalePending event", async function () {
+                    context("Foreign ERC-721", async function () {
 
-                        // Creator transfers all their tokens to seller
-                        await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
+                        beforeEach(async function () {
 
-                        // Get the next consignment id
-                        consignmentId = await marketController.getNextConsignment();
+                            // Creator transfers all their tokens to seller
+                            await foreign721.connect(creator).transferFrom(creator.address, seller.address, tokenId);
 
-                        // Token is on a foreign contract
-                        tokenAddress = foreign1155.address;
+                            // Get the next consignment id
+                            consignmentId = await marketController.getNextConsignment();
 
-                        // Give associate SELLER role
-                        await accessController.connect(admin).grantRole(Role.SELLER, associate.address);
+                            // Token is on a foreign contract
+                            tokenAddress = foreign721.address;
 
-                        // Make change, test event
-                        await expect(
-                            saleHandler.connect(associate).createSecondarySale(
-                                seller.address,
-                                tokenAddress,
-                                tokenId,
-                                start,
-                                quantity,
-                                price,
-                                perTxCap,
-                                audience
-                            )
-                        ).to.emit(saleHandler, 'SalePending')
-                            .withArgs(
-                                associate.address, // consignor
-                                seller.address,    // seller
-                                [ // Sale
-                                    consignmentId,
-                                    start,
-                                    price,
-                                    perTxCap,
-                                    ethers.BigNumber.from(State.PENDING),
-                                    ethers.BigNumber.from(Outcome.PENDING)
-                                ]
-                            );
-                    });
+                            // Give associate SELLER role
+                            await accessController.connect(admin).grantRole(Role.SELLER, associate.address);
 
-                    it("should trigger a ConsignmentRegistered event on MarketController", async function () {
+                            // Supply of one for 721
+                            supply = "1";
 
-                        // Creator transfers all their tokens to seller
-                        await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
+                        });
 
-                        // Get the next consignment id
-                        consignmentId = await marketController.getNextConsignment();
+                        it("should emit a SalePending event", async function () {
 
-                        // Token is on a foreign contract
-                        tokenAddress = foreign1155.address;
-
-                        // Give associate SELLER role
-                        await accessController.connect(admin).grantRole(Role.SELLER, associate.address);
-
-                        // Create sale, test event
-                        await expect(
-                            saleHandler.connect(associate).createSecondarySale(
-                                seller.address,
-                                tokenAddress,
-                                tokenId,
-                                start,
-                                supply,
-                                price,
-                                perTxCap,
-                                audience
-                            )
-                        ).emit(marketController, 'ConsignmentRegistered')
-                            .withArgs(
-                                associate.address, // consignor
-                                seller.address,    // seller
-                                [ // Consignment
-                                    Market.SECONDARY,
+                            // Make change, test event
+                            await expect(
+                                saleHandler.connect(associate).createSecondarySale(
                                     seller.address,
                                     tokenAddress,
                                     tokenId,
+                                    start,
                                     supply,
+                                    price,
+                                    perTxCap,
+                                    audience
+                                )
+                            ).to.emit(saleHandler, 'SalePending')
+                                .withArgs(
+                                    associate.address, // consignor
+                                    seller.address,    // seller
+                                    [ // Sale
+                                        consignmentId,
+                                        start,
+                                        price,
+                                        perTxCap,
+                                        ethers.BigNumber.from(State.PENDING),
+                                        ethers.BigNumber.from(Outcome.PENDING)
+                                    ]
+                                );
+                        });
+
+                        it("should trigger a ConsignmentRegistered event on MarketController", async function () {
+
+                            // Create sale, test event
+                            await expect(
+                                saleHandler.connect(associate).createSecondarySale(
+                                    seller.address,
+                                    tokenAddress,
+                                    tokenId,
+                                    start,
+                                    supply,
+                                    price,
+                                    perTxCap,
+                                    audience
+                                )
+                            ).emit(marketController, 'ConsignmentRegistered')
+                                .withArgs(
+                                    associate.address, // consignor
+                                    seller.address,    // seller
+                                    [ // Consignment
+                                        Market.SECONDARY,
+                                        seller.address,
+                                        tokenAddress,
+                                        tokenId,
+                                        supply,
+                                        consignmentId
+                                    ]
+                                )
+
+                        });
+
+                        it("should trigger a ConsignmentMarketed event on MarketController", async function () {
+
+                            // Create sale, test event
+                            await expect(
+                                saleHandler.connect(associate).createSecondarySale(
+                                    seller.address,
+                                    tokenAddress,
+                                    tokenId,
+                                    start,
+                                    supply,
+                                    price,
+                                    perTxCap,
+                                    audience
+                                )
+                            ).emit(marketController, 'ConsignmentMarketed')
+                                .withArgs(
+                                    associate.address,
+                                    seller.address,
                                     consignmentId
-                                ]
-                            )
+                                )
+
+                        });
 
                     });
 
-                    it("should trigger a ConsignmentMarketed event on MarketController", async function () {
+                    context("Foreign ERC-1155", async function () {
 
-                        // Creator transfers all their tokens to seller
-                        await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
+                        beforeEach(async function () {
 
-                        // Get the next consignment id
-                        consignmentId = await marketController.getNextConsignment();
+                            // Creator transfers all their tokens to seller
+                            await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
 
-                        // Token is on a foreign contract
-                        tokenAddress = foreign1155.address;
+                            // Get the next consignment id
+                            consignmentId = await marketController.getNextConsignment();
 
-                        // Give associate SELLER role
-                        await accessController.connect(admin).grantRole(Role.SELLER, associate.address);
+                            // Token is on a foreign contract
+                            tokenAddress = foreign1155.address;
 
-                        // Create sale, test event
-                        await expect(
-                            saleHandler.connect(associate).createSecondarySale(
-                                seller.address,
-                                tokenAddress,
-                                tokenId,
-                                start,
-                                supply,
-                                price,
-                                perTxCap,
-                                audience
-                            )
-                        ).emit(marketController, 'ConsignmentMarketed')
-                            .withArgs(
-                                associate.address,
-                                seller.address,
-                                consignmentId
-                            )
+                            // Give associate SELLER role
+                            await accessController.connect(admin).grantRole(Role.SELLER, associate.address);
+
+                        });
+
+                        it("should emit a SalePending event", async function () {
+
+                            // Make change, test event
+                            await expect(
+                                saleHandler.connect(associate).createSecondarySale(
+                                    seller.address,
+                                    tokenAddress,
+                                    tokenId,
+                                    start,
+                                    supply,
+                                    price,
+                                    perTxCap,
+                                    audience
+                                )
+                            ).to.emit(saleHandler, 'SalePending')
+                                .withArgs(
+                                    associate.address, // consignor
+                                    seller.address,    // seller
+                                    [ // Sale
+                                        consignmentId,
+                                        start,
+                                        price,
+                                        perTxCap,
+                                        ethers.BigNumber.from(State.PENDING),
+                                        ethers.BigNumber.from(Outcome.PENDING)
+                                    ]
+                                );
+                        });
+
+                        it("should trigger a ConsignmentRegistered event on MarketController", async function () {
+
+                            // Create sale, test event
+                            await expect(
+                                saleHandler.connect(associate).createSecondarySale(
+                                    seller.address,
+                                    tokenAddress,
+                                    tokenId,
+                                    start,
+                                    supply,
+                                    price,
+                                    perTxCap,
+                                    audience
+                                )
+                            ).emit(marketController, 'ConsignmentRegistered')
+                                .withArgs(
+                                    associate.address, // consignor
+                                    seller.address,    // seller
+                                    [ // Consignment
+                                        Market.SECONDARY,
+                                        seller.address,
+                                        tokenAddress,
+                                        tokenId,
+                                        supply,
+                                        consignmentId
+                                    ]
+                                )
+
+                        });
+
+                        it("should trigger a ConsignmentMarketed event on MarketController", async function () {
+
+                            // Create sale, test event
+                            await expect(
+                                saleHandler.connect(associate).createSecondarySale(
+                                    seller.address,
+                                    tokenAddress,
+                                    tokenId,
+                                    start,
+                                    supply,
+                                    price,
+                                    perTxCap,
+                                    audience
+                                )
+                            ).emit(marketController, 'ConsignmentMarketed')
+                                .withArgs(
+                                    associate.address,
+                                    seller.address,
+                                    consignmentId
+                                )
+
+                        });
 
                     });
 

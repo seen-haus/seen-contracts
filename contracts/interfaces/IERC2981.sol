@@ -4,7 +4,9 @@ import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 /**
  * @title IERC2981 interface
+ *
  * @notice NFT Royalty Standard.
+ *
  * See https://eips.ethereum.org/EIPS/eip-2981
  */
 interface IERC2981 is IERC165 {

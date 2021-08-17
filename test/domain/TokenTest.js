@@ -1,6 +1,11 @@
 const { expect } = require("chai");
 const Token = require("../../domain/Token");
 
+/**
+ *  Test the Token domain object
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ */
 describe("Token", function() {
 
     // Suite-wide scope

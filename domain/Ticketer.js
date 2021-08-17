@@ -1,8 +1,12 @@
+const NODE = (typeof module !== 'undefined' && typeof module.exports !== 'undefined');
+
 /**
  * Domain Enum: Ticketer
- * @author Cliff Hall <cliff@futurescale.com>
+ *
+ * See: {SeenTypes.Ticketer}
+ *
+ * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-const NODE = (typeof module !== 'undefined' && typeof module.exports !== 'undefined');
 class Ticketer {}
 
 Ticketer.DEFAULT = 0;
