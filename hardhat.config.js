@@ -15,11 +15,17 @@ module.exports = {
         blockNumber: environments.rinkeby.forkBlock
       }
       */
+      gas: environments.gasLimit
     },
     rinkeby: {
       url: environments.rinkeby.txNode,
       accounts: {mnemonic: environments.rinkeby.mnemonic},
-      gas: "auto"
+      gas: environments.gasLimit
+    },
+    mainnet: {
+      url: environments.mainnet.txNode,
+      accounts: {mnemonic: environments.mainnet.mnemonic},
+      gas: environments.gasLimit
     }
   },
   etherscan: {

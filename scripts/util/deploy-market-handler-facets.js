@@ -12,26 +12,26 @@ const ethers = hre.ethers;
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-async function deployMarketHandlerFacets(diamond) {
+async function deployMarketHandlerFacets(diamond, gasLimit) {
 
     // Deploy the AuctionBuilderFacet contract
     const AuctionBuilderFacet = await ethers.getContractFactory("AuctionBuilderFacet");
-    const auctionBuilderFacet = await AuctionBuilderFacet.deploy();
+    const auctionBuilderFacet = await AuctionBuilderFacet.deploy({gasLimit});
     await auctionBuilderFacet.deployed();
 
     // Deploy the AuctionRunnerFacet contract
     const AuctionRunnerFacet = await ethers.getContractFactory("AuctionRunnerFacet");
-    const auctionRunnerFacet = await AuctionRunnerFacet.deploy();
+    const auctionRunnerFacet = await AuctionRunnerFacet.deploy({gasLimit});
     await auctionRunnerFacet.deployed();
 
     // Deploy the SaleBuilderFacet contract
     const SaleBuilderFacet = await ethers.getContractFactory("SaleBuilderFacet");
-    const saleBuilderFacet = await SaleBuilderFacet.deploy();
+    const saleBuilderFacet = await SaleBuilderFacet.deploy({gasLimit});
     await saleBuilderFacet.deployed();
 
     // Deploy the SaleRunnerFacet contract
     const SaleRunnerFacet = await ethers.getContractFactory("SaleRunnerFacet");
-    const saleRunnerFacet = await SaleRunnerFacet.deploy();
+    const saleRunnerFacet = await SaleRunnerFacet.deploy({gasLimit});
     await saleBuilderFacet.deployed();
 
     // Cast Diamond to DiamondCutFacet
@@ -44,19 +44,19 @@ async function deployMarketHandlerFacets(diamond) {
 
     // Cut AuctionBuilder facet facet, initializing
     const auctionBuilderCut = getFacetAddCut(auctionBuilderFacet, [initFunction]);
-    await cutFacet.diamondCut([auctionBuilderCut], auctionBuilderFacet.address, callData);
+    await cutFacet.diamondCut([auctionBuilderCut], auctionBuilderFacet.address, callData, {gasLimit});
 
     // Cut AuctionRunner facet facet, initializing
     const auctionRunnerCut = getFacetAddCut(auctionRunnerFacet, [initFunction]);
-    await cutFacet.diamondCut([auctionRunnerCut], auctionRunnerFacet.address, callData);
+    await cutFacet.diamondCut([auctionRunnerCut], auctionRunnerFacet.address, callData, {gasLimit});
 
     // Cut SaleBuilder facet, initializing
     const saleBuilderCut = getFacetAddCut(saleBuilderFacet, [initFunction]);
-    await cutFacet.diamondCut([saleBuilderCut], saleBuilderFacet.address, callData);
+    await cutFacet.diamondCut([saleBuilderCut], saleBuilderFacet.address, callData, {gasLimit});
 
     // Cut SaleRunner facet, initializing
     const saleRunnerCut = getFacetAddCut(saleRunnerFacet, [initFunction]);
-    await cutFacet.diamondCut([saleRunnerCut], saleRunnerFacet.address, callData);
+    await cutFacet.diamondCut([saleRunnerCut], saleRunnerFacet.address, callData, {gasLimit});
 
     return [auctionBuilderFacet, auctionRunnerFacet, saleBuilderFacet, saleRunnerFacet];
 
