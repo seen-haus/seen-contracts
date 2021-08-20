@@ -1,5 +1,5 @@
 const { getFacetAddCut } = require('./diamond-utils.js')
-const { InterfaceIds } = require('./supported-interfaces.js')
+const { InterfaceIds } = require('../constants/supported-interfaces.js')
 const hre = require("hardhat");
 const ethers = hre.ethers;
 

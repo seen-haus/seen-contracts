@@ -15,8 +15,8 @@ contract SeenConstants {
 
     // Access Control Roles
     bytes32 internal constant ADMIN = keccak256("ADMIN");                   // Deployer and any other admins as needed
-    bytes32 internal constant SELLER = keccak256("SELLER");                 // Whitelisted sellers amd Seen.Haus reps
-    bytes32 internal constant MINTER = keccak256("MINTER");                 // Whitelisted artists and Seen.Haus reps
+    bytes32 internal constant SELLER = keccak256("SELLER");                 // Approved sellers amd Seen.Haus reps
+    bytes32 internal constant MINTER = keccak256("MINTER");                 // Approved artists and Seen.Haus reps
     bytes32 internal constant ESCROW_AGENT = keccak256("ESCROW_AGENT");     // Seen.Haus Physical Item Escrow Agent
     bytes32 internal constant MARKET_HANDLER = keccak256("MARKET_HANDLER"); // Market Handler contracts
 

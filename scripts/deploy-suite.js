@@ -1,11 +1,11 @@
-const environments = require('./environments');
+const environments = require('../environments');
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const network = hre.network.name;
 const gasLimit = environments[network].gasLimit;
 
-const Role = require("../domain/Role");
-const Ticketer = require("../domain/Ticketer");
+const Role = require("./domain/Role");
+const Ticketer = require("./domain/Ticketer");
 const { deployMarketDiamond } = require('./util/deploy-market-diamond.js');
 const { deployMarketControllerFacets } = require('./util/deploy-market-controller-facets.js');
 const { deployMarketHandlerFacets } = require('./util/deploy-market-handler-facets.js');

@@ -1,5 +1,5 @@
 const { assert } = require("chai");
-const { InterfaceIds } = require('../../scripts/util/supported-interfaces.js');
+const { InterfaceIds } = require('../../scripts/constants/supported-interfaces.js');
 
 /**
  *  Test the InterfaceInfo contract

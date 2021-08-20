@@ -1,11 +1,11 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
-const Role = require("../../domain/Role");
-const Token = require("../../domain/Token");
-const Market = require("../../domain/Market");
-const Ticketer = require("../../domain/Ticketer");
-const { InterfaceIds } = require('../../scripts/util/supported-interfaces.js');
+const Role = require("../../scripts/domain/Role");
+const Token = require("../../scripts/domain/Token");
+const Market = require("../../scripts/domain/Market");
+const Ticketer = require("../../scripts/domain/Ticketer");
+const { InterfaceIds } = require('../../scripts/constants/supported-interfaces.js');
 const { deployMarketDiamond } = require('../../scripts/util/deploy-market-diamond.js');
 const { deployMarketControllerFacets } = require('../../scripts/util/deploy-market-controller-facets.js');
 

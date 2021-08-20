@@ -17,7 +17,7 @@ import "../../interfaces/ISeenHausNFT.sol";
  * - Tracks which tokens have a physical part
  * - Logically capped token supplies; a token's supply cannot be increased after minting.
  * - Only ESCROW_AGENT-roled addresses can mint physical NFTs.
- * - Only MINTER-roled addresses can mint digital NFTs, e.g., Seen.Haus staff, whitelisted artists.
+ * - Only MINTER-roled addresses can mint digital NFTs, e.g., Seen.Haus staff, approved artists.
  * - Newly minted NFTs are automatically transferred to the MarketController and consigned
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)

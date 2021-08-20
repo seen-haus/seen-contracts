@@ -1,5 +1,5 @@
 const { expect } = require("chai");
-const Token = require("../../domain/Token");
+const Token = require("../../scripts/domain/Token");
 
 /**
  *  Test the Token domain object

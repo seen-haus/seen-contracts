@@ -1,5 +1,5 @@
 const { expect } = require("chai");
-const EscrowTicket = require("../../domain/EscrowTicket");
+const EscrowTicket = require("../../scripts/domain/EscrowTicket");
 
 /**
  *  Test the EscrowTicket domain object

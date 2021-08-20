@@ -1,5 +1,5 @@
 const { expect } = require("chai");
-const Role = require("../../domain/Role");
+const Role = require("../../scripts/domain/Role");
 
 /**
  *  Test the AccessController contract

@@ -1,5 +1,5 @@
 const { expect } = require("chai");
-const Facet = require("../../domain/Facet");
+const Facet = require("../../scripts/domain/Facet");
 
 /**
  *  Test the Facet domain object

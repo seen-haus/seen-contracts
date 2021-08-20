@@ -1,7 +1,7 @@
 {
   "name": "seen-contracts",
   "version": "0.1.0",
-  "description": "Seen Haus V2 contract set",
+  "description": "Seen Haus Contract Suite",
   "author": "Cliff Hall",
   "license": "GPL-3.0",
   "repository": {
@@ -22,9 +22,11 @@
   "scripts": {
     "build": "npx hardhat compile",
     "test": "npx hardhat test",
-    "deploy:local": "npx hardhat run --network hardhat scripts/deploy-suite.js",
-    "deploy:rinkeby": "npx hardhat run --network rinkeby scripts/deploy-suite.js >> deploy.contracts.rinkeby.txt",
-    "deploy:mainnet": "npx hardhat run --network mainnet scripts/deploy-suite.js >> deploy.contracts.mainnet.txt"
+    "deploy-suite:local": "npx hardhat run --network hardhat scripts/deploy-suite.js",
+    "deploy-suite:rinkeby": "npx hardhat run --network rinkeby scripts/deploy-suite.js >> logs/rinkeby.deploy.contracts.txt",
+    "deploy-suite:mainnet": "npx hardhat run --network mainnet scripts/deploy-suite.js >> logs/mainnet.deploy.contracts.txt",
+    "manage-roles:rinkeby": " npx hardhat --network rinkeby run scripts/manage-roles.js >> logs/rinkeby.manage.roles.txt",
+    "manage-roles:mainnet": " npx hardhat --network mainnet run scripts/manage-roles.js >> logs/mainnet.manage.roles.txt"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.0.0"

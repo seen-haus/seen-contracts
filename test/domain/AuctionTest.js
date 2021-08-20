@@ -1,8 +1,8 @@
 const { expect } = require("chai");
-const Auction = require("../../domain/Auction");
-const Clock = require("../../domain/Clock");
-const State = require("../../domain/State");
-const Outcome = require("../../domain/Outcome");
+const Auction = require("../../scripts/domain/Auction");
+const Clock = require("../../scripts/domain/Clock");
+const State = require("../../scripts/domain/State");
+const Outcome = require("../../scripts/domain/Outcome");
 
 /**
  *  Test the Auction domain object

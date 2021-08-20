@@ -1,7 +1,7 @@
 const { expect } = require("chai");
-const Sale = require("../../domain/Sale");
-const State = require("../../domain/State");
-const Outcome = require("../../domain/Outcome");
+const Sale = require("../../scripts/domain/Sale");
+const State = require("../../scripts/domain/State");
+const Outcome = require("../../scripts/domain/Outcome");
 
 /**
  *  Test the Sale domain object

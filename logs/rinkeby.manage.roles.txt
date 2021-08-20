@@ -1,0 +1,78 @@
+Compiling 64 files with 0.8.2
+Compilation finished successfully
+--------------------------------------------------------------------------------
+Seen Haus Contract Suite Role Manager
+--------------------------------------------------------------------------------
+⛓  Network: rinkeby
+📅 Thu Aug 19 2021 19:41:58 GMT-0400 (Eastern Daylight Time)
+🔱 Admin account:  0xBbf9f5e693fc694519604d9Cf73F2C98742b93c9
+--------------------------------------------------------------------------------
+🔑 Confirming roles...
+
+🔍 Cliff's admin address
+   👉 0xBbf9f5e693fc694519604d9Cf73F2C98742b93c9
+   ✅ ADMIN - No change
+   ✅ ESCROW_AGENT - Granted
+   ❌ SELLER - No change
+   ❌ MINTER - No change
+   ❌ MARKET_HANDLER - No change
+
+🔍 Jay's admin address
+   👉 0xDE7e3ec4442Ba87247797BEA433985449EDEA893
+   ✅ ADMIN - Granted
+   ❌ SELLER - No change
+   ❌ MINTER - No change
+   ❌ ESCROW_AGENT - No change
+   ❌ MARKET_HANDLER - No change
+
+🔍 Jay's escrow agent / seller address
+   👉 0xD2a3F28cD3f3825567e53773C341688E6afa12EC
+   ✅ ESCROW_AGENT - Granted
+   ✅ SELLER - Granted
+   ❌ ADMIN - No change
+   ❌ MINTER - No change
+   ❌ MARKET_HANDLER - No change
+
+🔍 Jay's minter / seller address
+   👉 0x06d95AD7d2F4c868f96203c55Fb0ec7A4ce17026
+   ✅ MINTER - Granted
+   ✅ SELLER - Granted
+   ❌ ADMIN - No change
+   ❌ ESCROW_AGENT - No change
+   ❌ MARKET_HANDLER - No change
+
+🔍 MarketDiamond contract
+   👉 0x8476d7D8335eeBD2DA99Dee334b4a152f62A7709
+   ✅ MARKET_HANDLER - No change
+   ❌ ADMIN - No change
+   ❌ SELLER - No change
+   ❌ MINTER - No change
+   ❌ ESCROW_AGENT - No change
+
+🔍 ItemsTicketer contract
+   👉 0xbF57242Ca1Cd3779B6482b4Cc936ac7851CF0265
+   ✅ MARKET_HANDLER - No change
+   ❌ ADMIN - No change
+   ❌ SELLER - No change
+   ❌ MINTER - No change
+   ❌ ESCROW_AGENT - No change
+
+🔍 LotsTicketer contract
+   👉 0x127a7cccF606C1030EFA7894eDaC42599Dc00dBA
+   ✅ MARKET_HANDLER - No change
+   ❌ ADMIN - No change
+   ❌ SELLER - No change
+   ❌ MINTER - No change
+   ❌ ESCROW_AGENT - No change
+
+🔍 SeenHausNFT contract
+   👉 0x3f2F78649D1452607581e33a4ffc953Fb9368f71
+   ✅ MARKET_HANDLER - No change
+   ❌ ADMIN - No change
+   ❌ SELLER - No change
+   ❌ MINTER - No change
+   ❌ ESCROW_AGENT - No change
+
+📋 Roles confirmed.
+
+

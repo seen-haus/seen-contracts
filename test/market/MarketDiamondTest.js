@@ -4,7 +4,7 @@ const ethers = hre.ethers;
 
 const { getSelectors, FacetCutAction, removeSelectors } = require('../../scripts/util/diamond-utils.js')
 const { deployMarketDiamond } = require('../../scripts/util/deploy-market-diamond.js');
-const Facet = require("../../domain/Facet");
+const Facet = require("../../scripts/domain/Facet");
 
 /**
  *  Test the Market Diamond contract and its core facets
