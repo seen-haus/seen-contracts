@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/IERC1155ReceiverUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
 
 import "../interfaces/IAuctionBuilder.sol";
 import "../interfaces/IAuctionHandler.sol";
@@ -110,13 +110,13 @@ contract InterfaceInfo {
     function getIERC1155Receiver()
     public pure
     returns(bytes4 id) {
-        id = type(IERC1155Receiver).interfaceId;
+        id = type(IERC1155ReceiverUpgradeable).interfaceId;
     }
 
     function getIERC721Receiver()
     public pure
     returns(bytes4 id) {
-        id = type(IERC721Receiver).interfaceId;
+        id = type(IERC721ReceiverUpgradeable).interfaceId;
     }
 
     function getIERC2981()

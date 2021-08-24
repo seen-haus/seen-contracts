@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "../../market/MarketClient.sol";
-import "../../interfaces/IERC2981.sol";
-import "../../interfaces/ISeenHausNFT.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
+import "../../../interfaces/ISeenHausNFT.sol";
+import "../../../interfaces/IERC2981.sol";
+import "../MarketClientBase.sol";
 
 /**
  * @title SeenHausNFT
@@ -22,7 +21,7 @@ import "../../interfaces/ISeenHausNFT.sol";
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
+contract SeenHausNFT is ISeenHausNFT, MarketClientBase, ERC1155Upgradeable {
 
     /// @dev token id => Token struct
     mapping (uint256 => Token) internal tokens;
@@ -31,21 +30,11 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
     uint256 internal nextToken;
 
     /**
-     * @notice Constructor
-     *
-     * @param _accessController - the Seen.Haus AccessController
-     * @param _marketController - the Seen.Haus MarketController
+     * @notice Initializer
      */
-    constructor(address _accessController, address _marketController)
-    AccessClient(_accessController)
-    MarketClient(_marketController)
-    ERC1155("")
-    {
-        _registerInterface(type(ISeenHausNFT).interfaceId);
-        _registerInterface(type(IERC2981).interfaceId);
-        _registerInterface(type(IERC165).interfaceId);
-        _registerInterface(type(IERC1155).interfaceId);
-        _registerInterface(type(IERC1155MetadataURI).interfaceId);
+    function initialize()
+    public {
+        __ERC1155_init_unchained("");
     }
 
     /**
@@ -99,6 +88,8 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
     internal
     returns(Consignment memory consignment)
     {
+        // Get the MarketController
+        IMarketController marketController = getMarketController();
 
         // Make sure royalty percentage is acceptable
         require(_royaltyPercentage <= marketController.getMaxRoyaltyPercentage(), "Royalty percentage exceeds marketplace maximum");
@@ -120,7 +111,6 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
 
         // Consign the token for the primary market
         consignment = marketController.registerConsignment(Market.Primary, msg.sender, _creator, address(this), tokenId, _supply);
-
     }
 
     /**
@@ -146,10 +136,8 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
     onlyRole(ESCROW_AGENT)
     returns(Consignment memory consignment)
     {
-
         // Mint the token, flagging it as physical, consigning to the MarketController
         return mint(_supply, _creator, _tokenURI, _royaltyPercentage, true);
-
     }
 
     /**
@@ -175,10 +163,8 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
     onlyRole(MINTER)
     returns(Consignment memory consignment)
     {
-
         // Mint the token, consigning to the MarketController
         return mint(_supply, _creator, _tokenURI, _royaltyPercentage, false);
-
     }
 
     /**
@@ -215,10 +201,16 @@ contract SeenHausNFT is ISeenHausNFT, MarketClient, ERC1155, ERC165Storage {
      * to respond.
      */
     function supportsInterface(bytes4 interfaceId)
-    public view override(IERC165, ERC1155, ERC165Storage)
+    public
+    view
+    override(ERC1155Upgradeable, IERC165Upgradeable)
     returns (bool)
     {
-        return ERC165Storage.supportsInterface(interfaceId);
+        return (
+            interfaceId == type(ISeenHausNFT).interfaceId ||
+            interfaceId == type(IERC2981).interfaceId ||
+            super.supportsInterface(interfaceId)
+        );
     }
 
     /**

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import "@openzeppelin/contracts-upgradeable/utils/introspection/IERC165Upgradeable.sol";
 
 /**
  * @title IERC2981 interface
@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
  *
  * See https://eips.ethereum.org/EIPS/eip-2981
  */
-interface IERC2981 is IERC165 {
+interface IERC2981 is IERC165Upgradeable {
 
     /**
      * @notice Determine how much royalty is owed (if any) and to whom.

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "../../../interfaces/IEscrowTicketer.sol";
 import "../../../interfaces/IAuctionRunner.sol";
 import "../../../interfaces/ISeenHausNFT.sol";
@@ -113,7 +113,7 @@ contract AuctionRunnerFacet is IAuctionRunner, MarketHandlerBase {
         uint256 endTime = auction.start + auction.duration;
 
         // Make sure we can accept the caller's bid
-        require(!Address.isContract(msg.sender), "Contracts may not bid");
+        require(!AddressUpgradeable.isContract(msg.sender), "Contracts may not bid");
         require(block.timestamp >= auction.start, "Auction hasn't started");
         require(block.timestamp <= endTime, "Auction timer has elapsed");
         require(msg.value >= auction.reserve, "Bid below reserve price");
@@ -167,7 +167,7 @@ contract AuctionRunnerFacet is IAuctionRunner, MarketHandlerBase {
     /**
      * @notice Close out a successfully completed auction.
      *
-     * Funds are disbursed as normal. See {MarketClient.disburseFunds}
+     * Funds are disbursed as normal. See {MarketHandlerBase.disburseFunds}
      *
      * Reverts if:
      *  - Auction doesn't exist

@@ -21,7 +21,7 @@ describe("ItemsTicketer", function() {
     let SeenHausNFT, seenHausNFT;
     let ItemsTicketer, itemsTicketer;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
-    let ticketId, tokenId, tokenURI, counter, supply, half, balance, royaltyPercentage, consignmentId, support, interfaces;
+    let ticketId, tokenId, tokenURI, counter, supply, half, balance, royaltyPercentage, consignmentId, support;
     let ticketURI, ticketURIBase = "https://seen.haus/ticket/metadata/";
 
     beforeEach( async function () {

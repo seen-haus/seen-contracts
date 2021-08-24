@@ -29,7 +29,8 @@
     "manage-roles:mainnet": " npx hardhat --network mainnet run scripts/manage-roles.js >> logs/mainnet.manage.roles.txt"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.0.0"
+    "@openzeppelin/contracts": "^4.3.0",
+    "@openzeppelin/contracts-upgradeable": "^4.3.0"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",

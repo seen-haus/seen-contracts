@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "../../../interfaces/IEscrowTicketer.sol";
 import "../../../interfaces/ISeenHausNFT.sol";
 import "../../../interfaces/ISaleRunner.sol";
@@ -110,7 +110,7 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
 
         // Make sure we can accept the buy order
         require(block.timestamp >= sale.start, "Sale hasn't started");
-        require(!Address.isContract(msg.sender), "Contracts may not buy");
+        require(!AddressUpgradeable.isContract(msg.sender), "Contracts may not buy");
         require(_amount <= sale.perTxCap, "Per transaction limit for this sale exceeded");
         require(msg.value == sale.price * _amount, "Payment does not cover order price");
 
@@ -147,7 +147,7 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
     /**
      * @notice Close out a successfully completed sale.
      *
-     * Funds are disbursed as normal. See: {MarketClient.disburseFunds}
+     * Funds are disbursed as normal. See: {MarketHandlerBase.disburseFunds}
      *
      * Reverts if:
      * - Sale doesn't exist or hasn't started

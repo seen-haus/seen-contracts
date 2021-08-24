@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-upgradeable/utils/introspection/IERC165Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "../../interfaces/IMarketController.sol";
 import "../../interfaces/IMarketHandler.sol";
 import "../../domain/SeenConstants.sol";
@@ -78,7 +77,7 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
     returns (bool status)
     {
         IMarketController marketController = getMarketController();
-        status = IERC20(marketController.getStaking()).balanceOf(msg.sender) > 0;
+        status = IERC20Upgradeable(marketController.getStaking()).balanceOf(msg.sender) > 0;
     }
 
     /**
@@ -94,7 +93,7 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
     returns (bool status)
     {
         IMarketController marketController = getMarketController();
-        status = IERC20(marketController.getStaking()).balanceOf(msg.sender) >= marketController.getVipStakerAmount();
+        status = IERC20Upgradeable(marketController.getStaking()).balanceOf(msg.sender) >= marketController.getVipStakerAmount();
     }
 
     /**
@@ -178,7 +177,7 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
         if (_consignment.market == Market.Secondary) {
 
             // Determine if NFT contract supports NFT Royalty Standard EIP-2981
-            try IERC165(_consignment.tokenAddress).supportsInterface(type(IERC2981).interfaceId) returns (bool supported) {
+            try IERC165Upgradeable(_consignment.tokenAddress).supportsInterface(type(IERC2981).interfaceId) returns (bool supported) {
 
                 // If so, find out the who to pay and how much
                 if (supported == true) {

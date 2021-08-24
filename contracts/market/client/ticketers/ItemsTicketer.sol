@@ -1,32 +1,33 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
 import "../../../interfaces/IEscrowTicketer.sol";
 import "../../../interfaces/ISeenHausNFT.sol";
-import "../../../access/AccessClient.sol";
-import "../../../market/MarketClient.sol";
 import "../../../util/StringUtils.sol";
+import "../MarketClientBase.sol";
 
 /**
- * @title LotsTicketer
+ * @title ItemsTicketer
  *
- * @notice An escrow ticketer contract implemented with ERC-721.
+ * @notice An IEscrowTicketer contract implemented with ERC-1155.
  *
- * Holders of this ticket have the right to transfer or claim a
- * given number of a physical consignment, escrowed by Seen.Haus.
+ * Holders of this style of ticket have the right to transfer or
+ * claim a given number of a physical consignment, escrowed by
+ * Seen.Haus.
  *
- * Since this is an ERC721 implementation, the holder must
- * claim, sell, or transfer the entire lot of the ticketed
- * items at once.
+ * Since this is an ERC155 implementation, the holder can
+ * sell / transfer part or all of the balance of their ticketed
+ * items rather than claim them all.
  *
- * N.B.: This contract disincentivizes whale behavior, e.g., a person
- * scooping up a bunch of the available items in a multi-edition
- * sale must flip or claim them all at once, not individually.
+ * N.B.: This contract supports piece-level reseller behavior,
+ * e.g., an entity scooping up a bunch of the available items
+ * in a multi-edition sale with the purpose of flipping each
+ * item individually to make maximum profit.
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-contract LotsTicketer is IEscrowTicketer, StringUtils, MarketClient, ERC721 {
+contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClientBase, ERC1155Upgradeable {
 
     // Ticket ID => Ticket
     mapping (uint256 => EscrowTicket) internal tickets;
@@ -34,20 +35,13 @@ contract LotsTicketer is IEscrowTicketer, StringUtils, MarketClient, ERC721 {
     /// @dev Next ticket number
     uint256 internal nextTicket;
 
-    string public constant NAME = "Seen.Haus Escrowed Lot Ticket";
-    string public constant SYMBOL = "ESCROW_TICKET";
-
     /**
-     * @notice Constructor
-     *
-     * @param _accessController - the Seen.Haus AccessController
-     * @param _marketController - the Seen.Haus MarketController
+     * @notice Initializer
      */
-    constructor(address _accessController, address _marketController)
-    AccessClient(_accessController)
-    MarketClient(_marketController)
-    ERC721(NAME, SYMBOL)
-    {}
+    function initialize()
+    public {
+        __ERC1155_init_unchained(ESCROW_TICKET_URI);
+    }
 
     /**
      * @notice The getNextTicket getter
@@ -65,14 +59,14 @@ contract LotsTicketer is IEscrowTicketer, StringUtils, MarketClient, ERC721 {
     /**
      * @notice Get info about the ticket
      */
-    function getTicket(uint256 ticketId)
+    function getTicket(uint256 _ticketId)
     external
     view
     override
     returns (EscrowTicket memory)
     {
-        require(_exists(ticketId), "Ticket does not exist");
-        return tickets[ticketId];
+        require(_ticketId < nextTicket, "Ticket does not exist");
+        return tickets[_ticketId];
     }
 
     /**
@@ -89,54 +83,37 @@ contract LotsTicketer is IEscrowTicketer, StringUtils, MarketClient, ERC721 {
     override
     returns (string memory)
     {
-        return tokenURI(_ticketId);
+        return uri(_ticketId);
     }
 
     /**
      * @notice Get the token URI
      *
-     * This method is overrides the Open Zeppelin version, returning
-     * a unique endpoint address on the seen.haus site for each token id.
-     *
-     * Tickets are transient and will be burned when claimed to obtain
-     * proof of ownership NFTs with their metadata on IPFS as usual.
-     *
-     * TODO: metadata with fixed name, description, and image, identifying it as a Seen.Haus Escrow Ticket
-     * adding these fields, perhaps in OpenSea attributes format
-     *  - ticketId
-     *  - consignmentId
-     *  - tokenAddress
-     *  - tokenId
-     *  - amount
+     * Same for all tickets, since they are dynamically created.
      *
      * @param _tokenId - the ticket's token id
-     *
      * @return tokenURI - the URI for the given token id's metadata
      */
-    function tokenURI(uint256 _tokenId)
+    function uri(uint256 _tokenId)
     public
     pure
     override
     returns (string memory)
     {
-        return strConcat(_baseURI(), uintToStr(_tokenId));
+        return strConcat(ESCROW_TICKET_URI, uintToStr(_tokenId));
     }
 
     /**
-     * @dev Base URI for computing {tokenURI}. Empty by default, can be overriden
-     * in child contracts.
-     */
-    function _baseURI()
-    internal
-    pure
-    override
-    returns (string memory)
-    {
-        return ESCROW_TICKET_URI;
-    }
-
-    /**
-     * Mint an escrow ticket
+     * Issue an escrow ticket to the buyer
+     *
+     * For physical consignments, Seen.Haus must hold the items in escrow
+     * until the buyer(s) claim them.
+     *
+     * When a buyer wins an auction or makes a purchase in a sale, the market
+     * handler contract they interacted with will call this method to issue an
+     * escrow ticket, which is an NFT that can be sold, transferred, or claimed.
+     *
+     * Reverts if token amount hasn't already been transferred to this contract
      *
      * @param _consignmentId - the id of the consignment being sold
      * @param _amount - the amount of the given token to escrow
@@ -147,6 +124,9 @@ contract LotsTicketer is IEscrowTicketer, StringUtils, MarketClient, ERC721 {
     override
     onlyRole(MARKET_HANDLER)
     {
+        // Get the MarketController
+        IMarketController marketController = getMarketController();
+
         // Fetch consignment (reverting if consignment doesn't exist)
         Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
@@ -164,36 +144,49 @@ contract LotsTicketer is IEscrowTicketer, StringUtils, MarketClient, ERC721 {
         ticket.id = ticketId;
         ticket.itemURI = token.uri;
 
-        // Mint the ticket and send to the buyer
-        _mint(_buyer, ticketId);
+        // Mint escrow ticket and send to buyer
+        _mint(_buyer, ticketId, _amount, new bytes(0x0));
 
         // Notify listeners about state change
         emit TicketIssued(ticketId, _consignmentId, _buyer, _amount);
+
     }
 
     /**
-      * Claim the escrowed items associated with the ticket.
-      *
-      * @param _ticketId - the ticket representing the escrowed items
-      */
-    function claim(uint256 _ticketId)
-    external
-    override
+     * Claim escrowed items associated with the ticket.
+     *
+     * @param _ticketId - the ticket representing the escrowed item(s)
+     */
+    function claim(uint256 _ticketId) external override
     {
-        require(_exists(_ticketId), "Invalid ticket id");
-        require(ownerOf(_ticketId) == msg.sender, "Caller not ticket holder");
+        // Get the MarketController
+        IMarketController marketController = getMarketController();
 
-        // Get the ticket
+        // Make sure the ticket exists
         EscrowTicket memory ticket = tickets[_ticketId];
+        require(ticket.id == _ticketId, "Ticket does not exist");
 
-        // Burn the ticket
-        _burn(_ticketId);
+        uint256 amount = balanceOf(msg.sender, _ticketId);
+        require(amount > 0, "Caller has no balance for this ticket");
+
+        // Burn the caller's balance
+        _burn(msg.sender, _ticketId, amount);
+
+        // Reduce the ticket's amount by the claim amount
+        ticket.amount -= amount;
+
+        // When entire supply is claimed and burned, delete the ticket structure
+        if (ticket.amount == 0) {
+            delete tickets[_ticketId];
+        } else {
+            tickets[_ticketId] = ticket;
+        }
 
         // Release the consignment to claimant
-        marketController.releaseConsignment(ticket.consignmentId, ticket.amount, msg.sender);
+        marketController.releaseConsignment(ticket.consignmentId, amount, msg.sender);
 
         // Notify listeners of state change
-        emit TicketClaimed(_ticketId, msg.sender, ticket.amount);
+        emit TicketClaimed(_ticketId, msg.sender, amount);
 
     }
 
@@ -212,14 +205,13 @@ contract LotsTicketer is IEscrowTicketer, StringUtils, MarketClient, ERC721 {
      */
     function supportsInterface(bytes4 interfaceId)
     public
-    pure
-    override(ERC721)
+    view
+    override(ERC1155Upgradeable)
     returns (bool)
     {
         return (
-            interfaceId == type(IERC165).interfaceId ||
-            interfaceId == type(IERC721).interfaceId ||
-            interfaceId == type(IEscrowTicketer).interfaceId
+            interfaceId == type(IEscrowTicketer).interfaceId ||
+            super.supportsInterface(interfaceId)
         );
     }
 

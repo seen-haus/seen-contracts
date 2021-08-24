@@ -18,12 +18,11 @@ describe("SeenHausNFT", function() {
 
     // Common vars
     let accounts, deployer, admin, escrowAgent, associate, minter, creator, recipient, owner;
-    let AccessController, accessController;
-    let MarketController, marketController;
+    let accessController, marketController;
     let SeenHausNFT, seenHausNFT;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let counter, tokenURI, tokenId, supply, salePrice, royaltyAmount, expectedRoyalty, percentage, royaltyPercentage;
-    let token, isPhysical, balance, uri, invalidRoyaltyPercentage, address, support, consignmentId, consignment;
+    let token, isPhysical, balance, uri, invalidRoyaltyPercentage, address, support, consignmentId;
     let replacementAddress = "0x2d36143CC2E0E74E007E7600F341dC9D37D81C07";
 
     beforeEach( async function () {
@@ -171,7 +170,7 @@ describe("SeenHausNFT", function() {
 
             it("setMarketController() should require ADMIN to set the marketController address", async function () {
 
-                // N.B. There is no separate test suite for MarketClient.sol, which is an abstract contract.
+                // N.B. There is no separate test suite for MarketClientBase.sol, which is an abstract contract.
                 //      Functionality not covered elsewhere will be tested here in the SeenHausNFT test suite.
 
                 // non-ADMIN attempt

@@ -9,6 +9,7 @@ const ethers = hre.ethers;
  *
  * @param diamond
  * @param marketConfig
+ * @param gasLimit - gasLimit for transactions
  * @returns {Promise<(*|*|*)[]>}
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)

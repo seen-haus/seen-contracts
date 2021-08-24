@@ -56,7 +56,7 @@ interface ISaleRunner is IMarketHandler {
     /**
      * @notice Close out a successfully completed sale.
      *
-     * Funds are disbursed as normal. See: {MarketClient.disburseFunds}
+     * Funds are disbursed as normal. See: {MarketHandlerBase.disburseFunds}
      *
      * Reverts if:
      * - Sale doesn't exist or hasn't started
