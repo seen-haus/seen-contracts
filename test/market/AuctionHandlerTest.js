@@ -14,6 +14,7 @@ const { InterfaceIds } = require('../../scripts/constants/supported-interfaces.j
 const { deployMarketDiamond } = require('../../scripts/util/deploy-market-diamond.js');
 const { deployMarketControllerFacets } = require('../../scripts/util/deploy-market-controller-facets.js');
 const { deployMarketHandlerFacets } = require('../../scripts/util/deploy-market-handler-facets.js');
+const { deployMarketClients } = require("../../scripts/util/deploy-market-clients.js");
 
 /**
  *  Test the AuctionHandler facets (AuctionBuilder, AuctionRunner)
@@ -27,15 +28,13 @@ describe("AuctionHandler", function() {
     let accessController;
     let marketController;
     let auctionHandler;
-    let LotsTicketer, lotsTicketer;
-    let ItemsTicketer, itemsTicketer;
-    let SeenHausNFT, seenHausNFT;
+    let lotsTicketer, itemsTicketer, seenHausNFT;
     let Foreign721, foreign721;
     let Foreign1155, foreign1155;
     let SeenStaking, seenStaking;
     let multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let market, tokenAddress, tokenId, tokenURI, auction, physicalTokenId, physicalConsignmentId, consignmentId, nextConsignment, block, blockNumber;
-    let royaltyPercentage, supply, start, duration, reserve, audience, clock, escrowTicketer, interfaces;
+    let royaltyPercentage, supply, start, duration, reserve, audience, clock, escrowTicketer;
     let royaltyAmount, sellerAmount, feeAmount, multisigAmount, stakingAmount, grossSale, netAfterRoyalties;
     let sellerBalance, contractBalance, buyerBalance, ticketerBalance, newBalance, badStartTime, signer, belowReserve, percentage, trollBid, outbid;
 
@@ -109,29 +108,10 @@ describe("AuctionHandler", function() {
         // Cast Diamond to IAuctionHandler
         auctionHandler = await ethers.getContractAt('IAuctionHandler', marketDiamond.address);
 
-        // Deploy the SeenHausNFT contract
-        SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
-        seenHausNFT = await SeenHausNFT.deploy(
-            accessController.address,
-            marketController.address,
-        );
-        await seenHausNFT.deployed();
-
-        // Deploy the ItemsTicketer contract
-        ItemsTicketer = await ethers.getContractFactory('ItemsTicketer');
-        itemsTicketer = await ItemsTicketer.deploy(
-            accessController.address,
-            marketController.address
-        );
-        await itemsTicketer.deployed();
-
-        // Deploy the LotsTicketer contract
-        LotsTicketer = await ethers.getContractFactory('LotsTicketer');
-        lotsTicketer = await LotsTicketer.deploy(
-            accessController.address,
-            marketController.address
-        );
-        await lotsTicketer.deployed();
+        // Deploy the Market Client implementation/proxy pairs
+        const marketClientArgs = [accessController.address, marketController.address];
+        [impls, proxies, clients] = await deployMarketClients(marketClientArgs);
+        [lotsTicketer, itemsTicketer, seenHausNFT] = clients;
 
         // NFT and escrow ticketer addresses get set after deployment since
         // they require the MarketController's address in their constructors

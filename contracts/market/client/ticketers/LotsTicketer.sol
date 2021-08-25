@@ -92,19 +92,21 @@ contract LotsTicketer is IEscrowTicketer, MarketClientBase, StringUtils, ERC721U
      * This method is overrides the Open Zeppelin version, returning
      * a unique endpoint address on the seen.haus site for each token id.
      *
+     * ex: tokenId = 12
+     * https://seen.haus/ticket/metadata/lots-ticketer/12
+     *
      * Tickets are transient and will be burned when claimed to obtain
      * proof of ownership NFTs with their metadata on IPFS as usual.
      *
      * TODO: metadata with fixed name, description, and image, identifying it as a Seen.Haus Escrow Ticket
-     * adding these fields, perhaps in OpenSea attributes format
+     * adding these fields, in OpenSea attributes format
      *  - ticketId
      *  - consignmentId
      *  - tokenAddress
      *  - tokenId
-     *  - amount
+     *  - supply
      *
      * @param _tokenId - the ticket's token id
-     *
      * @return tokenURI - the URI for the given token id's metadata
      */
     function tokenURI(uint256 _tokenId)
@@ -117,8 +119,7 @@ contract LotsTicketer is IEscrowTicketer, MarketClientBase, StringUtils, ERC721U
     }
 
     /**
-     * @dev Base URI for computing {tokenURI}. Empty by default, can be overriden
-     * in child contracts.
+     * @dev Base URI for computing {tokenURI}.
      */
     function _baseURI()
     internal
@@ -126,7 +127,7 @@ contract LotsTicketer is IEscrowTicketer, MarketClientBase, StringUtils, ERC721U
     override
     returns (string memory)
     {
-        return ESCROW_TICKET_URI;
+        return strConcat(ESCROW_TICKET_URI, "lots-ticketer/");
     }
 
     /**

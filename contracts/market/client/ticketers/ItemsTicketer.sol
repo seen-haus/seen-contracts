@@ -89,7 +89,8 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClientBase, ERC115
     /**
      * @notice Get the token URI
      *
-     * Same for all tickets, since they are dynamically created.
+     * ex: tokenId = 12
+     * https://seen.haus/ticket/metadata/items-ticketer/12
      *
      * @param _tokenId - the ticket's token id
      * @return tokenURI - the URI for the given token id's metadata
@@ -100,7 +101,8 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClientBase, ERC115
     override
     returns (string memory)
     {
-        return strConcat(ESCROW_TICKET_URI, uintToStr(_tokenId));
+        string memory base = strConcat(ESCROW_TICKET_URI,  "items-ticketer/");
+        return strConcat(base, uintToStr(_tokenId));
     }
 
     /**

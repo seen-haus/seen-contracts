@@ -2,7 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 
 /**
- * Deploy the Market Client proxy contracts
+ * Deploy the Market Client Proxy contracts
  *
  * Market clients are the contracts in the system that communicate with
  * the MarketController as clients of the MarketDiamond rather than acting
@@ -15,29 +15,33 @@ const ethers = hre.ethers;
  * Reused between deployment script and unit tests for consistency
  *
  * @param marketClients
+ * @param marketClientArgs
  * @param gasLimit - gasLimit for transactions
  * @returns {Promise<(*|*|*)[]>}
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-async function deployMarketClientProxies(marketClients, gasLimit) {
+async function deployMarketClientProxies(marketClients, marketClientArgs, gasLimit) {
 
-    // Deploy the LotsTicketer IEscrowTicketer implementation
-    const LotsTicketer = await ethers.getContractFactory("LotsTicketer");
-    const lotsTicketer = await LotsTicketer.deploy(...marketClientArgs, {gasLimit});
-    await lotsTicketer.deployed();
+    // Destructure the market client implementations
+    [lotsTicketerImpl, itemsTicketerImpl, seenHausNFTImpl] = marketClients;
 
-    // Deploy the ItemsTicketer IEscrowTicketer implementation
-    const ItemsTicketer = await ethers.getContractFactory("ItemsTicketer");
-    const itemsTicketer = await ItemsTicketer.deploy(...marketClientArgs, {gasLimit});
-    await itemsTicketer.deployed();
+    // Deploy the LotsTicketer Proxy
+    const LotsTicketerProxy = await ethers.getContractFactory("MarketClientProxy");
+    const lotsTicketerProxy = await LotsTicketerProxy.deploy(...marketClientArgs, lotsTicketerImpl.address, {gasLimit});
+    await lotsTicketerProxy.deployed();
 
-    // Deploy the SeenHausNFT contract
-    const SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
-    const seenHausNFT = await SeenHausNFT.deploy(...marketClientArgs, {gasLimit});
-    await seenHausNFT.deployed();
+    // Deploy the ItemsTicketer proxy
+    const ItemsTicketerProxy = await ethers.getContractFactory("MarketClientProxy");
+    const itemsTicketerProxy = await ItemsTicketerProxy.deploy(...marketClientArgs, itemsTicketerImpl.address, {gasLimit});
+    await itemsTicketerProxy.deployed();
 
-    return [lotsTicketer, itemsTicketer, seenHausNFT];
+    // Deploy the SeenHausNFT proxy
+    const SeenHausNFTProxy = await ethers.getContractFactory("MarketClientProxy");
+    const seenHausNFTProxy = await SeenHausNFTProxy.deploy(...marketClientArgs, seenHausNFTImpl.address, {gasLimit});
+    await seenHausNFTProxy.deployed();
+
+    return [lotsTicketerProxy, itemsTicketerProxy, seenHausNFTProxy];
 
 }
 

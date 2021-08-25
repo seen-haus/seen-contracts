@@ -6,6 +6,7 @@ import "../../domain/SeenConstants.sol";
 import "../../domain/SeenTypes.sol";
 import "./MarketClientLib.sol";
 
+
 /**
  * @title MarketClientBase
  *
@@ -19,12 +20,12 @@ import "./MarketClientLib.sol";
 abstract contract MarketClientBase is SeenTypes, SeenConstants {
 
     /**
- * @dev Modifier that checks that the caller has a specific role.
- *
- * Reverts if caller doesn't have role.
- *
- * See: {AccessController.hasRole}
- */
+     * @dev Modifier that checks that the caller has a specific role.
+     *
+     * Reverts if caller doesn't have role.
+     *
+     * See: {AccessController.hasRole}
+     */
     modifier onlyRole(bytes32 role) {
         require(MarketClientLib.hasRole(role), "Access denied, caller doesn't have role");
         _;
@@ -43,7 +44,6 @@ abstract contract MarketClientBase is SeenTypes, SeenConstants {
         MarketClientLib.ProxyStorage memory ps = MarketClientLib.proxyStorage();
         return ps.marketController;
     }
-
 
     /**
      * @notice Get a percentage of a given amount.

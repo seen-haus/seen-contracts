@@ -2,18 +2,20 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 const { time } = require('@openzeppelin/test-helpers');
+
 const Role = require("../../scripts/domain/Role");
-const Market = require("../../scripts/domain/Market");
 const Sale = require("../../scripts/domain/Sale");
 const State = require("../../scripts/domain/State");
+const Market = require("../../scripts/domain/Market");
 const Outcome = require("../../scripts/domain/Outcome");
 const Audience = require("../../scripts/domain/Audience");
 const Ticketer = require("../../scripts/domain/Ticketer");
 const Consignment = require("../../scripts/domain/Consignment");
 const { InterfaceIds } = require('../../scripts/constants/supported-interfaces.js');
 const { deployMarketDiamond } = require('../../scripts/util/deploy-market-diamond.js');
-const { deployMarketControllerFacets } = require('../../scripts/util/deploy-market-controller-facets.js');
+const { deployMarketClients } = require("../../scripts/util/deploy-market-clients.js");
 const { deployMarketHandlerFacets } = require('../../scripts/util/deploy-market-handler-facets.js');
+const { deployMarketControllerFacets } = require('../../scripts/util/deploy-market-controller-facets.js');
 
 /**
  *  Test the SaleHandler facets (SaleBuilder, SaleRunner)
@@ -25,9 +27,7 @@ describe("SaleHandler", function() {
     // Common vars
     let accounts, deployer, admin, creator, associate, seller, minter, buyer, escrowAgent;
     let accessController, marketController, saleHandler;
-    let LotsTicketer, lotsTicketer;
-    let ItemsTicketer, itemsTicketer;
-    let SeenHausNFT, seenHausNFT;
+    let lotsTicketer, itemsTicketer, seenHausNFT;
     let Foreign721, foreign721;
     let Foreign1155, foreign1155;
     let SeenStaking, seenStaking;
@@ -104,29 +104,10 @@ describe("SaleHandler", function() {
         // Cast Diamond to IAuctionHandler
         saleHandler = await ethers.getContractAt('ISaleHandler', marketDiamond.address);
 
-        // Deploy the SeenHausNFT contract
-        SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
-        seenHausNFT = await SeenHausNFT.deploy(
-            accessController.address,
-            marketController.address,
-        );
-        await seenHausNFT.deployed();
-
-        // Deploy the ItemsTicketer contract
-        ItemsTicketer = await ethers.getContractFactory('ItemsTicketer');
-        itemsTicketer = await ItemsTicketer.deploy(
-            accessController.address,
-            marketController.address
-        );
-        await itemsTicketer.deployed();
-
-        // Deploy the LotsTicketer contract
-        LotsTicketer = await ethers.getContractFactory('LotsTicketer');
-        lotsTicketer = await LotsTicketer.deploy(
-            accessController.address,
-            marketController.address
-        );
-        await lotsTicketer.deployed();
+        // Deploy the Market Client implementation/proxy pairs
+        const marketClientArgs = [accessController.address, marketController.address];
+        [impls, proxies, clients] = await deployMarketClients(marketClientArgs);
+        [lotsTicketer, itemsTicketer, seenHausNFT] = clients;
 
         // Escrow Ticketer and NFT addresses get set after deployment since
         // they require the MarketController's address in their constructors

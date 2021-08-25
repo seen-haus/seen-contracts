@@ -28,6 +28,18 @@ import { Proxy } from "./Proxy.sol";
  */
 contract MarketClientProxy is IMarketClientProxy, SeenConstants, Proxy {
 
+    /**
+ * @dev Modifier that checks that the caller has a specific role.
+ *
+ * Reverts if caller doesn't have role.
+ *
+ * See: {AccessController.hasRole}
+ */
+    modifier onlyRole(bytes32 role) {
+        require(MarketClientLib.hasRole(role), "Access denied, caller doesn't have role");
+        _;
+    }
+
     constructor(
         address _accessController,
         address _marketController,
@@ -71,12 +83,9 @@ contract MarketClientProxy is IMarketClientProxy, SeenConstants, Proxy {
      */
     function setImplementation(address _impl)
     external
+    onlyRole(ADMIN)
     override
     {
-
-        // Ensure admin is calling
-        require(MarketClientLib.hasRole(ADMIN), "Must have ADMIN role to set implementation.");
-
         // Get the ProxyStorage struct
         MarketClientLib.ProxyStorage storage ps = MarketClientLib.proxyStorage();
 
@@ -108,11 +117,9 @@ contract MarketClientProxy is IMarketClientProxy, SeenConstants, Proxy {
      */
     function setAccessController(address _accessController)
     external
+    onlyRole(ADMIN)
     override
     {
-        // Ensure admin is calling
-        require(MarketClientLib.hasRole(ADMIN), "Must have ADMIN role to set AccessController.");
-
         // Get the ProxyStorage struct
         MarketClientLib.ProxyStorage storage ps = MarketClientLib.proxyStorage();
 
@@ -150,11 +157,9 @@ contract MarketClientProxy is IMarketClientProxy, SeenConstants, Proxy {
      */
     function setMarketController(address _marketController)
     external
+    onlyRole(ADMIN)
     override
     {
-        // Ensure admin is calling
-        require(MarketClientLib.hasRole(ADMIN), "Must have ADMIN role to set MarketController.");
-
         // Get the ProxyStorage struct
         MarketClientLib.ProxyStorage storage ps = MarketClientLib.proxyStorage();
 

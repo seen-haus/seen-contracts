@@ -44,12 +44,12 @@ library MarketClientLib {
     }
 
     /**
- * @dev Checks that the caller has a specific role.
- *
- * Reverts if caller doesn't have role.
- *
- * See: {AccessController.hasRole}
- */
+     * @dev Checks that the caller has a specific role.
+     *
+     * Reverts if caller doesn't have role.
+     *
+     * See: {AccessController.hasRole}
+     */
     function hasRole(bytes32 role) internal view returns (bool) {
         ProxyStorage storage ps = proxyStorage();
         return ps.accessController.hasRole(role, msg.sender);

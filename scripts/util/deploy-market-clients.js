@@ -1,15 +1,17 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { deployMarketClientImpls } = require("./deploy-market-client-impls.js");
+const { deployMarketClientProxies } = require("./deploy-market-client-proxies.js");
+const { castMarketClientProxies } = require("./cast-market-client-proxies.js");
 
 /**
- * Deploy the Market Client implementation contracts
+ * Deploy the Market Client Implementation/Proxy pairs
  *
  * Market clients are the contracts in the system that communicate with
  * the MarketController as clients of the MarketDiamond rather than acting
  * as facets of the MarketDiamond. They include SeenHausNFT, ItemsTicketer,
  * and LotsTicketer.
  *
- * Reused between deployment script and unit tests for consistency
+ *  N.B. Intended for use with tests,
  *
  * @param marketClientArgs
  * @param gasLimit - gasLimit for transactions
@@ -19,22 +21,16 @@ const ethers = hre.ethers;
  */
 async function deployMarketClients(marketClientArgs, gasLimit) {
 
-    // Deploy the LotsTicketer IEscrowTicketer implementation
-    const LotsTicketer = await ethers.getContractFactory("LotsTicketer");
-    const lotsTicketer = await LotsTicketer.deploy(...marketClientArgs, {gasLimit});
-    await lotsTicketer.deployed();
+    // Deploy Market Client implementation contracts
+    const marketClientImpls = await deployMarketClientImpls(gasLimit);
 
-    // Deploy the ItemsTicketer IEscrowTicketer implementation
-    const ItemsTicketer = await ethers.getContractFactory("ItemsTicketer");
-    const itemsTicketer = await ItemsTicketer.deploy(...marketClientArgs, {gasLimit});
-    await itemsTicketer.deployed();
+    // Deploy Market Client proxy contracts
+    const marketClientProxies = await deployMarketClientProxies(marketClientImpls, marketClientArgs, gasLimit);
 
-    // Deploy the SeenHausNFT contract
-    const SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
-    const seenHausNFT = await SeenHausNFT.deploy(...marketClientArgs, {gasLimit});
-    await seenHausNFT.deployed();
+    // Cast the proxies to their implementation interfaces
+    const marketClients = await castMarketClientProxies(marketClientProxies, gasLimit);
 
-    return [lotsTicketer, itemsTicketer, seenHausNFT];
+    return [marketClientImpls, marketClientProxies, marketClients];
 
 }
 
