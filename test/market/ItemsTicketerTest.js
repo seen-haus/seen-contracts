@@ -7,6 +7,7 @@ const Ticketer = require("../../scripts/domain/Ticketer");
 const { InterfaceIds } = require('../../scripts/constants/supported-interfaces.js');
 const { deployMarketDiamond } = require('../../scripts/util/deploy-market-diamond.js');
 const { deployMarketControllerFacets } = require('../../scripts/util/deploy-market-controller-facets.js');
+const { deployMarketClients } = require("../../scripts/util/deploy-market-clients.js");
 
 /**
  *  Test the ItemsTicketer contract
@@ -18,11 +19,11 @@ describe("ItemsTicketer", function() {
     // Common vars
     let accounts, deployer, admin, escrowAgent, associate, creator, marketHandler, buyer;
     let accessController, marketController;
-    let SeenHausNFT, seenHausNFT;
-    let ItemsTicketer, itemsTicketer;
+    let seenHausNFT, itemsTicketer;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
-    let ticketId, tokenId, tokenURI, counter, supply, half, balance, royaltyPercentage, consignmentId, support, interfaces;
-    let ticketURI, ticketURIBase = "https://seen.haus/ticket/metadata/";
+    let ticketId, tokenId, tokenURI, counter, supply, half, balance, royaltyPercentage, consignmentId, support;
+    let ticketURI, ticketURIBase = "https://seen.haus/ticket/metadata/items-ticketer/";
+    let replacementAddress = "0x2d36143CC2E0E74E007E7600F341dC9D37D81C07";
 
     beforeEach( async function () {
 
@@ -66,22 +67,14 @@ describe("ItemsTicketer", function() {
         // Cast Diamond to MarketController
         marketController = await ethers.getContractAt('IMarketController', marketDiamond.address);
 
-        // Deploy the SeenHausNFT contract
-        SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
-        seenHausNFT = await SeenHausNFT.deploy(
-            accessController.address,
-            marketController.address
-        );
-        await seenHausNFT.deployed();
+        // Deploy the Market Client implementation/proxy pairs
+        const marketClientArgs = [accessController.address, marketController.address];
+        [impls, proxies, clients] = await deployMarketClients(marketClientArgs);
+        [lotsTicketer, itemsTicketer, seenHausNFT] = clients;
 
-        // Deploy the ItemsTicketer contract
-        ItemsTicketer = await ethers.getContractFactory("ItemsTicketer");
-        itemsTicketer = await ItemsTicketer.deploy(
-            accessController.address,
-            marketController.address
-        );
-        await itemsTicketer.deployed();
-
+        // Cast LotsTicketer's proxy to IMarketClientProxy
+        itemsTicketerProxy = await ethers.getContractAt('IMarketClientProxy', seenHausNFT.address);
+        
         // NFT address gets set after deployment since it requires
         // the MarketController's address in its constructor
         await marketController.setNft(seenHausNFT.address);
@@ -167,33 +160,138 @@ describe("ItemsTicketer", function() {
 
         context("Privileged Access", async function () {
 
-            it("issueTicket() should require MARKET_HANDLER role", async function () {
+            context("Proxy", async function () {
 
-                // non-MARKET_HANDLER attempt
-                await expect(
-                    itemsTicketer.connect(associate).issueTicket(consignmentId, supply, buyer.address)
-                ).to.be.revertedWith("Access denied, caller doesn't have role");
+                // N.B. MarketClientProxy provides storage and accessors for the AccessController and MarketController
+                // used by the implementation contract. This is because all the market client contracts need these
+                // references, but adding the storage and accessors to them pushes their size toward the upper limit.
 
-                // Get counter
-                counter = await itemsTicketer.getNextTicket();
+                it("setImplementation() should require ADMIN to set the implementation address", async function () {
 
-                // Test
-                expect(
-                    counter.eq(ticketId),
-                    "non-MARKET_HANDLER can issue a ticket"
-                ).is.true;
+                    // non-ADMIN attempt
+                    await expect(
+                        itemsTicketerProxy.connect(associate).setImplementation(replacementAddress)
+                    ).to.be.revertedWith("Access denied, caller doesn't have role");
 
-                // MARKET_HANDLER attempt
-                await itemsTicketer.connect(marketHandler).issueTicket(consignmentId, supply, buyer.address);
+                    // Get address
+                    address = await itemsTicketerProxy.getImplementation();
 
-                // Get counter
-                counter = await itemsTicketer.getNextTicket();
+                    // Test
+                    expect(
+                        address !== replacementAddress,
+                        "non-ADMIN can set implementation address"
+                    ).is.true;
 
-                // Test
-                expect(
-                    counter.gt(ticketId),
-                    "MARKET_HANDLER can't issue a ticket"
-                ).is.true;
+                    // ADMIN attempt
+                    await itemsTicketerProxy.connect(admin).setImplementation(replacementAddress);
+
+                    // Get address
+                    address = await itemsTicketerProxy.getImplementation();
+
+                    // Test
+                    expect(
+                        address === replacementAddress,
+                        "ADMIN can't set implementation address"
+                    ).is.true;
+
+                });
+
+                it("setAccessController() should require ADMIN to set the accessController address", async function () {
+
+                    // non-ADMIN attempt
+                    await expect(
+                        itemsTicketerProxy.connect(associate).setAccessController(replacementAddress)
+                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+
+                    // Get address
+                    address = await itemsTicketerProxy.getAccessController();
+
+                    // Test
+                    expect(
+                        address !== replacementAddress,
+                        "non-ADMIN can set accessController address"
+                    ).is.true;
+
+                    // ADMIN attempt
+                    await itemsTicketerProxy.connect(admin).setAccessController(replacementAddress);
+
+                    // Get address
+                    address = await itemsTicketerProxy.getAccessController();
+
+                    // Test
+                    expect(
+                        address === replacementAddress,
+                        "ADMIN can't set accessController address"
+                    ).is.true;
+
+                });
+
+                it("setMarketController() should require ADMIN to set the marketController address", async function () {
+
+                    // N.B. There is no separate test suite for MarketClientBase.sol, which is an abstract contract.
+                    //      Functionality not covered elsewhere will be tested here in the SeenHausNFT test suite.
+
+                    // non-ADMIN attempt
+                    await expect(
+                        itemsTicketerProxy.connect(associate).setMarketController(replacementAddress)
+                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+
+                    // Get address
+                    address = await itemsTicketerProxy.getMarketController();
+
+                    // Test
+                    expect(
+                        address !== replacementAddress,
+                        "non-ADMIN can set marketController address"
+                    ).is.true;
+
+                    // ADMIN attempt
+                    await itemsTicketerProxy.connect(admin).setMarketController(replacementAddress);
+
+                    // Get address
+                    address = await itemsTicketerProxy.getMarketController();
+
+                    // Test
+                    expect(
+                        address === replacementAddress,
+                        "ADMIN can't set marketController address"
+                    ).is.true;
+
+                });
+
+            });
+
+            context("Logic", async function () {
+
+                it("issueTicket() should require MARKET_HANDLER role", async function () {
+
+                    // non-MARKET_HANDLER attempt
+                    await expect(
+                        itemsTicketer.connect(associate).issueTicket(consignmentId, supply, buyer.address)
+                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+
+                    // Get counter
+                    counter = await itemsTicketer.getNextTicket();
+
+                    // Test
+                    expect(
+                        counter.eq(ticketId),
+                        "non-MARKET_HANDLER can issue a ticket"
+                    ).is.true;
+
+                    // MARKET_HANDLER attempt
+                    await itemsTicketer.connect(marketHandler).issueTicket(consignmentId, supply, buyer.address);
+
+                    // Get counter
+                    counter = await itemsTicketer.getNextTicket();
+
+                    // Test
+                    expect(
+                        counter.gt(ticketId),
+                        "MARKET_HANDLER can't issue a ticket"
+                    ).is.true;
+
+                });
 
             });
 

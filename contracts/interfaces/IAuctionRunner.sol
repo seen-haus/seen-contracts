@@ -58,7 +58,7 @@ interface IAuctionRunner is IMarketHandler {
     /**
      * @notice Close out a successfully completed auction.
      *
-     * Funds are disbursed as normal. See {MarketClient.disburseFunds}
+     * Funds are disbursed as normal. See {MarketHandlerBase.disburseFunds}
      *
      * Reverts if:
      *  - Auction doesn't exist

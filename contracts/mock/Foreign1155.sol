@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "../../interfaces/IERC2981.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
+import "../interfaces/IERC2981.sol";
 
 /**
  * @title Foreign1155
@@ -11,12 +11,10 @@ import "../../interfaces/IERC2981.sol";
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-contract Foreign1155 is IERC2981, ERC1155 {
+contract Foreign1155 is IERC2981, ERC1155Upgradeable {
 
     mapping(uint256 => address) public creators;
     mapping(uint256 => uint256) public royaltyPercentage;
-
-    constructor() ERC1155(""){}
 
     /**
      * Mint a Sample NFT
@@ -67,14 +65,13 @@ contract Foreign1155 is IERC2981, ERC1155 {
      */
     function supportsInterface(bytes4 interfaceId)
     public
-    pure
-    override(IERC165, ERC1155)
+    view
+    override(IERC165Upgradeable, ERC1155Upgradeable)
     returns (bool)
     {
         return (
-            interfaceId == type(IERC165).interfaceId ||
-            interfaceId == type(IERC1155).interfaceId ||
-            interfaceId == type(IERC2981).interfaceId
+            interfaceId == type(IERC2981).interfaceId ||
+            super.supportsInterface(interfaceId)
         );
     }
 

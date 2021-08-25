@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
 import "../../../interfaces/IEscrowTicketer.sol";
 import "../../../interfaces/ISeenHausNFT.sol";
-import "../../../market/MarketClient.sol";
 import "../../../util/StringUtils.sol";
+import "../MarketClientBase.sol";
 
 /**
  * @title ItemsTicketer
@@ -27,7 +27,7 @@ import "../../../util/StringUtils.sol";
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155 {
+contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClientBase, ERC1155Upgradeable {
 
     // Ticket ID => Ticket
     mapping (uint256 => EscrowTicket) internal tickets;
@@ -36,16 +36,12 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155 {
     uint256 internal nextTicket;
 
     /**
-     * @notice Constructor
-     *
-     * @param _accessController - the Seen.Haus AccessController
-     * @param _marketController - the Seen.Haus MarketController
+     * @notice Initializer
      */
-    constructor(address _accessController, address _marketController)
-    AccessClient(_accessController)
-    MarketClient(_marketController)
-    ERC1155(ESCROW_TICKET_URI)
-    {}
+    function initialize()
+    public {
+        __ERC1155_init_unchained(ESCROW_TICKET_URI);
+    }
 
     /**
      * @notice The getNextTicket getter
@@ -93,7 +89,8 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155 {
     /**
      * @notice Get the token URI
      *
-     * Same for all tickets, since they are dynamically created.
+     * ex: tokenId = 12
+     * https://seen.haus/ticket/metadata/items-ticketer/12
      *
      * @param _tokenId - the ticket's token id
      * @return tokenURI - the URI for the given token id's metadata
@@ -104,7 +101,8 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155 {
     override
     returns (string memory)
     {
-        return strConcat(ESCROW_TICKET_URI, uintToStr(_tokenId));
+        string memory base = strConcat(ESCROW_TICKET_URI,  "items-ticketer/");
+        return strConcat(base, uintToStr(_tokenId));
     }
 
     /**
@@ -128,6 +126,9 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155 {
     override
     onlyRole(MARKET_HANDLER)
     {
+        // Get the MarketController
+        IMarketController marketController = getMarketController();
+
         // Fetch consignment (reverting if consignment doesn't exist)
         Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
@@ -160,6 +161,9 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155 {
      */
     function claim(uint256 _ticketId) external override
     {
+        // Get the MarketController
+        IMarketController marketController = getMarketController();
+
         // Make sure the ticket exists
         EscrowTicket memory ticket = tickets[_ticketId];
         require(ticket.id == _ticketId, "Ticket does not exist");
@@ -203,14 +207,13 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClient, ERC1155 {
      */
     function supportsInterface(bytes4 interfaceId)
     public
-    pure
-    override(ERC1155)
+    view
+    override(ERC1155Upgradeable)
     returns (bool)
     {
         return (
-            interfaceId == type(IERC165).interfaceId ||
-            interfaceId == type(IERC1155).interfaceId ||
-            interfaceId == type(IEscrowTicketer).interfaceId
+            interfaceId == type(IEscrowTicketer).interfaceId ||
+            super.supportsInterface(interfaceId)
         );
     }
 

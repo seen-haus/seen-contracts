@@ -7,6 +7,7 @@ const Market = require("../../scripts/domain/Market");
 const Ticketer = require("../../scripts/domain/Ticketer");
 const { InterfaceIds } = require('../../scripts/constants/supported-interfaces.js');
 const { deployMarketDiamond } = require('../../scripts/util/deploy-market-diamond.js');
+const { deployMarketClients } = require("../../scripts/util/deploy-market-clients.js");
 const { deployMarketControllerFacets } = require('../../scripts/util/deploy-market-controller-facets.js');
 
 /**
@@ -18,12 +19,11 @@ describe("SeenHausNFT", function() {
 
     // Common vars
     let accounts, deployer, admin, escrowAgent, associate, minter, creator, recipient, owner;
-    let AccessController, accessController;
-    let MarketController, marketController;
-    let SeenHausNFT, seenHausNFT;
+    let accessController, marketController;
+    let seenHausNFT, seenHausNFTProxy;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let counter, tokenURI, tokenId, supply, salePrice, royaltyAmount, expectedRoyalty, percentage, royaltyPercentage;
-    let token, isPhysical, balance, uri, invalidRoyaltyPercentage, address, support, consignmentId, consignment;
+    let token, isPhysical, balance, uri, invalidRoyaltyPercentage, address, support, consignmentId;
     let replacementAddress = "0x2d36143CC2E0E74E007E7600F341dC9D37D81C07";
 
     beforeEach( async function () {
@@ -70,13 +70,13 @@ describe("SeenHausNFT", function() {
         // Cast Diamond to MarketController
         marketController = await ethers.getContractAt('IMarketController', marketDiamond.address);
 
-        // Deploy the SeenHausNFT contract
-        SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
-        seenHausNFT = await SeenHausNFT.deploy(
-            accessController.address,
-            marketController.address
-        );
-        await seenHausNFT.deployed();
+        // Deploy the Market Client implementation/proxy pairs
+        const marketClientArgs = [accessController.address, marketController.address];
+        [impls, proxies, clients] = await deployMarketClients(marketClientArgs);
+        [lotsTicketer, itemsTicketer, seenHausNFT] = clients;
+
+        // Cast SeenHausNFT's proxy to IMarketClientProxy
+        seenHausNFTProxy = await ethers.getContractAt('IMarketClientProxy', seenHausNFT.address);
 
         // NFT address gets set after deployment since it requires
         // the MarketController's address in its constructor
@@ -169,96 +169,168 @@ describe("SeenHausNFT", function() {
 
         context("Privileged Access", async function () {
 
-            it("setMarketController() should require ADMIN to set the marketController address", async function () {
+            context("Proxy", async function () {
 
-                // N.B. There is no separate test suite for MarketClient.sol, which is an abstract contract.
-                //      Functionality not covered elsewhere will be tested here in the SeenHausNFT test suite.
+                // N.B. MarketClientProxy provides storage and accessors for the AccessController and MarketController
+                // used by the implementation contract. This is because all the market client contracts need these
+                // references, but adding the storage and accessors to them pushes their size toward the upper limit.
 
-                // non-ADMIN attempt
-                await expect(
-                    seenHausNFT.connect(associate).setMarketController(replacementAddress)
-                ).to.be.revertedWith("Access denied, caller doesn't have role");
+                it("setImplementation() should require ADMIN to set the implementation address", async function () {
 
-                // Get address
-                address = await seenHausNFT.getMarketController();
+                    // non-ADMIN attempt
+                    await expect(
+                        seenHausNFTProxy.connect(associate).setImplementation(replacementAddress)
+                    ).to.be.revertedWith("Access denied, caller doesn't have role");
 
-                // Test
-                expect(
-                    address !== replacementAddress,
-                    "non-ADMIN can set marketController address"
-                ).is.true;
+                    // Get address
+                    address = await seenHausNFTProxy.getImplementation();
 
-                // ADMIN attempt
-                await seenHausNFT.connect(admin).setMarketController(replacementAddress);
+                    // Test
+                    expect(
+                        address !== replacementAddress,
+                        "non-ADMIN can set implementation address"
+                    ).is.true;
 
-                // Get address
-                address = await seenHausNFT.getMarketController();
+                    // ADMIN attempt
+                    await seenHausNFTProxy.connect(admin).setImplementation(replacementAddress);
 
-                // Test
-                expect(
-                    address === replacementAddress,
-                    "ADMIN can't set marketController address"
-                ).is.true;
+                    // Get address
+                    address = await seenHausNFTProxy.getImplementation();
+
+                    // Test
+                    expect(
+                        address === replacementAddress,
+                        "ADMIN can't set implementation address"
+                    ).is.true;
+
+                });
+
+                it("setAccessController() should require ADMIN to set the accessController address", async function () {
+
+                    // non-ADMIN attempt
+                    await expect(
+                        seenHausNFTProxy.connect(associate).setAccessController(replacementAddress)
+                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+
+                    // Get address
+                    address = await seenHausNFTProxy.getAccessController();
+
+                    // Test
+                    expect(
+                        address !== replacementAddress,
+                        "non-ADMIN can set accessController address"
+                    ).is.true;
+
+                    // ADMIN attempt
+                    await seenHausNFTProxy.connect(admin).setAccessController(replacementAddress);
+
+                    // Get address
+                    address = await seenHausNFTProxy.getAccessController();
+
+                    // Test
+                    expect(
+                        address === replacementAddress,
+                        "ADMIN can't set accessController address"
+                    ).is.true;
+
+                });
+
+                it("setMarketController() should require ADMIN to set the marketController address", async function () {
+
+                    // N.B. There is no separate test suite for MarketClientBase.sol, which is an abstract contract.
+                    //      Functionality not covered elsewhere will be tested here in the SeenHausNFT test suite.
+
+                    // non-ADMIN attempt
+                    await expect(
+                        seenHausNFTProxy.connect(associate).setMarketController(replacementAddress)
+                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+
+                    // Get address
+                    address = await seenHausNFTProxy.getMarketController();
+
+                    // Test
+                    expect(
+                        address !== replacementAddress,
+                        "non-ADMIN can set marketController address"
+                    ).is.true;
+
+                    // ADMIN attempt
+                    await seenHausNFTProxy.connect(admin).setMarketController(replacementAddress);
+
+                    // Get address
+                    address = await seenHausNFTProxy.getMarketController();
+
+                    // Test
+                    expect(
+                        address === replacementAddress,
+                        "ADMIN can't set marketController address"
+                    ).is.true;
+
+                });
 
             });
 
-            it("mintDigital() should require MINTER to mint a digital token", async function () {
+            context("Logic", async function () {
 
-                // non-MINTER attempt
-                await expect(
-                    seenHausNFT.connect(associate).mintDigital(supply, creator.address, tokenURI, royaltyPercentage)
-                ).to.be.revertedWith("Access denied, caller doesn't have role");
+                it("mintDigital() should require MINTER to mint a digital token", async function () {
 
-                // Get counter
-                counter = await seenHausNFT.getNextToken();
+                    // non-MINTER attempt
+                    await expect(
+                        seenHausNFT.connect(associate).mintDigital(supply, creator.address, tokenURI, royaltyPercentage)
+                    ).to.be.revertedWith("Access denied, caller doesn't have role");
 
-                // Test
-                expect(
-                    counter.eq(tokenId),
-                    "non-MINTER can mint a digital token"
-                ).is.true;
+                    // Get counter
+                    counter = await seenHausNFT.getNextToken();
 
-                // MINTER attempt
-                await seenHausNFT.connect(minter).mintDigital(supply, creator.address, tokenURI, royaltyPercentage);
+                    // Test
+                    expect(
+                        counter.eq(tokenId),
+                        "non-MINTER can mint a digital token"
+                    ).is.true;
 
-                // Get counter
-                counter = await seenHausNFT.getNextToken();
+                    // MINTER attempt
+                    await seenHausNFT.connect(minter).mintDigital(supply, creator.address, tokenURI, royaltyPercentage);
 
-                // Test
-                expect(
-                    counter.gt(tokenId),
-                    "MINTER can't mint a digital token"
-                ).is.true;
+                    // Get counter
+                    counter = await seenHausNFT.getNextToken();
 
-            });
+                    // Test
+                    expect(
+                        counter.gt(tokenId),
+                        "MINTER can't mint a digital token"
+                    ).is.true;
 
-            it("mintPhysical() should require ESCROW_AGENT to mint a physical token", async function () {
+                });
 
-                // non-ESCROW_AGENT attempt
-                await expect(
-                    seenHausNFT.connect(associate).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage)
-                ).to.be.revertedWith("Access denied, caller doesn't have role");
+                it("mintPhysical() should require ESCROW_AGENT to mint a physical token", async function () {
 
-                // Get counter
-                counter = await seenHausNFT.getNextToken();
+                    // non-ESCROW_AGENT attempt
+                    await expect(
+                        seenHausNFT.connect(associate).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage)
+                    ).to.be.revertedWith("Access denied, caller doesn't have role");
 
-                // Test
-                expect(
-                    counter.eq(tokenId),
-                    "non-ESCROW_AGENT can mint a physical token"
-                ).is.true;
+                    // Get counter
+                    counter = await seenHausNFT.getNextToken();
 
-                // ESCROW_AGENT attempt
-                await seenHausNFT.connect(escrowAgent).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage);
+                    // Test
+                    expect(
+                        counter.eq(tokenId),
+                        "non-ESCROW_AGENT can mint a physical token"
+                    ).is.true;
 
-                // Get counter
-                counter = await seenHausNFT.getNextToken();
+                    // ESCROW_AGENT attempt
+                    await seenHausNFT.connect(escrowAgent).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage);
 
-                // Test
-                expect(
-                    counter.gt(tokenId),
-                    "ESCROW_AGENT can't mint a digital token"
-                ).is.true;
+                    // Get counter
+                    counter = await seenHausNFT.getNextToken();
+
+                    // Test
+                    expect(
+                        counter.gt(tokenId),
+                        "ESCROW_AGENT can't mint a digital token"
+                    ).is.true;
+
+                });
 
             });
 

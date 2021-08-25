@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
 import { IDiamondCut } from "../../interfaces/IDiamondCut.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**
  * @title DiamondLib
  *
  * @notice Diamond storage slot and supported interfaces
  *
- * @notice Based on Nick Mudge's gas-optimized diamond-2 reference.
+ * @notice Based on Nick Mudge's gas-optimized diamond-2 reference,
+ * with modifications to support role-based access and management of
+ * supported interfaces.
+ *
  * Reference Implementation  : https://github.com/mudgen/diamond-2-hardhat
  * EIP-2535 Diamond Standard : https://eips.ethereum.org/EIPS/eip-2535
  *
@@ -42,8 +45,8 @@ library DiamondLib {
         // Used to implement ERC-165.
         mapping(bytes4 => bool) supportedInterfaces;
 
-        // notice the Seen.Haus AccessController
-        IAccessControl accessController;
+        // The Seen.Haus AccessController
+        IAccessControlUpgradeable accessController;
 
     }
 

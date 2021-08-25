@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "../domain/SeenConstants.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "../../domain/SeenConstants.sol";
 
 /**
  * @title AccessController
@@ -11,7 +11,7 @@ import "../domain/SeenConstants.sol";
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-contract AccessController is AccessControl, SeenConstants  {
+contract AccessController is AccessControlUpgradeable, SeenConstants  {
 
     /**
      * @notice Constructor

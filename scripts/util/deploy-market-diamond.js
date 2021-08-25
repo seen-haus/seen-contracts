@@ -8,7 +8,7 @@ const ethers = hre.ethers;
  *
  * Reused between deployment script and unit tests for consistency
  *
- * @param accessController - the AccessController
+ * @param gasLimit - gasLimit for transactions
  * @returns {Promise<(*|*|*)[]>}
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)

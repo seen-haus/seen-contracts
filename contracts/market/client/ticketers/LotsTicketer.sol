@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "../../../interfaces/IEscrowTicketer.sol";
 import "../../../interfaces/ISeenHausNFT.sol";
-import "../../../access/AccessClient.sol";
-import "../../../market/MarketClient.sol";
 import "../../../util/StringUtils.sol";
+import "../MarketClientBase.sol";
 
 /**
  * @title LotsTicketer
@@ -26,7 +25,7 @@ import "../../../util/StringUtils.sol";
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-contract LotsTicketer is IEscrowTicketer, StringUtils, MarketClient, ERC721 {
+contract LotsTicketer is IEscrowTicketer, MarketClientBase, StringUtils, ERC721Upgradeable {
 
     // Ticket ID => Ticket
     mapping (uint256 => EscrowTicket) internal tickets;
@@ -38,16 +37,11 @@ contract LotsTicketer is IEscrowTicketer, StringUtils, MarketClient, ERC721 {
     string public constant SYMBOL = "ESCROW_TICKET";
 
     /**
-     * @notice Constructor
-     *
-     * @param _accessController - the Seen.Haus AccessController
-     * @param _marketController - the Seen.Haus MarketController
+     * @notice Initializer
      */
-    constructor(address _accessController, address _marketController)
-    AccessClient(_accessController)
-    MarketClient(_marketController)
-    ERC721(NAME, SYMBOL)
-    {}
+    function initialize() external {
+        __ERC721_init(NAME, SYMBOL);
+    }
 
     /**
      * @notice The getNextTicket getter
@@ -98,19 +92,21 @@ contract LotsTicketer is IEscrowTicketer, StringUtils, MarketClient, ERC721 {
      * This method is overrides the Open Zeppelin version, returning
      * a unique endpoint address on the seen.haus site for each token id.
      *
+     * ex: tokenId = 12
+     * https://seen.haus/ticket/metadata/lots-ticketer/12
+     *
      * Tickets are transient and will be burned when claimed to obtain
      * proof of ownership NFTs with their metadata on IPFS as usual.
      *
      * TODO: metadata with fixed name, description, and image, identifying it as a Seen.Haus Escrow Ticket
-     * adding these fields, perhaps in OpenSea attributes format
+     * adding these fields, in OpenSea attributes format
      *  - ticketId
      *  - consignmentId
      *  - tokenAddress
      *  - tokenId
-     *  - amount
+     *  - supply
      *
      * @param _tokenId - the ticket's token id
-     *
      * @return tokenURI - the URI for the given token id's metadata
      */
     function tokenURI(uint256 _tokenId)
@@ -123,8 +119,7 @@ contract LotsTicketer is IEscrowTicketer, StringUtils, MarketClient, ERC721 {
     }
 
     /**
-     * @dev Base URI for computing {tokenURI}. Empty by default, can be overriden
-     * in child contracts.
+     * @dev Base URI for computing {tokenURI}.
      */
     function _baseURI()
     internal
@@ -132,7 +127,7 @@ contract LotsTicketer is IEscrowTicketer, StringUtils, MarketClient, ERC721 {
     override
     returns (string memory)
     {
-        return ESCROW_TICKET_URI;
+        return strConcat(ESCROW_TICKET_URI, "lots-ticketer/");
     }
 
     /**
@@ -147,6 +142,9 @@ contract LotsTicketer is IEscrowTicketer, StringUtils, MarketClient, ERC721 {
     override
     onlyRole(MARKET_HANDLER)
     {
+        // Get the MarketController
+        IMarketController marketController = getMarketController();
+
         // Fetch consignment (reverting if consignment doesn't exist)
         Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
@@ -183,6 +181,9 @@ contract LotsTicketer is IEscrowTicketer, StringUtils, MarketClient, ERC721 {
         require(_exists(_ticketId), "Invalid ticket id");
         require(ownerOf(_ticketId) == msg.sender, "Caller not ticket holder");
 
+        // Get the MarketController
+        IMarketController marketController = getMarketController();
+
         // Get the ticket
         EscrowTicket memory ticket = tickets[_ticketId];
 
@@ -212,14 +213,13 @@ contract LotsTicketer is IEscrowTicketer, StringUtils, MarketClient, ERC721 {
      */
     function supportsInterface(bytes4 interfaceId)
     public
-    pure
-    override(ERC721)
+    view
+    override(ERC721Upgradeable)
     returns (bool)
     {
         return (
-            interfaceId == type(IERC165).interfaceId ||
-            interfaceId == type(IERC721).interfaceId ||
-            interfaceId == type(IEscrowTicketer).interfaceId
+            interfaceId == type(IEscrowTicketer).interfaceId ||
+            super.supportsInterface(interfaceId)
         );
     }
 

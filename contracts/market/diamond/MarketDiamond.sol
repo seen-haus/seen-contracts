@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import { IAccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
+import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
 import { IDiamondLoupe } from "../../interfaces/IDiamondLoupe.sol";
 import { IDiamondCut } from "../../interfaces/IDiamondCut.sol";
 import { DiamondLib } from "./DiamondLib.sol";
@@ -11,7 +10,10 @@ import { JewelerLib } from "./JewelerLib.sol";
 /**
  * @title MarketDiamond
  *
- * @notice Based on Nick Mudge's gas-optimized diamond-2 reference.
+ * @notice Based on Nick Mudge's gas-optimized diamond-2 reference,
+ * with modifications to support role-based access and management of
+ * supported interfaces.
+ *
  * Reference Implementation  : https://github.com/mudgen/diamond-2-hardhat
  * EIP-2535 Diamond Standard : https://eips.ethereum.org/EIPS/eip-2535
  *
@@ -32,7 +34,7 @@ contract MarketDiamond {
      * @param _interfaceIds - the initially supported ERC-165 interface ids
      */
     constructor(
-        IAccessControl _accessController,
+        IAccessControlUpgradeable _accessController,
         IDiamondCut.FacetCut[] memory _facetCuts,
         bytes4[] memory _interfaceIds
     ) payable {

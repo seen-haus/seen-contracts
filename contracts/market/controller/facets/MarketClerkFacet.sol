@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
-import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/utils/ERC721HolderUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/IERC1155Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import "../../../interfaces/IMarketClerk.sol";
 import "../../diamond/DiamondLib.sol";
 import "../MarketControllerBase.sol";
@@ -17,13 +17,12 @@ import "../MarketControllerLib.sol";
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder, ERC721Holder {
+contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUpgradeable, ERC721HolderUpgradeable {
 
     /**
      * @dev Modifier to protect initializer function from being invoked twice.
      */
     modifier onlyUnInitialized() {
-
         MarketControllerLib.MarketControllerInitializers storage mci = MarketControllerLib.marketControllerInitializers();
         require(!mci.clerkFacet, "Initializer: contract is already initialized");
         mci.clerkFacet = true;
@@ -40,8 +39,8 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder, 
     onlyUnInitialized
     {
         DiamondLib.addSupportedInterface(type(IMarketClerk).interfaceId);
-        DiamondLib.addSupportedInterface(type(IERC1155Receiver).interfaceId);
-        DiamondLib.addSupportedInterface(type(IERC721Receiver).interfaceId);
+        DiamondLib.addSupportedInterface(type(IERC1155ReceiverUpgradeable).interfaceId);
+        DiamondLib.addSupportedInterface(type(IERC721ReceiverUpgradeable).interfaceId);
     }
 
     /**
@@ -95,7 +94,7 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder, 
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         Consignment storage consignment = mcs.consignments[_consignmentId];
         return consignment.multiToken
-            ? IERC1155(consignment.tokenAddress).balanceOf(address(this), consignment.tokenId)
+            ? IERC1155Upgradeable(consignment.tokenAddress).balanceOf(address(this), consignment.tokenId)
             : consignment.released ? 0 : 1;
 
     }
@@ -156,21 +155,21 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder, 
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
 
         // Check whether this is a multi token NFT
-        bool multiToken = IERC165(_tokenAddress).supportsInterface(type(IERC1155).interfaceId);
+        bool multiToken = IERC165Upgradeable(_tokenAddress).supportsInterface(type(IERC1155Upgradeable).interfaceId);
 
         // Ensure consigned asset has been transferred to this this contract
         if (multiToken)  {
 
             // Ensure the consigned token supply has been transferred to this contract
-            require( IERC1155(_tokenAddress).balanceOf(address(this), _tokenId) == _supply, "MarketController must own token" );
+            require( IERC1155Upgradeable(_tokenAddress).balanceOf(address(this), _tokenId) == _supply, "MarketController must own token" );
 
         } else {
 
             // Token must be a single token NFT
-            require(IERC165(_tokenAddress).supportsInterface(type(IERC721).interfaceId), "Invalid token type");
+            require(IERC165Upgradeable(_tokenAddress).supportsInterface(type(IERC721Upgradeable).interfaceId), "Invalid token type");
 
             // Ensure the consigned token has been transferred to this contract
-            require(IERC721(_tokenAddress).ownerOf(_tokenId) == (address(this)), "MarketController must own token");
+            require(IERC721Upgradeable(_tokenAddress).ownerOf(_tokenId) == (address(this)), "MarketController must own token");
 
             // Ensure the supply is set to 1
             require(_supply == 1, "Invalid supply for token");
@@ -275,7 +274,7 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder, 
         if (consignment.multiToken) {
 
             // Get the current supply
-            uint256 supply = IERC1155(consignment.tokenAddress).balanceOf(address(this), consignment.tokenId);
+            uint256 supply = IERC1155Upgradeable(consignment.tokenAddress).balanceOf(address(this), consignment.tokenId);
 
             // Ensure this contract holds enough supply
             require(supply >= _amount, "Consigned token supply less than amount");
@@ -284,7 +283,7 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder, 
             if (supply == _amount) consignment.released = true;
 
             // Transfer a balance of the token from the MarketController to the recipient
-            IERC1155(consignment.tokenAddress).safeTransferFrom(
+            IERC1155Upgradeable(consignment.tokenAddress).safeTransferFrom(
                 address(this),
                 _releaseTo,
                 consignment.tokenId,
@@ -298,7 +297,7 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155Holder, 
             consignment.released = true;
 
             // Transfer the token from the MarketController to the recipient
-            IERC721(consignment.tokenAddress).safeTransferFrom(
+            IERC721Upgradeable(consignment.tokenAddress).safeTransferFrom(
                 address(this),
                 _releaseTo,
                 consignment.tokenId

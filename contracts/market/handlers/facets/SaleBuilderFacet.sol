@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/IERC1155Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import "../../../interfaces/IEscrowTicketer.sol";
 import "../../../interfaces/ISaleBuilder.sol";
 import "../../../interfaces/ISaleHandler.sol";
@@ -178,16 +177,16 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
 
         // Make sure this contract is approved to transfer the token
         // N.B. The following will work because isApprovedForAll has the same signature on both IERC721 and IERC1155
-        require(IERC1155(_tokenAddress).isApprovedForAll(_seller, address(this)), "Not approved to transfer seller's tokens");
+        require(IERC1155Upgradeable(_tokenAddress).isApprovedForAll(_seller, address(this)), "Not approved to transfer seller's tokens");
 
         // To register the consignment, tokens must first be in MarketController's possession
-        if (IERC165(_tokenAddress).supportsInterface(type(IERC1155).interfaceId)) {
+        if (IERC165Upgradeable(_tokenAddress).supportsInterface(type(IERC1155Upgradeable).interfaceId)) {
 
             // Ensure seller owns sufficient supply of token
-            require(IERC1155(_tokenAddress).balanceOf(_seller, _tokenId) >= _supply, "Seller has insufficient balance of token");
+            require(IERC1155Upgradeable(_tokenAddress).balanceOf(_seller, _tokenId) >= _supply, "Seller has insufficient balance of token");
 
             // Transfer supply to MarketController
-            IERC1155(_tokenAddress).safeTransferFrom(
+            IERC1155Upgradeable(_tokenAddress).safeTransferFrom(
                 _seller,
                 address(getMarketController()),
                 _tokenId,
@@ -198,10 +197,10 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
         } else {
 
             // Token must be a single token NFT
-            require(IERC165(_tokenAddress).supportsInterface(type(IERC721).interfaceId), "Invalid token type");
+            require(IERC165Upgradeable(_tokenAddress).supportsInterface(type(IERC721Upgradeable).interfaceId), "Invalid token type");
 
             // Transfer tokenId to MarketController
-            IERC721(_tokenAddress).safeTransferFrom(
+            IERC721Upgradeable(_tokenAddress).safeTransferFrom(
                 _seller,
                 address(getMarketController()),
                 _tokenId

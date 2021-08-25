@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/IERC1155Upgradeable.sol";
 import "../domain/SeenTypes.sol";
 import "./IERC2981.sol";
 
@@ -14,7 +14,7 @@ import "./IERC2981.sol";
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
 */
-interface ISeenHausNFT is IERC2981, IERC1155 {
+interface ISeenHausNFT is IERC2981, IERC1155Upgradeable {
 
     /**
      * @notice The nextToken getter

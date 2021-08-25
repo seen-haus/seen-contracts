@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "../../interfaces/IERC2981.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import "../interfaces/IERC2981.sol";
 
 /**
  * @title Foreign721
@@ -11,15 +11,13 @@ import "../../interfaces/IERC2981.sol";
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-contract Foreign721 is IERC2981, ERC721 {
+contract Foreign721 is IERC2981, ERC721Upgradeable {
 
     string public constant TOKEN_NAME = "Foreign721";
     string public constant TOKEN_SYMBOL = "721Test";
 
     mapping(uint256 => address) public creators;
     mapping(uint256 => uint256) public royaltyPercentage;
-
-    constructor() ERC721(TOKEN_NAME, TOKEN_SYMBOL) {}
 
     /**
      * @notice Get royalty info for a token
