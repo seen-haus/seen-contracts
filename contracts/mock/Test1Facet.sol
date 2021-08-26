@@ -6,6 +6,9 @@ pragma solidity ^0.8.0;
  *
  * @notice Contract for testing Diamond operations
  *
+ * A bunch of functions to be added to the Diamond, with varying
+ * boolean return values for testing invocation.
+ *
  * @author Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */

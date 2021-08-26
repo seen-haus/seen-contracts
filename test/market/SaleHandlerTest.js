@@ -230,7 +230,7 @@ describe("SaleHandler", function() {
             start = ethers.BigNumber.from(block.timestamp).add('900').toString(); // 15 minutes from latest block
             price = ethers.utils.parseUnits("1", "ether");
             quantity = supply;
-            perTxCap = supply; // TODO: test lower buyout price by overriding this value at sale creation
+            perTxCap = supply;
             audience = Audience.OPEN;
             buyOutPrice = price.mul(ethers.BigNumber.from(quantity)).toString();
             single = "1";

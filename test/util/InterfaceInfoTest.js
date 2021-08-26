@@ -54,6 +54,14 @@ describe("InterfaceInfo", function() {
 
         });
 
+        it("getIMarketClientProxy() should return expected id", async function () {
+
+            const expected = InterfaceIds.IMarketClientProxy;
+            const actual = await interfaceInfo.getIMarketClientProxy();
+            assert.equal(actual, expected);
+
+        });
+
         it("getIMarketClerk() should return expected id", async function () {
 
             const expected = InterfaceIds.IMarketClerk;

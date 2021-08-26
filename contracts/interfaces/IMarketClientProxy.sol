@@ -10,7 +10,7 @@ import { IMarketController } from "./IMarketController.sol";
  * @notice Allows upgrading the implementation, market controller, and access controller
  * of a MarketClientProxy
  *
- * The ERC-165 identifier for this interface is: //TODO find out interface id
+ * The ERC-165 identifier for this interface is: 0x9bc69c79
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */

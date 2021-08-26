@@ -2,12 +2,23 @@ const { assert } = require('chai');
 const hre = require("hardhat");
 const ethers = hre.ethers;
 
-const { getSelectors, FacetCutAction, removeSelectors } = require('../../scripts/util/diamond-utils.js')
-const { deployMarketDiamond } = require('../../scripts/util/deploy-market-diamond.js');
 const Facet = require("../../scripts/domain/Facet");
+const { deployMarketDiamond } = require('../../scripts/util/deploy-market-diamond.js');
+const { getSelectors, FacetCutAction, removeSelectors } = require('../../scripts/util/diamond-utils.js')
 
 /**
- *  Test the Market Diamond contract and its core facets
+ * Test the Market Diamond contract and its core facets
+ *
+ * @notice Based on Nick Mudge's gas-optimized diamond-2 reference,
+ * with modifications to support role-based access and management of
+ * supported interfaces.
+ *
+ * These tests have been refactored to remove dependency upon the
+ * actions of previous tests, and to use contexts to group tests to
+ * to make them easier to reason about and spot gaps in coverage.
+ *
+ * They also include new tests for initializer functions and storage
+ * slots.
  *
  * @author Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
@@ -20,10 +31,20 @@ describe('MarketDiamond', async function () {
   // Common vars
   let marketDiamond, diamondLoupe, diamondCut;
   let loupeFacetViaDiamond, cutFacetViaDiamond;
-  let Test1Facet, test1Facet, test1ViaDiamond, Test2Facet, test2Facet, test2ViaDiamond;
-  let tx, receipt, addresses, address, selectors, interfaces, facets, facet, facetCuts, result, keepers;
+  let Test1Facet, test1Facet, test1ViaDiamond;
+  let Test2Facet, test2Facet, test2ViaDiamond;
+  let Test3Facet, test3Facet, test3ViaDiamond;
+  let Test2FacetUpgrade, test2FacetUpgrade;
+  let tx, receipt, addresses, address, selectors;
+  let interfaces, facets, facetCuts, result;
+  let initFunction, initInterface, initCallData;
+  let keepers;
 
   beforeEach(async function () {
+
+    // Make accounts available
+    accounts = await ethers.getSigners();
+    deployer = accounts[0];
 
     // Deploy the Diamond
     [marketDiamond, diamondLoupe, diamondCut, accessController] = await deployMarketDiamond();
@@ -39,6 +60,7 @@ describe('MarketDiamond', async function () {
 
   });
 
+  // Introspection tests
   context("DiamondLoupeFacet", async function () {
 
     context("facets()", async () => {
@@ -172,23 +194,29 @@ describe('MarketDiamond', async function () {
 
   });
 
-  // TODO: Add tests of diamondCut where the newly cut facet's address and a function call with arguments are passed
-  // Need to be certain that intializer functions are properly executed and demonstrate how to encode the calls
+  // Modification tests
   context("DiamondCutFacet", async function () {
 
     beforeEach(async function () {
 
-      // Deploy Test1Facet and add its address to the list
+      // Deploy Test1Facet
       Test1Facet = await ethers.getContractFactory('Test1Facet');
       test1Facet = await Test1Facet.deploy();
       await test1Facet.deployed();
-      addresses.push(test1Facet.address);
 
-      // Deploy Test2Facet and add its address to the list
+      // Deploy Test2Facet
       Test2Facet = await ethers.getContractFactory('Test2Facet');
       test2Facet = await Test2Facet.deploy();
       await test2Facet.deployed();
-      addresses.push(test2Facet.address);
+
+      // Deploy Test3Facet
+      Test3Facet = await ethers.getContractFactory('Test3Facet');
+      test3Facet = await Test3Facet.deploy();
+      await test3Facet.deployed();
+
+      // N.B. The facets are not yet connected to the diamond in any way,
+      // but following handles prepare us for accessing the diamond via
+      // the ABI of these facets, once their functions have been added.
 
       // Cast Diamond to Test1Facet
       test1ViaDiamond = await ethers.getContractAt('Test1Facet', marketDiamond.address);
@@ -196,102 +224,167 @@ describe('MarketDiamond', async function () {
       // Cast Diamond to Test2Facet
       test2ViaDiamond = await ethers.getContractAt('Test2Facet', marketDiamond.address);
 
+      // Cast Diamond to Test3Facet
+      test3ViaDiamond = await ethers.getContractAt('Test3Facet', marketDiamond.address);
+
     });
 
     context("diamondCut()", async function () {
 
-      it('should add functions from Test1Facet', async () => {
+      context("FacetCutAction.Add", async function () {
 
-        // Get the Test1Facet function selectors from the abi
-        selectors = getSelectors(test1Facet);
+        it('should add functions from Test1Facet', async () => {
 
-        // Define the facet cut
-        facetCuts = [{
-          facetAddress: test1Facet.address,
-          action: FacetCutAction.Add,
-          functionSelectors: selectors
-        }];
+          // Get the Test1Facet function selectors from the abi
+          selectors = getSelectors(test1Facet);
 
-        // Send the DiamondCut transaction
-        tx = await cutFacetViaDiamond.diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
-
-        // Wait for transaction to confirm
-        receipt = await tx.wait();
-
-        // Be certain transaction was successful
-        assert.equal(receipt.status, 1,`Diamond upgrade failed: ${tx.hash}`)
-
-        // Make sure function selectors for the facet are correct
-        result = await loupeFacetViaDiamond.facetFunctionSelectors(test1Facet.address);
-        assert.sameMembers(result, selectors);
-
-      });
-
-      it('should add functions from Test2Facet', async () => {
-
-        // Get the Test1Facet function selectors from the abi
-        selectors = getSelectors(test2Facet);
-
-        // Define the facet cut
-        facetCuts = [{
-          facetAddress: test2Facet.address,
-          action: FacetCutAction.Add,
-          functionSelectors: selectors
-        }];
-
-        // Send the DiamondCut transaction
-        tx = await cutFacetViaDiamond.diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
-
-        // Wait for transaction to confirm
-        receipt = await tx.wait();
-
-        // Be certain transaction was successful
-        assert.equal(receipt.status, 1,`Diamond upgrade failed: ${tx.hash}`)
-
-        // Make sure function selectors for the facet are correct
-        result = await loupeFacetViaDiamond.facetFunctionSelectors(test2Facet.address);
-        assert.sameMembers(result, selectors);
-
-      });
-
-      it('should allow functions from different facets to be added in one transaction ', async () => {
-
-        // Get even numbered selectors from Test1Facet + odd from Test2Facet
-        selectors = [
-            getSelectors(test1ViaDiamond).filter((s,i) => i % 2),
-            getSelectors(test2ViaDiamond).filter((s,i) => !(i % 2)),
-        ];
-
-        // Define facet cuts
-        facetCuts = [
-          {
+          // Define the facet cut
+          facetCuts = [{
             facetAddress: test1Facet.address,
             action: FacetCutAction.Add,
-            functionSelectors: selectors[0]
-          },
-          {
+            functionSelectors: selectors
+          }];
+
+          // Send the DiamondCut transaction
+          tx = await cutFacetViaDiamond.diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
+
+          // Wait for transaction to confirm
+          receipt = await tx.wait();
+
+          // Be certain transaction was successful
+          assert.equal(receipt.status, 1,`Diamond upgrade failed: ${tx.hash}`)
+
+          // Make sure function selectors for the facet are correct
+          result = await loupeFacetViaDiamond.facetFunctionSelectors(test1Facet.address);
+          assert.sameMembers(result, selectors);
+
+        });
+
+        it('should add functions from Test2Facet', async () => {
+
+          // Get the Test1Facet function selectors from the abi
+          selectors = getSelectors(test2Facet);
+
+          // Define the facet cut
+          facetCuts = [{
             facetAddress: test2Facet.address,
             action: FacetCutAction.Add,
-            functionSelectors: selectors[1]
-          }
-        ];
+            functionSelectors: selectors
+          }];
 
-        // Send the DiamondCut transaction
-        tx = await cutFacetViaDiamond.diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit })
+          // Send the DiamondCut transaction
+          tx = await cutFacetViaDiamond.diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
 
-        // Be certain transaction was successful
-        assert.equal(receipt.status, 1,`Diamond upgrade failed: ${tx.hash}`);
+          // Wait for transaction to confirm
+          receipt = await tx.wait();
 
-        // Ensure the currently installed test selectors are what we added
-        result = [
+          // Be certain transaction was successful
+          assert.equal(receipt.status, 1,`Diamond upgrade failed: ${tx.hash}`)
+
+          // Make sure function selectors for the facet are correct
+          result = await loupeFacetViaDiamond.facetFunctionSelectors(test2Facet.address);
+          assert.sameMembers(result, selectors);
+
+        });
+
+        it('should allow functions from different facets to be added in one transaction', async () => {
+
+          // Get even numbered selectors from Test1Facet + odd from Test2Facet
+          selectors = [
+            getSelectors(test1ViaDiamond).filter((s,i) => i % 2),
+            getSelectors(test2ViaDiamond).filter((s,i) => !(i % 2)),
+          ];
+
+          // Define facet cuts
+          facetCuts = [
+            {
+              facetAddress: test1Facet.address,
+              action: FacetCutAction.Add,
+              functionSelectors: selectors[0]
+            },
+            {
+              facetAddress: test2Facet.address,
+              action: FacetCutAction.Add,
+              functionSelectors: selectors[1]
+            }
+          ];
+
+          // Send the DiamondCut transaction
+          tx = await cutFacetViaDiamond.diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit })
+
+          // Be certain transaction was successful
+          assert.equal(receipt.status, 1,`Diamond upgrade failed: ${tx.hash}`);
+
+          // Ensure the currently installed test selectors are what we added
+          result = [
             await loupeFacetViaDiamond.facetFunctionSelectors(test1Facet.address),
             await loupeFacetViaDiamond.facetFunctionSelectors(test2Facet.address)
-        ];
-        assert.sameMembers(result.flat(), selectors.flat());
+          ];
+          assert.sameMembers(result.flat(), selectors.flat());
+
+        });
+
+        context("Initializer", async function () {
+
+          beforeEach(async function () {
+
+            // Encode the initialization call
+            initFunction = "initialize(address _testAddress)";
+            initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
+            initCallData = initInterface.encodeFunctionData("initialize", [deployer.address]);
+
+            // Get the Test3Facet function selectors from the abi, removing the initializer
+            selectors = getSelectors(test3Facet).remove([initFunction]);
+
+            // Create facet cut payload
+            facetCuts = [
+              {
+                facetAddress: test3Facet.address,
+                action: FacetCutAction.Add,
+                functionSelectors: selectors
+              }
+            ];
+
+            // Execute the Diamond cut
+            tx = await cutFacetViaDiamond.diamondCut(facetCuts, test3Facet.address, initCallData, {gasLimit});
+
+            // Wait for transaction to confirm
+            receipt = await tx.wait();
+
+            // Be certain transaction was successful
+            assert.equal(receipt.status, 1, `Diamond upgrade failed: ${tx.hash}`);
+
+          });
+
+          it('should call an initializer function if supplied', async () => {
+
+            // Make sure function selectors for the facet are correct
+            result = await loupeFacetViaDiamond.facetFunctionSelectors(test3Facet.address);
+            assert.sameMembers(result, selectors);
+
+          });
+
+          it('should store initializer state in diamond storage slot when modifier runs', async () => {
+
+            // Make sure initializer state got stored when modifier ran
+            result = await test3ViaDiamond.isInitialized();
+            assert.equal(result, true, "Initializer state not stored");
+
+          });
+
+          it('should store initializer argument in diamond storage slot when method runs', async () => {
+
+            // Make sure argument passed to initializer got stored when method ran
+            result = await test3ViaDiamond.getTestAddress();
+            assert.equal(result, deployer.address, "Initializer argument not stored");
+
+          });
+
+        });
 
       });
 
-      context("With Test1Facet and Test2Facet added", async function () {
+      context("FacetCutAction.Remove", async function () {
 
         beforeEach(async function () {
 
@@ -475,6 +568,70 @@ describe('MarketDiamond', async function () {
               diamondLoupe.address,
               "Incorrect facet address"
           );
+
+        });
+
+      });
+
+      context("FacetCutAction.Replace", async function () {
+
+        beforeEach(async function () {
+
+          // Define the facet cuts
+          facetCuts = [
+            {
+              facetAddress: test1Facet.address,
+              action: FacetCutAction.Add,
+              functionSelectors: getSelectors(test1Facet)
+            },
+            {
+              facetAddress: test2Facet.address,
+              action: FacetCutAction.Add,
+              functionSelectors: getSelectors(test2Facet)
+            }
+          ];
+
+          // Send the DiamondCut transaction
+          tx = await cutFacetViaDiamond.diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
+
+          // Wait for transaction to confirm
+          receipt = await tx.wait();
+
+          // Be certain transaction was successful
+          assert.equal(receipt.status, 1,`Diamond upgrade failed: ${tx.hash}`)
+
+        });
+
+        it('should replace a function on Test2Facet', async () => {
+
+          // Verify current return value of function to be replaced
+          assert.equal(await test2ViaDiamond.test2Func13(), "Seen");
+
+          // Deploy Test2FacetUpgrade
+          Test2FacetUpgrade = await ethers.getContractFactory('Test2FacetUpgrade');
+          test2FacetUpgrade = await Test2FacetUpgrade.deploy();
+          await test2FacetUpgrade.deployed();
+
+          // Define the facet cut
+          facetCuts = [
+            {
+              facetAddress: test2FacetUpgrade.address,
+              action: FacetCutAction.Replace,
+              functionSelectors: getSelectors(test2FacetUpgrade)
+            }
+          ];
+
+          // Send the DiamondCut transaction
+          tx = await cutFacetViaDiamond.diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
+
+          // Wait for transaction to confirm
+          receipt = await tx.wait();
+
+          // Be certain transaction was successful
+          assert.equal(receipt.status, 1,`Diamond upgrade failed: ${tx.hash}`)
+
+          // Verify new return value of function that was replaced
+          assert.equal(await test2ViaDiamond.test2Func13(), "json");
 
         });
 

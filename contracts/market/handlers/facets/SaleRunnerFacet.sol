@@ -16,7 +16,7 @@ import "../MarketHandlerBase.sol";
  */
 contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
 
-    // Threshold to auction extension window // TODO move this to market controller configuration
+    // Threshold to auction extension window
     uint256 constant extensionWindow = 15 minutes;
 
     /**

@@ -98,8 +98,10 @@ contract LotsTicketer is IEscrowTicketer, MarketClientBase, StringUtils, ERC721U
      * Tickets are transient and will be burned when claimed to obtain
      * proof of ownership NFTs with their metadata on IPFS as usual.
      *
-     * TODO: metadata with fixed name, description, and image, identifying it as a Seen.Haus Escrow Ticket
-     * adding these fields, in OpenSea attributes format
+     * Endpoint should serve metadata with fixed name, description,
+     * and image, identifying it as a Seen.Haus Escrow Ticket, and
+     * adding these fields, in OpenSea attributes format:
+     *
      *  - ticketId
      *  - consignmentId
      *  - tokenAddress

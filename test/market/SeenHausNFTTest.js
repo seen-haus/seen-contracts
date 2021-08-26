@@ -98,7 +98,7 @@ describe("SeenHausNFT", function() {
             it("should indicate support for ERC-165 interface", async function () {
 
                 // See https://eips.ethereum.org/EIPS/eip-165#how-a-contract-will-publish-the-interfaces-it-implements
-                support = await seenHausNFT.supportsInterface("0x01ffc9a7");
+                support = await seenHausNFT.supportsInterface(InterfaceIds.IERC165);
 
                 // Test
                 await expect(
@@ -111,7 +111,7 @@ describe("SeenHausNFT", function() {
             it("should indicate support for ERC-1155 interface", async function () {
 
                 // See https://eips.ethereum.org/EIPS/eip-1155#specification
-                support = await seenHausNFT.supportsInterface("0xd9b67a26");
+                support = await seenHausNFT.supportsInterface(InterfaceIds.IERC1155);
 
                 // Test
                 await expect(
@@ -124,7 +124,7 @@ describe("SeenHausNFT", function() {
             it("should indicate support for ERC-2981 interface", async function () {
 
                 // See https://eips.ethereum.org/EIPS/eip-2981#specification
-                support = await seenHausNFT.supportsInterface("0x2a55205a");
+                support = await seenHausNFT.supportsInterface(InterfaceIds.IERC2981);
 
                 // Test
                 await expect(

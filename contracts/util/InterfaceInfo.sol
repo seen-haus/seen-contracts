@@ -12,6 +12,7 @@ import "../interfaces/IDiamondLoupe.sol";
 import "../interfaces/IERC2981.sol";
 import "../interfaces/IEscrowTicketer.sol";
 import "../interfaces/IMarketClerk.sol";
+import "../interfaces/IMarketClientProxy.sol";
 import "../interfaces/IMarketConfig.sol";
 import "../interfaces/IMarketController.sol";
 import "../interfaces/IMarketHandler.sol";
@@ -63,6 +64,12 @@ contract InterfaceInfo {
     public pure
     returns(bytes4 id) {
         id = type(IEscrowTicketer).interfaceId;
+    }
+
+    function getIMarketClientProxy()
+    public pure
+    returns(bytes4 id) {
+        id = type(IMarketClientProxy).interfaceId;
     }
 
     function getIMarketClerk()
