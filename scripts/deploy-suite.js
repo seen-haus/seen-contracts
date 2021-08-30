@@ -120,12 +120,19 @@ async function main() {
     [lotsTicketerImpl, itemsTicketerImpl, seenHausNFTImpl] = impls;
     [lotsTicketerProxy, itemsTicketerProxy, seenHausNFTProxy] = proxies;
     [lotsTicketer, itemsTicketer, seenHausNFT] = clients;
+
+    // Gather the complete args that were used to create the proxies
+    const itemsTicketerProxyArgs = [...marketClientArgs,itemsTicketerImpl.address];
+    const lotsTicketerProxyArgs = [...marketClientArgs,lotsTicketerImpl.address];
+    const seenHausNFTProxyArgs = [...marketClientArgs,seenHausNFTImpl.address];
+
+    // Report and prepare for verification
     deploymentComplete("ItemsTicketer Logic", lotsTicketerImpl.address, [], contracts);
     deploymentComplete("LotsTicketer Logic", itemsTicketerImpl.address, [], contracts);
     deploymentComplete("SeenHausNFT Logic", seenHausNFTImpl.address, [], contracts);
-    deploymentComplete("ItemsTicketer Proxy", lotsTicketerProxy.address, marketClientArgs, contracts);
-    deploymentComplete("LotsTicketer Proxy", itemsTicketerProxy.address, marketClientArgs, contracts);
-    deploymentComplete("SeenHausNFT Proxy", seenHausNFTProxy.address, marketClientArgs, contracts);
+    deploymentComplete("ItemsTicketer Proxy", lotsTicketerProxy.address, itemsTicketerProxyArgs, contracts);
+    deploymentComplete("LotsTicketer Proxy", itemsTicketerProxy.address, lotsTicketerProxyArgs, contracts);
+    deploymentComplete("SeenHausNFT Proxy", seenHausNFTProxy.address, seenHausNFTProxyArgs, contracts);
 
     console.log(`\n🌐️Configuring and granting roles...`);
 
