@@ -163,4 +163,200 @@ for verification on Etherscan. Waiting for verification result...
 Successfully verified contract SeenHausNFT on Etherscan.
 https://rinkeby.etherscan.io/address/0x3f2F78649D1452607581e33a4ffc953Fb9368f71#code
 
+--------------------------------------------------------------------------------
+Seen Haus Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: rinkeby
+📅 Mon Aug 30 2021 16:36:15 GMT-0400 (Eastern Daylight Time)
+🔱 Deployer account:  0xBbf9f5e693fc694519604d9Cf73F2C98742b93c9
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, MarketDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0xf6AC203b7994e92E9eD1DBBd7D13e77dc6231bb5
+✅ DiamondLoupeFacet deployed to: 0x7Df15BA415608Ff5d7f28eAfE41C21b960A68a3f
+✅ DiamondCutFacet deployed to: 0x73888F191fA9776e5BE2Ffe323794d10f6719bF8
+✅ MarketDiamond deployed to: 0xF5E4708817F2e3943173c59054972B7FeA82Ea06
+
+💎 Deploying and initializing Marketplace facets...
+✅ MarketConfigFacet deployed to: 0x4B51A77Bf2e6D950DC2552a1636784bE79C26F7C
+✅ MarketClerkFacet deployed to: 0x250C3C264b7812DD2F906968a0173911F21a732E
+✅ AuctionBuilderFacet deployed to: 0x66e9D23449316B18DB08001ceac0a333647E0AE5
+✅ AuctionRunnerFacet deployed to: 0x18040bc4a4a5C5C1809eA27B882659a8d6D17070
+✅ SaleBuilderFacet deployed to: 0x7A283f8E1D98D8293535eC938320d99f7a27e25a
+✅ SaleRunnerFacet deployed to: 0xAf72E40ed5Aa9FA398cf073bE1B86A9978f301e6
+
+⧉ Deploying Market Client implementation/proxy pairs...
+✅ LotsTicketer Logic deployed to: 0x102ACe27edfA775618685Dbc36DD95B4373BB6aF
+✅ ItemsTicketer Logic deployed to: 0xE21418db9152fcBc37dc89Ad7B47a355671903C6
+✅ SeenHausNFT Logic deployed to: 0x1b19C9Fd9ac13d536b6Ec24eA22022856e460194
+✅ LotsTicketer Proxy deployed to: 0xe679CE1B68e2087BBc7eb66f218C510e9447A009
+✅ ItemsTicketer Proxy deployed to: 0xcF272963F880bd5f92bC09b12B7F063a80A2a537
+✅ SeenHausNFT Proxy deployed to: 0xC1D91108337bbF853AeA62ed1b3d20085Ca5EAd6
+
+🌐️Configuring and granting roles...
+✅ MarketController updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+⏲ Pause one minute, allowing deployments to propagate to Etherscan backend...
+🔍 Verifying contracts on Etherscan...
+
+📋 Verifying AccessController
+Nothing to compile
+Compiling 1 file with 0.8.2
+Successfully submitted source code for contract
+contracts/market/access/AccessController.sol:AccessController at 0xf6AC203b7994e92E9eD1DBBd7D13e77dc6231bb5
+for verification on Etherscan. Waiting for verification result...
+
+Successfully verified contract AccessController on Etherscan.
+https://rinkeby.etherscan.io/address/0xf6AC203b7994e92E9eD1DBBd7D13e77dc6231bb5#code
+
+📋 Verifying DiamondLoupeFacet
+Compiling 71 files with 0.8.2
+Compilation finished successfully
+Compiling 1 file with 0.8.2
+Successfully submitted source code for contract
+contracts/market/diamond/facets/DiamondLoupeFacet.sol:DiamondLoupeFacet at 0x7Df15BA415608Ff5d7f28eAfE41C21b960A68a3f
+for verification on Etherscan. Waiting for verification result...
+
+Successfully verified contract DiamondLoupeFacet on Etherscan.
+https://rinkeby.etherscan.io/address/0x7Df15BA415608Ff5d7f28eAfE41C21b960A68a3f#code
+
+📋 Verifying DiamondCutFacet
+Nothing to compile
+Compiling 1 file with 0.8.2
+Successfully submitted source code for contract
+contracts/market/diamond/facets/DiamondCutFacet.sol:DiamondCutFacet at 0x73888F191fA9776e5BE2Ffe323794d10f6719bF8
+for verification on Etherscan. Waiting for verification result...
+
+Successfully verified contract DiamondCutFacet on Etherscan.
+https://rinkeby.etherscan.io/address/0x73888F191fA9776e5BE2Ffe323794d10f6719bF8#code
+
+📋 Verifying MarketDiamond
+Nothing to compile
+Compiling 1 file with 0.8.2
+Successfully submitted source code for contract
+contracts/market/diamond/MarketDiamond.sol:MarketDiamond at 0xF5E4708817F2e3943173c59054972B7FeA82Ea06
+for verification on Etherscan. Waiting for verification result...
+
+Successfully verified contract MarketDiamond on Etherscan.
+https://rinkeby.etherscan.io/address/0xF5E4708817F2e3943173c59054972B7FeA82Ea06#code
+
+📋 Verifying MarketConfigFacet
+Nothing to compile
+Compiling 1 file with 0.8.2
+Successfully submitted source code for contract
+contracts/market/controller/facets/MarketConfigFacet.sol:MarketConfigFacet at 0x4B51A77Bf2e6D950DC2552a1636784bE79C26F7C
+for verification on Etherscan. Waiting for verification result...
+
+Successfully verified contract MarketConfigFacet on Etherscan.
+https://rinkeby.etherscan.io/address/0x4B51A77Bf2e6D950DC2552a1636784bE79C26F7C#code
+
+📋 Verifying MarketClerkFacet
+Nothing to compile
+Compiling 1 file with 0.8.2
+Successfully submitted source code for contract
+contracts/market/controller/facets/MarketClerkFacet.sol:MarketClerkFacet at 0x250C3C264b7812DD2F906968a0173911F21a732E
+for verification on Etherscan. Waiting for verification result...
+
+Successfully verified contract MarketClerkFacet on Etherscan.
+https://rinkeby.etherscan.io/address/0x250C3C264b7812DD2F906968a0173911F21a732E#code
+
+📋 Verifying AuctionBuilderFacet
+Nothing to compile
+Compiling 1 file with 0.8.2
+Successfully submitted source code for contract
+contracts/market/handlers/facets/AuctionBuilderFacet.sol:AuctionBuilderFacet at 0x66e9D23449316B18DB08001ceac0a333647E0AE5
+for verification on Etherscan. Waiting for verification result...
+
+Successfully verified contract AuctionBuilderFacet on Etherscan.
+https://rinkeby.etherscan.io/address/0x66e9D23449316B18DB08001ceac0a333647E0AE5#code
+
+📋 Verifying AuctionRunnerFacet
+Nothing to compile
+Compiling 1 file with 0.8.2
+Successfully submitted source code for contract
+contracts/market/handlers/facets/AuctionRunnerFacet.sol:AuctionRunnerFacet at 0x18040bc4a4a5C5C1809eA27B882659a8d6D17070
+for verification on Etherscan. Waiting for verification result...
+
+Successfully verified contract AuctionRunnerFacet on Etherscan.
+https://rinkeby.etherscan.io/address/0x18040bc4a4a5C5C1809eA27B882659a8d6D17070#code
+
+📋 Verifying SaleBuilderFacet
+Nothing to compile
+Compiling 1 file with 0.8.2
+Successfully submitted source code for contract
+contracts/market/handlers/facets/SaleBuilderFacet.sol:SaleBuilderFacet at 0x7A283f8E1D98D8293535eC938320d99f7a27e25a
+for verification on Etherscan. Waiting for verification result...
+
+Successfully verified contract SaleBuilderFacet on Etherscan.
+https://rinkeby.etherscan.io/address/0x7A283f8E1D98D8293535eC938320d99f7a27e25a#code
+
+📋 Verifying SaleRunnerFacet
+Nothing to compile
+Compiling 1 file with 0.8.2
+Successfully submitted source code for contract
+contracts/market/handlers/facets/SaleRunnerFacet.sol:SaleRunnerFacet at 0xAf72E40ed5Aa9FA398cf073bE1B86A9978f301e6
+for verification on Etherscan. Waiting for verification result...
+
+Successfully verified contract SaleRunnerFacet on Etherscan.
+https://rinkeby.etherscan.io/address/0xAf72E40ed5Aa9FA398cf073bE1B86A9978f301e6#code
+
+📋 Verifying LotsTicketer Logic
+Nothing to compile
+Compiling 1 file with 0.8.2
+Successfully submitted source code for contract
+contracts/market/client/ticketers/LotsTicketer.sol:LotsTicketer at 0x102ACe27edfA775618685Dbc36DD95B4373BB6aF
+for verification on Etherscan. Waiting for verification result...
+
+Successfully verified contract LotsTicketer on Etherscan.
+https://rinkeby.etherscan.io/address/0x102ACe27edfA775618685Dbc36DD95B4373BB6aF#code
+
+📋 Verifying ItemsTicketer Logic
+Nothing to compile
+Compiling 1 file with 0.8.2
+Successfully submitted source code for contract
+contracts/market/client/ticketers/ItemsTicketer.sol:ItemsTicketer at 0xE21418db9152fcBc37dc89Ad7B47a355671903C6
+for verification on Etherscan. Waiting for verification result...
+
+Successfully verified contract ItemsTicketer on Etherscan.
+https://rinkeby.etherscan.io/address/0xE21418db9152fcBc37dc89Ad7B47a355671903C6#code
+
+📋 Verifying SeenHausNFT Logic
+Nothing to compile
+Compiling 1 file with 0.8.2
+Successfully submitted source code for contract
+contracts/market/client/nft/SeenHausNFT.sol:SeenHausNFT at 0x1b19C9Fd9ac13d536b6Ec24eA22022856e460194
+for verification on Etherscan. Waiting for verification result...
+
+Successfully verified contract SeenHausNFT on Etherscan.
+https://rinkeby.etherscan.io/address/0x1b19C9Fd9ac13d536b6Ec24eA22022856e460194#code
+
+📋 Verifying LotsTicketer Proxy
+Nothing to compile
+Compiling 1 file with 0.8.2
+Successfully submitted source code for contract
+contracts/market/client/MarketClientProxy.sol:MarketClientProxy at 0xe679CE1B68e2087BBc7eb66f218C510e9447A009
+for verification on Etherscan. Waiting for verification result...
+
+Successfully verified contract MarketClientProxy on Etherscan.
+https://rinkeby.etherscan.io/address/0xe679CE1B68e2087BBc7eb66f218C510e9447A009#code
+
+📋 Verifying ItemsTicketer Proxy
+Nothing to compile
+Compiling 1 file with 0.8.2
+Successfully submitted source code for contract
+contracts/market/client/MarketClientProxy.sol:MarketClientProxy at 0xcF272963F880bd5f92bC09b12B7F063a80A2a537
+for verification on Etherscan. Waiting for verification result...
+
+Successfully verified contract MarketClientProxy on Etherscan.
+https://rinkeby.etherscan.io/address/0xcF272963F880bd5f92bC09b12B7F063a80A2a537#code
+
+📋 Verifying SeenHausNFT Proxy
+Nothing to compile
+Compiling 1 file with 0.8.2
+Successfully submitted source code for contract
+contracts/market/client/MarketClientProxy.sol:MarketClientProxy at 0xC1D91108337bbF853AeA62ed1b3d20085Ca5EAd6
+for verification on Etherscan. Waiting for verification result...
+
+Successfully verified contract MarketClientProxy on Etherscan.
+https://rinkeby.etherscan.io/address/0xC1D91108337bbF853AeA62ed1b3d20085Ca5EAd6#code
+
 

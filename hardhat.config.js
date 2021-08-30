@@ -46,7 +46,7 @@ module.exports = {
   gasReporter: {
     currency: 'USD',
     enabled: true,
-    gasPrice: 100,
+    gasPrice: 300,
     coinmarketcap: environments.coinmarketcap.apiKey,
     showTimeSpent: true,
     showMethodSig: true

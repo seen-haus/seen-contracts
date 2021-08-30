@@ -17,7 +17,8 @@ Role.Names = [
     "SELLER",          // Approved sellers amd Seen.Haus reps
     "MINTER",          // Approved artists and Seen.Haus reps for digital minting
     "ESCROW_AGENT",    // Approved escrow agent for physical minting
-    "MARKET_HANDLER"   // Market Handler contracts;
+    "MARKET_HANDLER",  // Market Handler contracts
+    "UPGRADER"         // Upgrader of proxied contracts/facets
 ]
 
 Role.Names.forEach( roleName => {

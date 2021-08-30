@@ -88,6 +88,9 @@ async function main() {
 
     console.log(`\n💎 Deploying and initializing Marketplace facets...`);
 
+    // Temporarily grant UPGRADER role to deployer account
+    await accessController.grantRole(Role.UPGRADER, deployer);
+
     // Cut the MarketController facet into the Diamond
     const marketConfig = [
         config.staking,
@@ -122,19 +125,22 @@ async function main() {
     [lotsTicketer, itemsTicketer, seenHausNFT] = clients;
 
     // Gather the complete args that were used to create the proxies
-    const itemsTicketerProxyArgs = [...marketClientArgs,itemsTicketerImpl.address];
-    const lotsTicketerProxyArgs = [...marketClientArgs,lotsTicketerImpl.address];
-    const seenHausNFTProxyArgs = [...marketClientArgs,seenHausNFTImpl.address];
+    const itemsTicketerProxyArgs = [...marketClientArgs, itemsTicketerImpl.address];
+    const lotsTicketerProxyArgs = [...marketClientArgs, lotsTicketerImpl.address];
+    const seenHausNFTProxyArgs = [...marketClientArgs, seenHausNFTImpl.address];
 
     // Report and prepare for verification
-    deploymentComplete("ItemsTicketer Logic", lotsTicketerImpl.address, [], contracts);
-    deploymentComplete("LotsTicketer Logic", itemsTicketerImpl.address, [], contracts);
+    deploymentComplete("LotsTicketer Logic", lotsTicketerImpl.address, [], contracts);
+    deploymentComplete("ItemsTicketer Logic", itemsTicketerImpl.address, [], contracts);
     deploymentComplete("SeenHausNFT Logic", seenHausNFTImpl.address, [], contracts);
-    deploymentComplete("ItemsTicketer Proxy", lotsTicketerProxy.address, itemsTicketerProxyArgs, contracts);
-    deploymentComplete("LotsTicketer Proxy", itemsTicketerProxy.address, lotsTicketerProxyArgs, contracts);
+    deploymentComplete("LotsTicketer Proxy", lotsTicketerProxy.address, lotsTicketerProxyArgs, contracts);
+    deploymentComplete("ItemsTicketer Proxy", itemsTicketerProxy.address, itemsTicketerProxyArgs, contracts);
     deploymentComplete("SeenHausNFT Proxy", seenHausNFTProxy.address, seenHausNFTProxyArgs, contracts);
 
     console.log(`\n🌐️Configuring and granting roles...`);
+
+    // Renounce temporarily granted UPGRADER role for deployer account
+    await accessController.renounceRole(Role.UPGRADER, deployer);
 
     // Add Escrow Ticketer and NFT addresses to MarketController
     await marketController.setNft(seenHausNFT.address);

@@ -26,6 +26,7 @@ contract AccessController is AccessControlUpgradeable, SeenConstants  {
         _setRoleAdmin(MINTER, ADMIN);
         _setRoleAdmin(ESCROW_AGENT, ADMIN);
         _setRoleAdmin(MARKET_HANDLER, ADMIN);
+        _setRoleAdmin(UPGRADER, ADMIN);
     }
 
 }

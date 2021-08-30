@@ -25,6 +25,8 @@ contract DiamondCutFacet is SeenConstants, IDiamondCut {
      *
      * If populated, _calldata is executed with delegatecall on _init
      *
+     * Reverts if caller does not have UPGRADER role
+     *
      * @param _facetCuts Contains the facet addresses and function selectors
      * @param _init The address of the contract or facet to execute _calldata
      * @param _calldata A function call, including function selector and arguments
@@ -36,46 +38,11 @@ contract DiamondCutFacet is SeenConstants, IDiamondCut {
         // Get the diamond storage slot
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
 
-        // Ensure the caller has the ADMIN role
-        ds.accessController.hasRole(ADMIN, msg.sender);
+        // Ensure the caller has the UPGRADER role
+        require(ds.accessController.hasRole(UPGRADER, msg.sender), "Caller must have UPGRADER role");
 
-        // Determine how many existing selectors we have
-        uint256 originalSelectorCount = ds.selectorCount;
-        uint256 selectorCount = originalSelectorCount;
-        bytes32 selectorSlot;
-
-        // Check if last selector slot is full
-        if (selectorCount & 7 > 0) {
-            // get last selectorSlot
-            selectorSlot = ds.selectorSlots[selectorCount >> 3];
-        }
-        
-        // Cut the facets
-        for (uint256 facetIndex; facetIndex < _facetCuts.length; facetIndex++) {
-            (selectorCount, selectorSlot) = JewelerLib.addReplaceRemoveFacetSelectors(
-                selectorCount,
-                selectorSlot,
-                _facetCuts[facetIndex].facetAddress,
-                _facetCuts[facetIndex].action,
-                _facetCuts[facetIndex].functionSelectors
-            );
-        }
-
-        // Update the selector count if it changed
-        if (selectorCount != originalSelectorCount) {
-            ds.selectorCount = uint16(selectorCount);
-        }
-
-        // Update last selector slot
-        if (selectorCount & 7 > 0) {
-            ds.selectorSlots[selectorCount >> 3] = selectorSlot;
-        }
-
-        // Notify listeners of state change
-        emit DiamondCut(_facetCuts, _init, _calldata);
-
-        // Initialize the facet
-        JewelerLib.initializeDiamondCut(_init, _calldata);
+        // Make the cuts
+        JewelerLib.diamondCut(_facetCuts, _init, _calldata);
 
     }
 }

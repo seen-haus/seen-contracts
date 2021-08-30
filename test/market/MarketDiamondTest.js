@@ -1,7 +1,8 @@
-const { assert } = require('chai');
+const { assert, expect} = require('chai');
 const hre = require("hardhat");
 const ethers = hre.ethers;
 
+const Role = require("../../scripts/domain/Role");
 const Facet = require("../../scripts/domain/Facet");
 const { deployMarketDiamond } = require('../../scripts/util/deploy-market-diamond.js');
 const { getSelectors, FacetCutAction, removeSelectors } = require('../../scripts/util/diamond-utils.js')
@@ -29,6 +30,7 @@ describe('MarketDiamond', async function () {
   const gasLimit = 1600000;
 
   // Common vars
+  let accounts, deployer, admin, upgrader, rando;
   let marketDiamond, diamondLoupe, diamondCut;
   let loupeFacetViaDiamond, cutFacetViaDiamond;
   let Test1Facet, test1Facet, test1ViaDiamond;
@@ -45,6 +47,9 @@ describe('MarketDiamond', async function () {
     // Make accounts available
     accounts = await ethers.getSigners();
     deployer = accounts[0];
+    admin = accounts[1];
+    upgrader = accounts[2];
+    rando = accounts[3];
 
     // Deploy the Diamond
     [marketDiamond, diamondLoupe, diamondCut, accessController] = await deployMarketDiamond();
@@ -57,6 +62,13 @@ describe('MarketDiamond', async function () {
 
     // Get the facet addresses
     addresses = Object.assign([], await loupeFacetViaDiamond.facetAddresses());
+
+    // Deployer grants ADMIN role to admin address and renounces admin
+    await accessController.connect(deployer).grantRole(Role.ADMIN, admin.address);
+    await accessController.connect(deployer).renounceRole(Role.ADMIN, deployer.address);
+
+    // Grant UPGRADER role to upgrader account
+    await accessController.connect(admin).grantRole(Role.UPGRADER, upgrader.address);
 
   });
 
@@ -231,6 +243,38 @@ describe('MarketDiamond', async function () {
 
     context("diamondCut()", async function () {
 
+      context("Privileged Access", async function () {
+
+          it("should require UPGRADER to perform cut actions", async function () {
+
+            // Get the Test1Facet function selectors from the abi
+            selectors = getSelectors(test1Facet);
+
+            // Define the facet cut
+            facetCuts = [{
+              facetAddress: test1Facet.address,
+              action: FacetCutAction.Add,
+              functionSelectors: selectors
+            }];
+
+            // non-UPGRADER attempt
+            await expect(
+                cutFacetViaDiamond.connect(admin).diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit })
+            ).to.be.revertedWith("Caller must have UPGRADER role");
+
+            // UPGRADER attempt
+            tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit })
+
+            // Wait for transaction to confirm
+            receipt = await tx.wait();
+
+            // Be certain transaction was successful
+            assert.equal(receipt.status, 1,`UPGRADER not able to upgrader MarketDiamond`)
+
+          });
+
+      });
+
       context("FacetCutAction.Add", async function () {
 
         it('should add functions from Test1Facet', async () => {
@@ -246,7 +290,7 @@ describe('MarketDiamond', async function () {
           }];
 
           // Send the DiamondCut transaction
-          tx = await cutFacetViaDiamond.diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
+          tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
 
           // Wait for transaction to confirm
           receipt = await tx.wait();
@@ -273,7 +317,7 @@ describe('MarketDiamond', async function () {
           }];
 
           // Send the DiamondCut transaction
-          tx = await cutFacetViaDiamond.diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
+          tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
 
           // Wait for transaction to confirm
           receipt = await tx.wait();
@@ -310,7 +354,7 @@ describe('MarketDiamond', async function () {
           ];
 
           // Send the DiamondCut transaction
-          tx = await cutFacetViaDiamond.diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit })
+          tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit })
 
           // Be certain transaction was successful
           assert.equal(receipt.status, 1,`Diamond upgrade failed: ${tx.hash}`);
@@ -346,7 +390,7 @@ describe('MarketDiamond', async function () {
             ];
 
             // Execute the Diamond cut
-            tx = await cutFacetViaDiamond.diamondCut(facetCuts, test3Facet.address, initCallData, {gasLimit});
+            tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, test3Facet.address, initCallData, {gasLimit});
 
             // Wait for transaction to confirm
             receipt = await tx.wait();
@@ -403,7 +447,7 @@ describe('MarketDiamond', async function () {
           ];
 
           // Send the DiamondCut transaction
-          tx = await cutFacetViaDiamond.diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
+          tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
 
           // Wait for transaction to confirm
           receipt = await tx.wait();
@@ -477,7 +521,7 @@ describe('MarketDiamond', async function () {
           }];
 
           // Send the DiamondCut transaction
-          tx = await cutFacetViaDiamond.diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
+          tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
 
           // Wait for transaction to confirm
           receipt = await tx.wait();
@@ -505,7 +549,7 @@ describe('MarketDiamond', async function () {
           }];
 
           // Send the DiamondCut transaction
-          tx = await cutFacetViaDiamond.diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
+          tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
 
           // Wait for transaction to confirm
           receipt = await tx.wait();
@@ -543,7 +587,7 @@ describe('MarketDiamond', async function () {
           }];
 
           // Send the DiamondCut transaction
-          tx = await cutFacetViaDiamond.diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
+          tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
 
           // Wait for transaction to confirm
           receipt = await tx.wait();
@@ -592,7 +636,7 @@ describe('MarketDiamond', async function () {
           ];
 
           // Send the DiamondCut transaction
-          tx = await cutFacetViaDiamond.diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
+          tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
 
           // Wait for transaction to confirm
           receipt = await tx.wait();
@@ -622,7 +666,7 @@ describe('MarketDiamond', async function () {
           ];
 
           // Send the DiamondCut transaction
-          tx = await cutFacetViaDiamond.diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
+          tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, '0x', { gasLimit });
 
           // Wait for transaction to confirm
           receipt = await tx.wait();

@@ -83,7 +83,7 @@ contract MarketClientProxy is IMarketClientProxy, SeenConstants, Proxy {
      */
     function setImplementation(address _impl)
     external
-    onlyRole(ADMIN)
+    onlyRole(UPGRADER)
     override
     {
         // Get the ProxyStorage struct
@@ -117,7 +117,7 @@ contract MarketClientProxy is IMarketClientProxy, SeenConstants, Proxy {
      */
     function setAccessController(address _accessController)
     external
-    onlyRole(ADMIN)
+    onlyRole(UPGRADER)
     override
     {
         // Get the ProxyStorage struct
@@ -157,7 +157,7 @@ contract MarketClientProxy is IMarketClientProxy, SeenConstants, Proxy {
      */
     function setMarketController(address _marketController)
     external
-    onlyRole(ADMIN)
+    onlyRole(UPGRADER)
     override
     {
         // Get the ProxyStorage struct

@@ -18,7 +18,7 @@ const { deployMarketControllerFacets } = require('../../scripts/util/deploy-mark
 describe("IMarketController", function() {
 
     // Common vars
-    let accounts, deployer, admin, marketHandler, associate, seller, escrowAgent, minter;
+    let accounts, deployer, admin, upgrader, marketHandler, associate, seller, escrowAgent, minter;
     let accessController, marketController, marketDiamond;
     let Foreign721, foreign721;
     let Foreign1155, foreign1155;
@@ -36,14 +36,15 @@ describe("IMarketController", function() {
         accounts = await ethers.getSigners();
         deployer = accounts[0];
         admin = accounts[1];
-        seller = accounts[2];
+        upgrader = accounts[2];
         associate = accounts[3];
         escrowAgent = accounts[4];
         minter = accounts[5]
+        seller = accounts[6];
 
-        staking = accounts[6];        // We just need addresses for these,
-        multisig = accounts[7];       // not functional contracts
-        marketHandler = accounts[8];  // .
+        staking = accounts[7];        // We just need addresses for these,
+        multisig = accounts[8];       // not functional contracts
+        marketHandler = accounts[9];  // .
 
         // Market control values
         vipStakerAmount = "500";              // Amount of xSEEN to be VIP
@@ -76,6 +77,9 @@ describe("IMarketController", function() {
             defaultTicketerType
         ];
 
+        // Temporarily grant UPGRADER role to deployer account
+        await accessController.grantRole(Role.UPGRADER, deployer.address);
+
         // Cut the MarketController facet into the Diamond
         await deployMarketControllerFacets(marketDiamond, marketConfig);
 
@@ -93,9 +97,15 @@ describe("IMarketController", function() {
         await marketController.setLotsTicketer(lotsTicketer.address);
         await marketController.setItemsTicketer(itemsTicketer.address);
 
+        // Renounce temporarily granted UPGRADER role for deployer account
+        await accessController.renounceRole(Role.UPGRADER, deployer.address);
+
         // Deployer grants ADMIN role to admin address and renounces admin
         await accessController.connect(deployer).grantRole(Role.ADMIN, admin.address);
         await accessController.connect(deployer).renounceRole(Role.ADMIN, deployer.address);
+
+        // Grant UPGRADER role to upgrader account
+        await accessController.connect(admin).grantRole(Role.UPGRADER, upgrader.address);
 
         // Grant MARKET_HANDLER to SeenHausNFT
         await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);

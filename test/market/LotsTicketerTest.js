@@ -17,7 +17,7 @@ const { deployMarketControllerFacets } = require('../../scripts/util/deploy-mark
 describe("LotsTicketer", function() {
 
     // Common vars
-    let accounts, deployer, admin, escrowAgent, associate, creator, marketHandler, buyer;
+    let accounts, deployer, admin, upgrader, escrowAgent, associate, creator, marketHandler, buyer;
     let accessController, marketController;
     let seenHausNFT, lotsTicketer, lotsTicketerProxy;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
@@ -31,15 +31,16 @@ describe("LotsTicketer", function() {
         accounts = await ethers.getSigners();
         deployer = accounts[0];
         admin = accounts[1];
-        escrowAgent = accounts[2];
-        creator = accounts[3];
-        associate = accounts[4];
-        escrowAgent = accounts[5]
-        buyer = accounts[6];
+        upgrader = accounts[2];
+        escrowAgent = accounts[3];
+        creator = accounts[4];
+        associate = accounts[5];
+        escrowAgent = accounts[6]
+        buyer = accounts[7];
 
-        staking = accounts[7];        // We just need addresses for these,
-        multisig = accounts[8];       // not functional contracts
-        marketHandler = accounts[9];
+        staking = accounts[8];        // We just need addresses for these,
+        multisig = accounts[9];       // not functional contracts
+        marketHandler = accounts[10];
 
         // Market control values
         vipStakerAmount = "500";              // Amount of xSEEN to be VIP
@@ -62,6 +63,9 @@ describe("LotsTicketer", function() {
             defaultTicketerType
         ];
 
+        // Temporarily grant UPGRADER role to deployer account
+        await accessController.grantRole(Role.UPGRADER, deployer.address);
+
         // Cut the MarketController facet into the Diamond
         await deployMarketControllerFacets(marketDiamond, marketConfig);
 
@@ -80,9 +84,15 @@ describe("LotsTicketer", function() {
         // the MarketController's address in its constructor
         await marketController.setNft(seenHausNFT.address);
 
+        // Renounce temporarily granted UPGRADER role for deployer account
+        await accessController.renounceRole(Role.UPGRADER, deployer.address);
+
         // Deployer grants ADMIN role to admin address and renounces admin
         await accessController.connect(deployer).grantRole(Role.ADMIN, admin.address);
         await accessController.connect(deployer).renounceRole(Role.ADMIN, deployer.address);
+
+        // Grant UPGRADER role to upgrader account
+        await accessController.connect(admin).grantRole(Role.UPGRADER, upgrader.address);
 
         // Grant MARKET_HANDLER to SeenHausNFT and LotsTicketer
         await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
@@ -166,9 +176,9 @@ describe("LotsTicketer", function() {
                 // used by the implementation contract. This is because all the market client contracts need these
                 // references, but adding the storage and accessors to them pushes their size toward the upper limit.
 
-                it("setImplementation() should require ADMIN to set the implementation address", async function () {
+                it("setImplementation() should require UPGRADER to set the implementation address", async function () {
 
-                    // non-ADMIN attempt
+                    // non-UPGRADER attempt
                     await expect(
                         lotsTicketerProxy.connect(associate).setImplementation(replacementAddress)
                     ).to.be.revertedWith("Access denied, caller doesn't have role");
@@ -179,11 +189,11 @@ describe("LotsTicketer", function() {
                     // Test
                     expect(
                         address !== replacementAddress,
-                        "non-ADMIN can set implementation address"
+                        "non-UPGRADER can set implementation address"
                     ).is.true;
 
-                    // ADMIN attempt
-                    await lotsTicketerProxy.connect(admin).setImplementation(replacementAddress);
+                    // UPGRADER attempt
+                    await lotsTicketerProxy.connect(upgrader).setImplementation(replacementAddress);
 
                     // Get address
                     address = await lotsTicketerProxy.getImplementation();
@@ -191,12 +201,12 @@ describe("LotsTicketer", function() {
                     // Test
                     expect(
                         address === replacementAddress,
-                        "ADMIN can't set implementation address"
+                        "UPGRADER can't set implementation address"
                     ).is.true;
 
                 });
 
-                it("setAccessController() should require ADMIN to set the accessController address", async function () {
+                it("setAccessController() should require UPGRADER to set the accessController address", async function () {
 
                     // non-ADMIN attempt
                     await expect(
@@ -209,11 +219,11 @@ describe("LotsTicketer", function() {
                     // Test
                     expect(
                         address !== replacementAddress,
-                        "non-ADMIN can set accessController address"
+                        "non-UPGRADER can set accessController address"
                     ).is.true;
 
-                    // ADMIN attempt
-                    await lotsTicketerProxy.connect(admin).setAccessController(replacementAddress);
+                    // UPGRADER attempt
+                    await lotsTicketerProxy.connect(upgrader).setAccessController(replacementAddress);
 
                     // Get address
                     address = await lotsTicketerProxy.getAccessController();
@@ -221,17 +231,14 @@ describe("LotsTicketer", function() {
                     // Test
                     expect(
                         address === replacementAddress,
-                        "ADMIN can't set accessController address"
+                        "UPGRADER can't set accessController address"
                     ).is.true;
 
                 });
 
-                it("setMarketController() should require ADMIN to set the marketController address", async function () {
+                it("setMarketController() should require UPGRADER to set the marketController address", async function () {
 
-                    // N.B. There is no separate test suite for MarketClientBase.sol, which is an abstract contract.
-                    //      Functionality not covered elsewhere will be tested here in the SeenHausNFT test suite.
-
-                    // non-ADMIN attempt
+                    // non-UPGRADER attempt
                     await expect(
                         lotsTicketerProxy.connect(associate).setMarketController(replacementAddress)
                     ).to.be.revertedWith("Access denied, caller doesn't have role");
@@ -242,11 +249,11 @@ describe("LotsTicketer", function() {
                     // Test
                     expect(
                         address !== replacementAddress,
-                        "non-ADMIN can set marketController address"
+                        "non-UPGRADER can set marketController address"
                     ).is.true;
 
-                    // ADMIN attempt
-                    await lotsTicketerProxy.connect(admin).setMarketController(replacementAddress);
+                    // UPGRADER attempt
+                    await lotsTicketerProxy.connect(upgrader).setMarketController(replacementAddress);
 
                     // Get address
                     address = await lotsTicketerProxy.getMarketController();
@@ -254,7 +261,7 @@ describe("LotsTicketer", function() {
                     // Test
                     expect(
                         address === replacementAddress,
-                        "ADMIN can't set marketController address"
+                        "UPGRADER can't set marketController address"
                     ).is.true;
 
                 });

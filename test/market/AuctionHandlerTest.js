@@ -24,7 +24,7 @@ const { deployMarketClients } = require("../../scripts/util/deploy-market-client
 describe("AuctionHandler", function() {
 
     // Common vars
-    let accounts, deployer, admin, creator, associate, seller, minter, bidder, rival, escrowAgent;
+    let accounts, deployer, admin, upgrader, creator, associate, seller, minter, bidder, rival, escrowAgent;
     let accessController;
     let marketController;
     let auctionHandler;
@@ -50,15 +50,16 @@ describe("AuctionHandler", function() {
         accounts = await ethers.getSigners();
         deployer = accounts[0];
         admin = accounts[1];
-        seller = accounts[2];
+        upgrader = accounts[2];
         creator = accounts[3]
         minter = accounts[4];
         associate = accounts[5];
         bidder = accounts[6];
         rival = accounts[7];
         escrowAgent = accounts[8];
+        seller = accounts[9];
 
-        multisig = accounts[9];         // We just need addresses for these, not functional contracts
+        multisig = accounts[10];         // We just need addresses for these, not functional contracts
 
         // Market control values
         vipStakerAmount = "500";              // Amount of xSEEN to be VIP
@@ -96,6 +97,9 @@ describe("AuctionHandler", function() {
             defaultTicketerType
         ];
 
+        // Temporarily grant UPGRADER role to deployer account
+        await accessController.grantRole(Role.UPGRADER, deployer.address);
+
         // Cut the MarketController facet into the Diamond
         await deployMarketControllerFacets(marketDiamond, marketConfig);
 
@@ -118,6 +122,9 @@ describe("AuctionHandler", function() {
         await marketController.setNft(seenHausNFT.address);
         await marketController.setLotsTicketer(lotsTicketer.address);
         await marketController.setItemsTicketer(itemsTicketer.address);
+
+        // Renounce temporarily granted UPGRADER role for deployer account
+        await accessController.renounceRole(Role.UPGRADER, deployer.address);
 
         // Deployer grants ADMIN role to admin address and renounces admin
         await accessController.connect(deployer).grantRole(Role.ADMIN, admin.address);

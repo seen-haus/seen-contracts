@@ -19,5 +19,6 @@ contract SeenConstants {
     bytes32 internal constant MINTER = keccak256("MINTER");                 // Approved artists and Seen.Haus reps
     bytes32 internal constant ESCROW_AGENT = keccak256("ESCROW_AGENT");     // Seen.Haus Physical Item Escrow Agent
     bytes32 internal constant MARKET_HANDLER = keccak256("MARKET_HANDLER"); // Market Handler contracts
+    bytes32 internal constant UPGRADER = keccak256("UPGRADER");             // Performs contract upgrades
 
 }

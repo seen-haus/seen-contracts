@@ -26,7 +26,6 @@ library JewelerLib {
 
     bytes32 internal constant CLEAR_ADDRESS_MASK = bytes32(uint256(0xffffffffffffffffffffffff));
     bytes32 internal constant CLEAR_SELECTOR_MASK = bytes32(uint256(0xffffffff << 224));
-    bytes32 internal constant ADMIN = keccak256("ADMIN");
 
     /**
      * @notice Cut facets of the Diamond
@@ -34,11 +33,6 @@ library JewelerLib {
      * Add/replace/remove any number of function selectors
      *
      * If populated, _calldata is executed with delegatecall on _init
-     *
-     * N.B. This is an internal function version of diamondCut. The code is almost
-     * the same as that of DiamondCutFacet, except it uses 'Facet[] memory _facetCuts'
-     * instead of 'Facet[] calldata _facetCuts'. The code is duplicated to prevent
-     * copying _calldata to memory which causes an error for a two dimensional array.
      *
      * @param _facetCuts Contains the facet addresses and function selectors
      * @param _init The address of the contract or facet to execute _calldata
@@ -52,9 +46,6 @@ library JewelerLib {
 
         // Get the diamond storage slot
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
-
-        // Ensure the caller has the ADMIN role
-        require(ds.accessController.hasRole(ADMIN, msg.sender), "Caller must have ADMIN role");
 
         // Determine how many existing selectors we have
         uint256 originalSelectorCount = ds.selectorCount;
@@ -110,9 +101,7 @@ library JewelerLib {
      * It hails from the diamond-2 reference and works
      * under test.
      *
-     * I've added comments to try and reason about it,
-     * Still, "magic happens here" moments need illumination.
-     *
+     * I've added comments to try and reason about it
      * - CLH
      *
      * @param _selectorCount - the current selectorCount
