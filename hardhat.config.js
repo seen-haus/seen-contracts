@@ -15,7 +15,6 @@ module.exports = {
         blockNumber: environments.rinkeby.forkBlock
       }
       */
-      gas: environments.gasLimit
     },
     rinkeby: {
       url: environments.rinkeby.txNode,
