@@ -1,9 +1,9 @@
 # Seen Haus Contracts
 ## Status
-  - Initial contract suite is written, and thoroughly documented internally.
-  - A few diagrams below show the high-level view of contract responsibilities and collaborations.
-  - Old contracts that won't be changed or reused are kept in contracts_legacy folder for reference.
-  - Currently, creating more diagrams and unit tests.
+  - Ready for audit
+  - Contracts are proxied and upgradable
+  - 400+ unit tests with 99% code coverage
+  - Deployment scripts with automatic Etherscan verification of each contract
 
 ## Overview
 ![overview](docs/images/SeenHausContractsOverview.png)
@@ -37,12 +37,10 @@ npm install
 ### Configure Environment
 Create a file called `environments.js` with 
 - The following info for each Ethereum network environment.
-  * `forkNode`: the url endpoint for forking the ethereum network
-  * `forkBlock`: the block to fork the network ethereum from
   * `txNode`: the endpoint for sending ethereum transactions
   * `mnemonic`: a valid ethereum HD wallet seed phrase
 
-- The following info for interacting with Etherscan and Coinmarketcap:
+- The following info for verifying code on Etherscan and running the gas reporter
   * `etherscan.apiKey`: your etherscan API key
   * `coinmarketcap.apiKey`: your coinmarketcap API key
 
@@ -57,9 +55,12 @@ module.exports = {
   },
 
   "rinkeby": {
-        "forkNode": "https://eth-rinkeby.alchemyapi.io/v2/<YOUR_ALCHEMY_API_KEY>",
-        "forkBlock": 7507432,
         "txNode": "https://rinkeby.infura.io/v3/<YOUR_INFURA_API_KEY>",
+        "mnemonic": "<YOUR_UNIQUE_TWELVE_WORD_WALLET_SEED_PHRASE>"
+  },
+
+  "mainnet": {
+        "txNode": "https://mainnet.infura.io/v3/<YOUR_INFURA_API_KEY>",
         "mnemonic": "<YOUR_UNIQUE_TWELVE_WORD_WALLET_SEED_PHRASE>"
     }
 
@@ -83,13 +84,22 @@ This deploys the built contracts to local network (mainly to test deployment scr
 
 ```npm run deploy:local```
 
-
 ### Deploy to Rinkeby
 This deploys the built contracts to Rinkeby
 
-```npm run deploy:rinkeby```
+```npm run deploy-suite:rinkeby```
 
 ### Deploy to Mainnet
 This deploys the built contracts to Mainnet
 
-```npm run deploy:mainnet```
+```npm run deploy-suite:mainnet```
+
+### Manage Roles on Rinkeby
+This runs the `scripts/manage-roles.js` script.
+
+```npm run manage-roles:rinkeby```
+
+### Manage Roles on Mainnet
+This runs the `scripts/manage-roles.js` script against mainnet.
+
+```npm run manage-roles:mainnet```
