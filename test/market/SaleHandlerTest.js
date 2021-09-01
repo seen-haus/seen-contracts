@@ -1392,81 +1392,170 @@ describe("SaleHandler", function() {
 
             context("Secondary Market", async function () {
 
-                beforeEach(async function () {
+                context("Foriegn ERC-721", async function () {
 
-                    // Get the next consignment id
-                    consignmentId = await marketController.getNextConsignment();
+                    beforeEach(async function () {
 
-                    // Token is on a foreign contract
-                    tokenAddress = foreign1155.address;
+                        // Creator transfers all their tokens to seller
+                        await foreign721.connect(creator).transferFrom(creator.address, seller.address, tokenId);
 
-                    // Creator transfers all their tokens to seller
-                    await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
+                        // Get the next consignment id
+                        consignmentId = await marketController.getNextConsignment();
 
-                    // SELLER creates secondary market sale
-                    saleHandler.connect(seller).createSecondarySale(
-                        seller.address,
-                        tokenAddress,
-                        tokenId,
-                        start,
-                        quantity,
-                        price,
-                        perTxCap,
-                        audience
-                    )
+                        // Token is on a foreign contract
+                        tokenAddress = foreign721.address;
 
-                    // Wait until sale starts and bid
-                    await time.increaseTo(start);
-                    await saleHandler.connect(buyer).buy(consignmentId, supply, {value: buyOutPrice});
+                        // Supply of one for 721
+                        supply = "1";
 
-                    // Calculate the expected distribution of funds
-                    grossSale = ethers.BigNumber.from(buyOutPrice);
-                    royaltyAmount = grossSale.mul(royaltyPercentage).div("10000");
-                    netAfterRoyalties = grossSale.sub(royaltyAmount);
-                    feeAmount = netAfterRoyalties.mul(feePercentage).div("10000");
-                    multisigAmount = feeAmount.div("2");
-                    stakingAmount = feeAmount.div("2");
-                    sellerAmount = netAfterRoyalties.sub(feeAmount);
+                        // SELLER creates secondary market sale
+                        saleHandler.connect(seller).createSecondarySale(
+                            seller.address,
+                            tokenAddress,
+                            tokenId,
+                            start,
+                            supply,
+                            price,
+                            perTxCap,
+                            audience
+                        )
+
+                        // Wait until sale starts and bid
+                        await time.increaseTo(start);
+                        await saleHandler.connect(buyer).buy(consignmentId, supply, {value: price});
+
+                        // Calculate the expected distribution of funds
+                        grossSale = ethers.BigNumber.from(price);
+                        royaltyAmount = grossSale.mul(royaltyPercentage).div("10000");
+                        netAfterRoyalties = grossSale.sub(royaltyAmount);
+                        feeAmount = netAfterRoyalties.mul(feePercentage).div("10000");
+                        multisigAmount = feeAmount.div("2");
+                        stakingAmount = feeAmount.div("2");
+                        sellerAmount = netAfterRoyalties.sub(feeAmount);
+
+                    });
+
+                    it("creator should receive royalty based on gross sale amount", async function () {
+
+                        // Seller closes sale
+                        await expect(
+                            saleHandler.connect(seller).closeSale(consignmentId)
+                        ).to.emit(saleHandler, "RoyaltyDisbursed")
+                            .withArgs(consignmentId, creator.address, royaltyAmount);
+
+                    });
+
+                    it("multisig contract should be sent half the marketplace fee based on net after royalty", async function () {
+
+                        // Seller closes sale
+                        await expect(
+                            saleHandler.connect(seller).closeSale(consignmentId)
+                        ).to.emit(saleHandler, "FeeDisbursed")
+                            .withArgs(consignmentId, multisig.address, multisigAmount);
+
+                    });
+
+                    it("staking contract should be sent half the marketplace fee based on net after royalty", async function () {
+
+                        // Seller closes sale
+                        await expect(
+                            saleHandler.connect(seller).closeSale(consignmentId)
+                        ).to.emit(saleHandler, "FeeDisbursed")
+                            .withArgs(consignmentId, seenStaking.address, stakingAmount);
+
+                    });
+
+                    it("seller should be sent remainder after royalty and fee", async function () {
+
+                        // Seller closes sale
+                        await expect(
+                            saleHandler.connect(seller).closeSale(consignmentId)
+                        ).to.emit(saleHandler, "PayoutDisbursed")
+                            .withArgs(consignmentId, seller.address, sellerAmount);
+
+                    });
 
                 });
 
-                it("creator should receive royalty based on gross sale amount", async function () {
+                context("Foriegn ERC-1155", async function () {
 
-                    // Seller closes sale
-                    await expect(
-                        saleHandler.connect(seller).closeSale(consignmentId)
-                    ).to.emit(saleHandler, "RoyaltyDisbursed")
-                        .withArgs(consignmentId, creator.address, royaltyAmount);
+                    beforeEach(async function () {
 
-                });
+                        // Get the next consignment id
+                        consignmentId = await marketController.getNextConsignment();
 
-                it("multisig contract should be sent half the marketplace fee based on net after royalty", async function () {
+                        // Token is on a foreign contract
+                        tokenAddress = foreign1155.address;
 
-                    // Seller closes sale
-                    await expect(
-                        saleHandler.connect(seller).closeSale(consignmentId)
-                    ).to.emit(saleHandler, "FeeDisbursed")
-                        .withArgs(consignmentId, multisig.address, multisigAmount);
+                        // Creator transfers all their tokens to seller
+                        await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
 
-                });
+                        // SELLER creates secondary market sale
+                        saleHandler.connect(seller).createSecondarySale(
+                            seller.address,
+                            tokenAddress,
+                            tokenId,
+                            start,
+                            quantity,
+                            price,
+                            perTxCap,
+                            audience
+                        )
 
-                it("staking contract should be sent half the marketplace fee based on net after royalty", async function () {
+                        // Wait until sale starts and bid
+                        await time.increaseTo(start);
+                        await saleHandler.connect(buyer).buy(consignmentId, supply, {value: buyOutPrice});
 
-                    // Seller closes sale
-                    await expect(
-                        saleHandler.connect(seller).closeSale(consignmentId)
-                    ).to.emit(saleHandler, "FeeDisbursed")
-                        .withArgs(consignmentId, seenStaking.address, stakingAmount);
+                        // Calculate the expected distribution of funds
+                        grossSale = ethers.BigNumber.from(buyOutPrice);
+                        royaltyAmount = grossSale.mul(royaltyPercentage).div("10000");
+                        netAfterRoyalties = grossSale.sub(royaltyAmount);
+                        feeAmount = netAfterRoyalties.mul(feePercentage).div("10000");
+                        multisigAmount = feeAmount.div("2");
+                        stakingAmount = feeAmount.div("2");
+                        sellerAmount = netAfterRoyalties.sub(feeAmount);
 
-                });
+                    });
 
-                it("seller should be sent remainder after royalty and fee", async function () {
+                    it("creator should receive royalty based on gross sale amount", async function () {
 
-                    // Seller closes sale
-                    await expect(
-                        saleHandler.connect(seller).closeSale(consignmentId)
-                    ).to.emit(saleHandler, "PayoutDisbursed")
-                        .withArgs(consignmentId, seller.address, sellerAmount);
+                        // Seller closes sale
+                        await expect(
+                            saleHandler.connect(seller).closeSale(consignmentId)
+                        ).to.emit(saleHandler, "RoyaltyDisbursed")
+                            .withArgs(consignmentId, creator.address, royaltyAmount);
+
+                    });
+
+                    it("multisig contract should be sent half the marketplace fee based on net after royalty", async function () {
+
+                        // Seller closes sale
+                        await expect(
+                            saleHandler.connect(seller).closeSale(consignmentId)
+                        ).to.emit(saleHandler, "FeeDisbursed")
+                            .withArgs(consignmentId, multisig.address, multisigAmount);
+
+                    });
+
+                    it("staking contract should be sent half the marketplace fee based on net after royalty", async function () {
+
+                        // Seller closes sale
+                        await expect(
+                            saleHandler.connect(seller).closeSale(consignmentId)
+                        ).to.emit(saleHandler, "FeeDisbursed")
+                            .withArgs(consignmentId, seenStaking.address, stakingAmount);
+
+                    });
+
+                    it("seller should be sent remainder after royalty and fee", async function () {
+
+                        // Seller closes sale
+                        await expect(
+                            saleHandler.connect(seller).closeSale(consignmentId)
+                        ).to.emit(saleHandler, "PayoutDisbursed")
+                            .withArgs(consignmentId, seller.address, sellerAmount);
+
+                    });
 
                 });
 

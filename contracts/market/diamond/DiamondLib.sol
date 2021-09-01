@@ -90,18 +90,4 @@ library DiamondLib {
         return ds.supportedInterfaces[_interfaceId] || false;
     }
 
-    /**
-     * @notice Remove a supported interface from the Diamond
-     *
-     * @param _interfaceId - the interface to remove
-     */
-    function removeSupportedInterface(bytes4 _interfaceId) internal {
-
-        // Get the DiamondStorage struct
-        DiamondStorage storage ds = diamondStorage();
-
-        // Remove interface supported flag
-        delete ds.supportedInterfaces[_interfaceId];
-    }
-
 }

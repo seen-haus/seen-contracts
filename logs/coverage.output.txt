@@ -1,5 +1,7 @@
-
-  392 passing (11m)
+.
+.
+.
+  401 passing (10m)
 
 ---------------------------|----------|----------|----------|----------|----------------|
 File                       |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
@@ -42,9 +44,9 @@ File                       |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovere
  market/controller/facets/ |      100 |    73.68 |      100 |      100 |                |
   MarketClerkFacet.sol     |      100 |    65.38 |      100 |      100 |                |
   MarketConfigFacet.sol    |      100 |    91.67 |      100 |      100 |                |
- market/diamond/           |    95.83 |    67.86 |    90.91 |    95.19 |                |
-  DiamondLib.sol           |    83.33 |      100 |       75 |       75 |        101,104 |
-  JewelerLib.sol           |    96.25 |    69.23 |      100 |    96.47 |    293,295,297 |
+ market/diamond/           |      100 |    73.21 |      100 |      100 |                |
+  DiamondLib.sol           |      100 |      100 |      100 |      100 |                |
+  JewelerLib.sol           |      100 |       75 |      100 |      100 |                |
   MarketDiamond.sol        |      100 |       50 |      100 |      100 |                |
  market/diamond/facets/    |      100 |       95 |      100 |      100 |                |
   DiamondCutFacet.sol      |      100 |      100 |      100 |      100 |                |
@@ -57,18 +59,22 @@ File                       |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovere
   AuctionRunnerFacet.sol   |      100 |    92.86 |      100 |      100 |                |
   SaleBuilderFacet.sol     |      100 |       80 |      100 |      100 |                |
   SaleRunnerFacet.sol      |      100 |    88.24 |      100 |      100 |                |
- mock/                     |    94.12 |       50 |    98.11 |    86.21 |                |
+ mock/                     |      100 |    83.33 |      100 |      100 |                |
   Foreign1155.sol          |      100 |      100 |      100 |      100 |                |
-  Foreign721.sol           |    42.86 |      100 |       50 |    42.86 |    37,38,39,40 |
+  Foreign721.sol           |      100 |      100 |      100 |      100 |                |
   SeenStaking.sol          |      100 |      100 |      100 |      100 |                |
   Test1Facet.sol           |      100 |      100 |      100 |      100 |                |
   Test2Facet.sol           |      100 |      100 |      100 |      100 |                |
   Test2FacetUpgrade.sol    |      100 |      100 |      100 |      100 |                |
-  Test3Facet.sol           |      100 |       50 |      100 |      100 |                |
+  Test3Facet.sol           |      100 |    83.33 |      100 |      100 |                |
   TestFacetLib.sol         |      100 |      100 |      100 |      100 |                |
- util/                     |    83.33 |      100 |    84.21 |    84.21 |                |
-  InterfaceInfo.sol        |    82.35 |      100 |    82.35 |    82.35 |      54,60,132 |
+ util/                     |      100 |      100 |      100 |      100 |                |
+  InterfaceInfo.sol        |      100 |      100 |      100 |      100 |                |
   StringUtils.sol          |      100 |      100 |      100 |      100 |                |
 ---------------------------|----------|----------|----------|----------|----------------|
-All files                  |    98.11 |    82.01 |    96.12 |    97.86 |                |
+All files                  |     99.6 |    83.33 |    98.54 |    99.47 |                |
 ---------------------------|----------|----------|----------|----------|----------------|
+
+> Istanbul reports written to ./coverage/ and ./coverage.json
+
+Process finished with exit code 0

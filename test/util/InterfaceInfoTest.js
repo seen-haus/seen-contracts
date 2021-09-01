@@ -46,6 +46,22 @@ describe("InterfaceInfo", function() {
 
         });
 
+        it("getIDiamondCut() should return expected id", async function () {
+
+            const expected = InterfaceIds.IDiamondCut;
+            const actual = await interfaceInfo.getIDiamondCut();
+            assert.equal(actual, expected);
+
+        });
+
+        it("getIDiamondLoupe() should return expected id", async function () {
+
+            const expected = InterfaceIds.IDiamondLoupe;
+            const actual = await interfaceInfo.getIDiamondLoupe();
+            assert.equal(actual, expected);
+
+        });
+
         it("getIEscrowTicketer() should return expected id", async function () {
 
             const expected = InterfaceIds.IEscrowTicketer;
@@ -130,6 +146,14 @@ describe("InterfaceInfo", function() {
 
             const expected = InterfaceIds.IERC721Receiver;
             const actual = await interfaceInfo.getIERC721Receiver();
+            assert.equal(actual, expected);
+
+        });
+
+        it("getIERC72981() should return expected id", async function () {
+
+            const expected = InterfaceIds.IERC2981;
+            const actual = await interfaceInfo.getIERC2981();
             assert.equal(actual, expected);
 
         });

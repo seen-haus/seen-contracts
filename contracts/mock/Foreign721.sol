@@ -52,4 +52,29 @@ contract Foreign721 is IERC2981, ERC721Upgradeable {
         _mint(_creator, _tokenId);
     }
 
+    /**
+     * @notice Implementation of the {IERC165} interface.
+     *
+     * N.B. This method is inherited from several parents and
+     * the compiler cannot decide which to use. Thus, they must
+     * be overridden here.
+     *
+     * if you just call super.supportsInterface, it chooses
+     * 'the most derived contract'. But that's not good for this
+     * particular function because you may inherit from several
+     * IERC165 contracts, and all concrete ones need to be allowed
+     * to respond.
+     */
+    function supportsInterface(bytes4 interfaceId)
+    public
+    view
+    override(IERC165Upgradeable, ERC721Upgradeable)
+    returns (bool)
+    {
+        return (
+            interfaceId == type(IERC2981).interfaceId ||
+            super.supportsInterface(interfaceId)
+        );
+    }
+
 }

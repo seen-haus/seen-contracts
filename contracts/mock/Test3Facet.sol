@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { TestFacetLib } from "./TestFacetLib.sol";
 
 /**
@@ -21,6 +22,12 @@ contract Test3Facet {
     }
 
     function initialize(address _testAddress) public onlyUnInitialized {
+        // for testing revert with reason
+        require(!AddressUpgradeable.isContract(_testAddress), "Address cannot be a contract");
+
+        // For testing no reason reverts
+        require(_testAddress != address(msg.sender));
+
         TestFacetLib.TestFacetStorage storage tfs = TestFacetLib.testFacetStorage();
         tfs.testAddress = _testAddress;
     }

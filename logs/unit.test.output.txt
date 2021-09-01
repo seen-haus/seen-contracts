@@ -1,56 +1,59 @@
 
+> seen-contracts@0.1.0 test
+> npx hardhat test
+
 
   AccessController
     Deployer is limited to initial ADMIN role
-      ✓ Deployer should have ADMIN role (23ms)
-      ✓ Deployer should not have SELLER role (9ms)
+      ✓ Deployer should have ADMIN role (18ms)
+      ✓ Deployer should not have SELLER role (8ms)
       ✓ Deployer should not have MINTER role (6ms)
-      ✓ Deployer should not have ESCROW_AGENT role (10ms)
+      ✓ Deployer should not have ESCROW_AGENT role (5ms)
       ✓ Deployer should not have MARKET_HANDLER role (6ms)
     ADMIN role is role admin for all other roles
-      ✓ ADMIN role should be ADMIN role admin (10ms)
-      ✓ ADMIN role should be SELLER role admin (10ms)
+      ✓ ADMIN role should be ADMIN role admin (5ms)
+      ✓ ADMIN role should be SELLER role admin (6ms)
       ✓ ADMIN role should be MINTER role admin (6ms)
-      ✓ ADMIN role should be ESCROW_AGENT role admin (7ms)
-      ✓ ADMIN role should be MARKET_HANDLER role admin (6ms)
+      ✓ ADMIN role should be ESCROW_AGENT role admin (6ms)
+      ✓ ADMIN role should be MARKET_HANDLER role admin (5ms)
     Any ADMIN can grant all other roles
-      ✓ ADMIN role should be able to grant ADMIN role (23ms)
-      ✓ ADMIN role should be able to grant SELLER role (24ms)
-      ✓ ADMIN role should be able to grant MINTER role (22ms)
+      ✓ ADMIN role should be able to grant ADMIN role (24ms)
+      ✓ ADMIN role should be able to grant SELLER role (19ms)
+      ✓ ADMIN role should be able to grant MINTER role (28ms)
       ✓ ADMIN role should be able to grant ESCROW_AGENT role (20ms)
-      ✓ ADMIN role should be able to grant MARKET_HANDLER role (18ms)
+      ✓ ADMIN role should be able to grant MARKET_HANDLER role (19ms)
     Any ADMIN can revoke all other roles
-      ✓ ADMIN role should be able to revoke ADMIN role (28ms)
-      ✓ ADMIN role should be able to revoke SELLER role (22ms)
-      ✓ ADMIN role should be able to revoke MINTER role (19ms)
-      ✓ ADMIN role should be able to revoke ESCROW_AGENT role (19ms)
-      ✓ ADMIN role should be able to revoke MARKET_HANDLER role (22ms)
+      ✓ ADMIN role should be able to revoke ADMIN role (21ms)
+      ✓ ADMIN role should be able to revoke SELLER role (21ms)
+      ✓ ADMIN role should be able to revoke MINTER role (21ms)
+      ✓ ADMIN role should be able to revoke ESCROW_AGENT role (20ms)
+      ✓ ADMIN role should be able to revoke MARKET_HANDLER role (20ms)
     Any roled address can renounce its roles
-      ✓ ADMIN role should be able to renounce ADMIN role (22ms)
-      ✓ SELLER role should be able to renounce SELLER role (16ms)
-      ✓ MINTER role should be able to renounce MINTER role (18ms)
-      ✓ ESCROW_AGENT role should be able to renounce ESCROW_AGENT role (16ms)
-      ✓ MARKET_HANDLER role should be able to renounce MARKET_HANDLER role (19ms)
+      ✓ ADMIN role should be able to renounce ADMIN role (101ms)
+      ✓ SELLER role should be able to renounce SELLER role (19ms)
+      ✓ MINTER role should be able to renounce MINTER role (21ms)
+      ✓ ESCROW_AGENT role should be able to renounce ESCROW_AGENT role (19ms)
+      ✓ MARKET_HANDLER role should be able to renounce MARKET_HANDLER role (18ms)
     Any address can have multiple roles
-      ✓ ADMIN role should be able to grant multiple roles to same address (99ms)
+      ✓ ADMIN role should be able to grant multiple roles to same address (103ms)
 
   Auction
     Constructor
       ✓ Should allow creation of valid, minimal Auction instance (1ms)
-      ✓ Should allow creation of valid, fully populated Auction instance (2ms)
+      ✓ Should allow creation of valid, fully populated Auction instance (4ms)
     Field validations
-      ✓ If present, buyer must be a string representation of an EIP-55 compliant address (12ms)
-      ✓ Always present, consignmentId must be the string representation of a BigNumber (3ms)
+      ✓ If present, buyer must be a string representation of an EIP-55 compliant address (7ms)
+      ✓ Always present, consignmentId must be the string representation of a BigNumber (1ms)
       ✓ Always present, start must be the string representation of a positive BigNumber (1ms)
       ✓ Always present, duration must be the string representation of a positive BigNumber (0ms)
-      ✓ Always present, reserve must be the string representation of a positive BigNumber (2ms)
+      ✓ Always present, reserve must be the string representation of a positive BigNumber (1ms)
       ✓ If present, bid must be the string representation of a positive BigNumber (2ms)
-      ✓ Always present, clock must be equal to a Clock enum value (2ms)
-      ✓ Always present, state must be equal to a State enum value (1ms)
-      ✓ Always present, outcome must be equal to a Outcome enum value (13ms)
+      ✓ Always present, clock must be equal to a Clock enum value (1ms)
+      ✓ Always present, state must be equal to a State enum value (0ms)
+      ✓ Always present, outcome must be equal to a Outcome enum value (3ms)
     Utility functions
       ✓ Auction.fromObject() should return a Auction instance with the same values as the given plain object (1ms)
-      ✓ instance.toString() should return a JSON string representation of the Auction instance (1ms)
+      ✓ instance.toString() should return a JSON string representation of the Auction instance (0ms)
       ✓ instance.clone() should return another Auction instance with the same property values (1ms)
       ✓ instance.toObject() should return a plain object representation of the Auction instance (0ms)
 
@@ -60,696 +63,714 @@
     Field validations
       ✓ Always present, market must be equal to a Market enum value (1ms)
       ✓ Always present, seller  must be a string representation of an EIP-55 compliant address (1ms)
-      ✓ Always present, tokenAddress  must be a string representation of an EIP-55 compliant address (2ms)
-      ✓ Always present, tokenId must be the string representation of a BigNumber (2ms)
-      ✓ Always present, supply must be the string representation of a positive BigNumber (1ms)
+      ✓ Always present, tokenAddress  must be a string representation of an EIP-55 compliant address (0ms)
+      ✓ Always present, tokenId must be the string representation of a BigNumber (1ms)
+      ✓ Always present, supply must be the string representation of a positive BigNumber (2ms)
       ✓ Always present, id must be the string representation of a BigNumber (1ms)
-      ✓ Always present, multiToken must be a boolean (1ms)
-      ✓ Always present, marketed must be a boolean (1ms)
+      ✓ Always present, multiToken must be a boolean (0ms)
+      ✓ Always present, marketed must be a boolean (0ms)
       ✓ Always present, released must be a boolean (1ms)
     Utility functions
-      ✓ Consignment.fromObject() should return a Consignment instance with the same values as the given plain object (1ms)
+      ✓ Consignment.fromObject() should return a Consignment instance with the same values as the given plain object (0ms)
       ✓ instance.toString() should return a JSON string representation of the Consignment instance (0ms)
-      ✓ instance.clone() should return another Consignment instance with the same property values (1ms)
-      ✓ instance.toObject() should return a plain object representation of the Consignment instance (1ms)
+      ✓ instance.clone() should return another Consignment instance with the same property values (0ms)
+      ✓ instance.toObject() should return a plain object representation of the Consignment instance (0ms)
 
   EscrowTicket
     Constructor
-      ✓ Should allow creation of valid, fully populated EscrowTicket instance (1ms)
+      ✓ Should allow creation of valid, fully populated EscrowTicket instance (0ms)
     Field validations
       ✓ Always present, id must be the string representation of a BigNumber (1ms)
-      ✓ Always present, consignmentId must be the string representation of a BigNumber (0ms)
+      ✓ Always present, consignmentId must be the string representation of a BigNumber (1ms)
       ✓ Always present, amount must be the string representation of a positive BigNumber (0ms)
       ✓ Always present, itemURI must be a non-empty string (0ms)
     Utility functions
-      ✓ EscrowTicket.fromObject() should return a EscrowTicket instance with the same values as the given plain object (0ms)
-      ✓ instance.toString() should return a JSON string representation of the EscrowTicket instance (0ms)
+      ✓ EscrowTicket.fromObject() should return a EscrowTicket instance with the same values as the given plain object (1ms)
+      ✓ instance.toString() should return a JSON string representation of the EscrowTicket instance (1ms)
       ✓ instance.clone() should return another EscrowTicket instance with the same property values (0ms)
-      ✓ instance.toObject() should return a plain object representation of the EscrowTicket instance (1ms)
+      ✓ instance.toObject() should return a plain object representation of the EscrowTicket instance (0ms)
 
   Facet
     Constructor
       ✓ Should allow creation of valid, fully populated Facet instance (1ms)
     Field validations
-      ✓ Always present, facetAddress must be a valid EIP-55 address (2ms)
-      ✓ Always present, functionSelectors must be an array of strings representing a bytes4 BigNumber (2ms)
+      ✓ Always present, facetAddress must be a valid EIP-55 address (1ms)
+      ✓ Always present, functionSelectors must be an array of strings representing a bytes4 BigNumber (1ms)
     Utility functions
       ✓ Facet.fromObject() should return a Facet instance with the same values as the given plain object (0ms)
-      ✓ instance.toString() should return a JSON string representation of the Facet instance (1ms)
-      ✓ instance.clone() should return another Facet instance with the same property values (1ms)
+      ✓ instance.toString() should return a JSON string representation of the Facet instance (0ms)
+      ✓ instance.clone() should return another Facet instance with the same property values (0ms)
       ✓ instance.toObject() should return a plain object representation of the Facet instance (0ms)
 
   Sale
     Constructor
-      ✓ Should allow creation of valid, minimal Sale instance (1ms)
+      ✓ Should allow creation of valid, minimal Sale instance (0ms)
       ✓ Should allow creation of valid, fully populated Sale instance (1ms)
     Field validations
-      ✓ Always present, consignmentId must be the string representation of a BigNumber (1ms)
+      ✓ Always present, consignmentId must be the string representation of a BigNumber (0ms)
       ✓ Always present, start must be the string representation of a positive BigNumber (1ms)
-      ✓ Always present, price must be the string representation of a positive BigNumber (1ms)
+      ✓ Always present, price must be the string representation of a positive BigNumber (0ms)
       ✓ If present, perTxCap must be the string representation of a positive BigNumber (1ms)
       ✓ Always present, state must be equal to a State enum value (0ms)
-      ✓ Always present, outcome must be equal to a Outcome enum value (0ms)
+      ✓ Always present, outcome must be equal to a Outcome enum value (1ms)
     Utility functions
-      ✓ Sale.fromObject() should return a Sale instance with the same values as the given plain object (1ms)
+      ✓ Sale.fromObject() should return a Sale instance with the same values as the given plain object (0ms)
       ✓ instance.toString() should return a JSON string representation of the Sale instance (0ms)
-      ✓ instance.clone() should return another Sale instance with the same property values (1ms)
+      ✓ instance.clone() should return another Sale instance with the same property values (0ms)
       ✓ instance.toObject() should return a plain object representation of the Sale instance (0ms)
 
   Token
     Constructor
-      ✓ Should allow creation of valid, fully populated Token instance (3ms)
+      ✓ Should allow creation of valid, fully populated Token instance (2ms)
     Field validations
-      ✓ Always present, creator must be a string representation of an EIP-55 compliant address (1ms)
-      ✓ Always present, royaltyPercentage must be the string representation of a positive BigNumber (0ms)
-      ✓ Always present, isPhysical must be a boolean (1ms)
+      ✓ Always present, creator must be a string representation of an EIP-55 compliant address (0ms)
+      ✓ Always present, royaltyPercentage must be the string representation of a positive BigNumber (1ms)
+      ✓ Always present, isPhysical must be a boolean (0ms)
       ✓ Always present, id must be the string representation of a BigNumber (1ms)
-      ✓ Always present, supply must be the string representation of a positive BigNumber (0ms)
-      ✓ Always present, uri must be a non-empty string (1ms)
+      ✓ Always present, supply must be the string representation of a positive BigNumber (1ms)
+      ✓ Always present, uri must be a non-empty string (0ms)
     Utility functions
-      ✓ Token.fromObject() should return a Token instance with the same values as the given plain object (0ms)
-      ✓ instance.toString() should return a JSON string representation of the Token instance (1ms)
+      ✓ Token.fromObject() should return a Token instance with the same values as the given plain object (1ms)
+      ✓ instance.toString() should return a JSON string representation of the Token instance (0ms)
       ✓ instance.clone() should return another Token instance with the same property values (0ms)
       ✓ instance.toObject() should return a plain object representation of the Token instance (1ms)
 
   AuctionHandler
     Interfaces
       supportsInterface()
-        ✓ should indicate support for ERC-165 interface (7ms)
-        ✓ should indicate support for IAuctionHandler interface (6ms)
-        ✓ should indicate support for IAuctionBuilder interface (7ms)
-        ✓ should indicate support for IAuctionRunner interface (5ms)
+        ✓ should indicate support for ERC-165 interface (5ms)
+        ✓ should indicate support for IAuctionHandler interface (5ms)
+        ✓ should indicate support for IAuctionBuilder interface (6ms)
+        ✓ should indicate support for IAuctionRunner interface (6ms)
     Managing Auctions
       Privileged Access
         New Auctions
-          ✓ createSecondaryAuction() should require caller has SELLER role (195ms)
+          ✓ createSecondaryAuction() should require caller has SELLER role (173ms)
           createPrimaryAuction()
-            ✓ should require caller has SELLER role (75ms)
-            ✓ should require caller is the original asset consignor (118ms)
+            ✓ should require caller has SELLER role (60ms)
+            ✓ should require caller is the original asset consignor (77ms)
         Existing Auctions
-          ✓ changeAudience() should require caller has ADMIN role (31ms)
-          ✓ cancelAuction() should require caller has ADMIN role (132ms)
+          ✓ changeAudience() should require caller has ADMIN role (34ms)
+          ✓ cancelAuction() should require caller has ADMIN role (94ms)
       Change Events
         New Auctions
           createPrimaryAuction()
-            ✓ should emit an AuctionPending event (30ms)
+            ✓ should emit an AuctionPending event (37ms)
           createSecondaryAuction()
             Foreign ERC-721
               ✓ should emit an AuctionPending event (44ms)
-              ✓ should trigger a ConsignmentRegistered event on MarketController (44ms)
-              ✓ should trigger an ConsignmentMarketed event on MarketController (45ms)
-            Foreign ERC-1155
-              ✓ should emit an AuctionPending event (59ms)
-              ✓ should trigger a ConsignmentRegistered event on MarketController (41ms)
+              ✓ should trigger a ConsignmentRegistered event on MarketController (45ms)
               ✓ should trigger an ConsignmentMarketed event on MarketController (43ms)
+            Foreign ERC-1155
+              ✓ should emit an AuctionPending event (105ms)
+              ✓ should trigger a ConsignmentRegistered event on MarketController (64ms)
+              ✓ should trigger an ConsignmentMarketed event on MarketController (60ms)
         Existing Auctions
           changeAudience()
-            ✓ should emit an AudienceChanged event (32ms)
+            ✓ should emit an AudienceChanged event (21ms)
           bid()
-            ✓ should emit a BidAccepted event (26ms)
-            ✓ should emit a BidReturned event when previous bidder is outbid (45ms)
-            ✓ should emit a AuctionStarted event on first bid (27ms)
-            ✓ should emit an AuctionExtended event when bid is placed in last 15 minutes (53ms)
+            ✓ should emit a BidAccepted event (23ms)
+            ✓ should emit a BidReturned event when previous bidder is outbid (48ms)
+            ✓ should emit a AuctionStarted event on first bid (19ms)
+            ✓ should emit an AuctionExtended event when bid is placed in last 15 minutes (55ms)
           closeAuction()
-            ✓ should emit an AuctionEnded event (48ms)
-            ✓ should trigger an PayoutDisbursed event (53ms)
-            ✓ should trigger an FeeDisbursed event (56ms)
-            ✓ should trigger an RoyaltyDisbursed event for secondary market auctions (44ms)
+            ✓ should emit an AuctionEnded event (55ms)
+            ✓ should trigger an PayoutDisbursed event (94ms)
+            ✓ should trigger an FeeDisbursed event (54ms)
+            ✓ should trigger an RoyaltyDisbursed event for secondary market auctions (59ms)
           cancelAuction()
-            ✓ should emit an AuctionEnded event (31ms)
-            ✓ should trigger an BidReturned event if a bid existed (28ms)
+            ✓ should emit an AuctionEnded event (29ms)
+            ✓ should trigger an BidReturned event if a bid existed (50ms)
       Auction Behavior
         Existing Auctions
-          ✓ first bid should update the auction start time on Clock.TRIGGERED auctions (28ms)
-          ✓ should allow bid if audience is STAKER and bidder is a staker (45ms)
-          ✓ should allow bid if audience is VIP_STAKER and bidder is not a VIP staker (47ms)
+          ✓ first bid should update the auction start time on Clock.TRIGGERED auctions (30ms)
+          ✓ should allow bid if audience is STAKER and bidder is a staker (77ms)
+          ✓ should allow bid if audience is VIP_STAKER and bidder is not a VIP staker (50ms)
       Revert Reasons
         New Auctions
           createPrimaryAuction()
-            ✓ should revert if caller isn't the asset consignor (36ms)
-            ✓ should revert if consignment does not exist (23ms)
-            ✓ should revert if start time is in the past (30ms)
+            ✓ should revert if caller isn't the asset consignor (34ms)
+            ✓ should revert if consignment does not exist (25ms)
+            ✓ should revert if start time is in the past (17ms)
           createSecondaryAuction()
-            ✓ should revert if contract doesn't have approval to transfer seller's tokens (30ms)
-            ✓ should revert if seller has no balance of given token (31ms)
-            ✓ should revert if start time is in the past (21ms)
+            ✓ should revert if contract doesn't have approval to transfer seller's tokens (29ms)
+            ✓ should revert if seller has no balance of given token (34ms)
+            ✓ should revert if start time is in the past (11ms)
         Existing Auctions
           changeAudience()
-            ✓ should revert if consignment doesn't exist (21ms)
-            ✓ should revert if auction doesn't exist (50ms)
-            ✓ should revert if auction already settled (77ms)
+            ✓ should revert if consignment doesn't exist (18ms)
+            ✓ should revert if auction doesn't exist (54ms)
+            ✓ should revert if auction already settled (80ms)
           bid()
             ✓ should revert if consignment doesn't exist (17ms)
-            ✓ should revert if auction doesn't exist (121ms)
+            ✓ should revert if auction doesn't exist (368ms)
             ✓ should revert if bidder is a contract (18ms)
             ✓ should revert if auction start time hasn't arrived (13ms)
-            ✓ should revert if bid is below reserve price (30ms)
-            ✓ should revert if audience is STAKER and bidder is not a staker (28ms)
-            ✓ should revert if audience is VIP_STAKER and bidder is not a VIP staker (46ms)
-            ✓ should revert if bid is below the outbid threshold (29ms)
+            ✓ should revert if bid is below reserve price (15ms)
+            ✓ should revert if audience is STAKER and bidder is not a staker (27ms)
+            ✓ should revert if audience is VIP_STAKER and bidder is not a VIP staker (34ms)
+            ✓ should revert if bid is below the outbid threshold (35ms)
           closeAuction()
-            ✓ should revert if consignment doesn't exist (16ms)
-            ✓ should revert if auction doesn't exist (60ms)
-            ✓ should revert if end time not yet reached (12ms)
-            ✓ should revert if end time reached and no bids have been made (32ms)
+            ✓ should revert if consignment doesn't exist (15ms)
+            ✓ should revert if auction doesn't exist (86ms)
+            ✓ should revert if end time not yet reached (11ms)
+            ✓ should revert if end time reached and no bids have been made (17ms)
           cancelAuction()
-            ✓ should revert if consignment doesn't exist (19ms)
-            ✓ should revert if auction doesn't exist (72ms)
-            ✓ should revert if auction has already been settled (43ms)
+            ✓ should revert if consignment doesn't exist (18ms)
+            ✓ should revert if auction doesn't exist (88ms)
+            ✓ should revert if auction has already been settled (41ms)
       Funds Distribution
         Primary Market
-          ✓ multisig contract should be sent half the marketplace fee based on gross (62ms)
-          ✓ staking contract should be sent half the marketplace fee based on gross (62ms)
-          ✓ seller should be sent remainder after marketplace fee (126ms)
+          ✓ multisig contract should be sent half the marketplace fee based on gross (238ms)
+          ✓ staking contract should be sent half the marketplace fee based on gross (507ms)
+          ✓ seller should be sent remainder after marketplace fee (388ms)
         Secondary Market
-          ✓ creator should receive royalty based on gross sale amount (47ms)
-          ✓ multisig contract should be sent half the marketplace fee based on net after royalty (62ms)
-          ✓ staking contract should be sent half the marketplace fee based on net after royalty (47ms)
-          ✓ seller should be sent remainder after royalty and fee (70ms)
+          ✓ creator should receive royalty based on gross sale amount (221ms)
+          ✓ multisig contract should be sent half the marketplace fee based on net after royalty (203ms)
+          ✓ staking contract should be sent half the marketplace fee based on net after royalty (402ms)
+          ✓ seller should be sent remainder after royalty and fee (143ms)
       Asset Transfers
         New Auctions
-          ✓ createPrimaryAuction() should transfer token to MarketController contract (100ms)
-          ✓ createSecondaryAuction() should transfer token to MarketController contract (63ms)
+          ✓ createPrimaryAuction() should transfer token to MarketController contract (530ms)
+          ✓ createSecondaryAuction() should transfer token to MarketController contract (156ms)
         Existing Auctions
           closeAuction()
-            ✓ should transfer consigned balance of token to buyer if digital (56ms)
-            ✓ should transfer consigned balance of token to escrow ticketer if physical (68ms)
-            ✓ should transfer an escrow ticket to buyer if physical (61ms)
+            ✓ should transfer consigned balance of token to buyer if digital (80ms)
+            ✓ should transfer consigned balance of token to escrow ticketer if physical (187ms)
+            ✓ should transfer an escrow ticket to buyer if physical (80ms)
           cancelAuction()
-            ✓ should transfer consigned balance of token to seller if digital (36ms)
+            ✓ should transfer consigned balance of token to seller if digital (38ms)
             ✓ should transfer consigned balance of token to seller if physical (35ms)
       Reading Auction Information
-        ✓ getAuction() should return a valid Auction struct (7ms)
+        ✓ getAuction() should return a valid Auction struct (8ms)
 
   ItemsTicketer
     Interfaces
       supportsInterface()
-        ✓ should indicate support for ERC-165 interface (6ms)
-        ✓ should indicate support for IERC1155 interface (9ms)
-        ✓ should indicate support for IEscrowTicketer interface (7ms)
+        ✓ should indicate support for ERC-165 interface (11ms)
+        ✓ should indicate support for IERC1155 interface (148ms)
+        ✓ should indicate support for IEscrowTicketer interface (12ms)
     Ticketing
       Privileged Access
         Proxy
-          ✓ setImplementation() should require UPGRADER to set the implementation address (33ms)
-          ✓ setAccessController() should require UPGRADER to set the accessController address (27ms)
-          ✓ setMarketController() should require UPGRADER to set the marketController address (26ms)
+          ✓ setImplementation() should require UPGRADER to set the implementation address (37ms)
+          ✓ setAccessController() should require UPGRADER to set the accessController address (40ms)
+          ✓ setMarketController() should require UPGRADER to set the marketController address (27ms)
         Logic
-          ✓ issueTicket() should require MARKET_HANDLER role (40ms)
+          ✓ issueTicket() should require MARKET_HANDLER role (57ms)
       Change Events
-        ✓ claim() should trigger a ConsignmentReleased event on MarketController (24ms)
+        ✓ claim() should trigger a ConsignmentReleased event on MarketController (30ms)
       Issuing Tickets
-        ✓ should transfer full supply of escrow ticket to buyer (24ms)
+        ✓ should transfer full supply of escrow ticket to buyer (107ms)
         Revert Reasons
           ✓ consignment doesn't exist (18ms)
-          ✓ token amount is zero (12ms)
+          ✓ token amount is zero (18ms)
       Transferring Tickets
-        ✓ should allow buyer to transfer their whole balance to another address (23ms)
-        ✓ should allow buyer to transfer part of their balance to another address (16ms)
+        ✓ should allow buyer to transfer their whole balance to another address (30ms)
+        ✓ should allow buyer to transfer part of their balance to another address (19ms)
       Claiming Tickets
-        ✓ should transfer buyer's balance of the ticketed token to buyer (24ms)
-        ✓ should allow multiple ticket holders to claim their share of the ticketed token (59ms)
+        ✓ should transfer buyer's balance of the ticketed token to buyer (26ms)
+        ✓ should allow multiple ticket holders to claim their share of the ticketed token (479ms)
         Revert Reasons
           ✓ caller never held a balance of the ticket's supply (11ms)
-          ✓ caller held a balance of the ticket's supply but has claimed (32ms)
+          ✓ caller held a balance of the ticket's supply but has claimed (39ms)
       Reading Ticket Information
         getTicket()
-          ✓ should return a valid EscrowTicket struct (8ms)
+          ✓ should return a valid EscrowTicket struct (9ms)
           Revert Reasons
-            ✓ ticket does not exist (9ms)
+            ✓ ticket does not exist (10ms)
         getTicketURI()
-          ✓ should return the appropriate dynamic URI for the ticket (7ms)
-          ✓ should work even if the ticket id is the max uint256 value (17ms)
+          ✓ should return the appropriate dynamic URI for the ticket (6ms)
+          ✓ should work even if the ticket id is the max uint256 value (23ms)
 
   LotsTicketer
     Interfaces
       supportsInterface()
-        ✓ should indicate support for ERC-165 interface (6ms)
-        ✓ should indicate support for IERC721 interface (8ms)
-        ✓ should indicate support for IEscrowTicketer interface (6ms)
+        ✓ should indicate support for ERC-165 interface (8ms)
+        ✓ should indicate support for IERC721 interface (6ms)
+        ✓ should indicate support for IEscrowTicketer interface (5ms)
     Ticketing
       Privileged Access
         Proxy
-          ✓ setImplementation() should require UPGRADER to set the implementation address (22ms)
-          ✓ setAccessController() should require UPGRADER to set the accessController address (24ms)
-          ✓ setMarketController() should require UPGRADER to set the marketController address (24ms)
+          ✓ setImplementation() should require UPGRADER to set the implementation address (31ms)
+          ✓ setAccessController() should require UPGRADER to set the accessController address (46ms)
+          ✓ setMarketController() should require UPGRADER to set the marketController address (25ms)
         Logic
-          ✓ issueTicket() should require MARKET_HANDLER role (38ms)
+          ✓ issueTicket() should require MARKET_HANDLER role (55ms)
       Change Events
-        ✓ claim() should trigger a ConsignmentReleased event on MarketController (22ms)
+        ✓ claim() should trigger a ConsignmentReleased event on MarketController (41ms)
       Issuing Tickets
-        ✓ should transfer escrow ticket to buyer (24ms)
+        ✓ should transfer escrow ticket to buyer (55ms)
         Revert Reasons
-          ✓ should revert if consignment doesn't exist (19ms)
-          ✓ should revert if token amount is zero (13ms)
+          ✓ should revert if consignment doesn't exist (27ms)
+          ✓ should revert if token amount is zero (14ms)
       Transferring Tickets
-        ✓ should allow buyer to transfer their indivisible ticket to another address (15ms)
+        ✓ should allow buyer to transfer their indivisible ticket to another address (18ms)
       Claiming Tickets
-        ✓ should transfer buyer's balance of the ticketed token to buyer (25ms)
+        ✓ should transfer buyer's balance of the ticketed token to buyer (28ms)
         Revert Reasons
-          ✓ caller is not holder of the ticket (8ms)
+          ✓ caller is not holder of the ticket (12ms)
       Reading Ticket Info
         getTicket()
           ✓ should return a valid EscrowTicket struct (7ms)
           Revert Reasons
-            ✓ ticket does not exist (9ms)
+            ✓ ticket does not exist (11ms)
         getTicketURI()
-          ✓ should return the appropriate dynamic URI for the ticket (6ms)
-          ✓ should work even if the ticket id is the max uint256 value (15ms)
+          ✓ should return the appropriate dynamic URI for the ticket (7ms)
+          ✓ should work even if the ticket id is the max uint256 value (21ms)
 
   IMarketController
     Interfaces
       supportsInterface()
         ✓ should indicate support for ERC-165 interface (5ms)
-        ✓ should indicate support for IERC1155Receiver interface (4ms)
+        ✓ should indicate support for IERC1155Receiver interface (5ms)
         ✓ should indicate support for IERC721Receiver interface (5ms)
-        ✓ should indicate support for IMarketController interface (5ms)
+        ✓ should indicate support for IMarketController interface (6ms)
         ✓ should indicate support for IMarketConfig interface (6ms)
         ✓ should indicate support for IMarketClerk interface (5ms)
     Reading Market Configuration
-      ✓ getStaking() should return the xSEEN staking contract's address (4ms)
-      ✓ getMultisig() should return the Seen.Haus multisig contract's address (5ms)
-      ✓ getNft() should return the Seen.Haus NFT contract's address (11ms)
-      ✓ getLotsTicketer() should return the lots-based Escrow Ticketer implementation's address (7ms)
-      ✓ getItemsTicketer() should return the items-based Escrow Ticketer implementation's address (6ms)
-      ✓ getVipStakerAmount() should return the amount of xSEEN required to be considered VIP staker (5ms)
+      ✓ getStaking() should return the xSEEN staking contract's address (7ms)
+      ✓ getMultisig() should return the Seen.Haus multisig contract's address (7ms)
+      ✓ getNft() should return the Seen.Haus NFT contract's address (5ms)
+      ✓ getLotsTicketer() should return the lots-based Escrow Ticketer implementation's address (5ms)
+      ✓ getItemsTicketer() should return the items-based Escrow Ticketer implementation's address (7ms)
+      ✓ getVipStakerAmount() should return the amount of xSEEN required to be considered VIP staker (6ms)
       ✓ getFeePercentage() should return the % of post-royalty net that will be taken as the marketplace fee (6ms)
-      ✓ getMaxRoyaltyPercentage() should return the maximum % of non-Seen.Haus sale gross that will be paid to those creators (7ms)
+      ✓ getMaxRoyaltyPercentage() should return the maximum % of non-Seen.Haus sale gross that will be paid to those creators (6ms)
       ✓ getOutBidPercentage() should return the minimum % a Seen.Haus auction bid must be above the previous bid to prevail (6ms)
       ✓ getDefaultTicketerType() should return the ticketer type that will be used if a consignment hasn't had one specified (6ms)
     Writing Market Configuration
       Privileged Access
         ✓ setStaking() should require ADMIN to set the staking address (38ms)
-        ✓ setMultisig() should require ADMIN to set the multisig address (32ms)
-        ✓ setNft() should require ADMIN to set the seenHausNFT address (32ms)
-        ✓ setLotsTicketer() should require ADMIN to set the lots-based escrow ticketer address (36ms)
-        ✓ setItemsTicketer() should require ADMIN to set the items-based escrow ticketer address (34ms)
+        ✓ setMultisig() should require ADMIN to set the multisig address (36ms)
+        ✓ setNft() should require ADMIN to set the seenHausNFT address (40ms)
+        ✓ setLotsTicketer() should require ADMIN to set the lots-based escrow ticketer address (32ms)
+        ✓ setItemsTicketer() should require ADMIN to set the items-based escrow ticketer address (32ms)
         ✓ setVipStakerAmount() should require ADMIN to set the VIP staker amount (33ms)
-        ✓ setFeePercentage() should require ADMIN to set the fee percentage (32ms)
-        ✓ setMaxRoyaltyPercentage() should require ADMIN to set the max royalty percentage to pay other marketplaces (33ms)
-        ✓ setOutBidPercentage() should require ADMIN to set the outbid percentage (33ms)
-        ✓ setDefaultTicketerType() should require ADMIN to set the default escrow ticketer type (35ms)
+        ✓ setFeePercentage() should require ADMIN to set the fee percentage (36ms)
+        ✓ setMaxRoyaltyPercentage() should require ADMIN to set the max royalty percentage to pay other marketplaces (34ms)
+        ✓ setOutBidPercentage() should require ADMIN to set the outbid percentage (98ms)
+        ✓ setDefaultTicketerType() should require ADMIN to set the default escrow ticketer type (36ms)
       Change Events
-        ✓ setStaking() should emit a StakingAddressChanged event (17ms)
-        ✓ setMultisig() should emit a MultisigAddressChanged event (98ms)
+        ✓ setStaking() should emit a StakingAddressChanged event (18ms)
+        ✓ setMultisig() should emit a MultisigAddressChanged event (15ms)
         ✓ setNft() should emit a NFTAddressChanged event (15ms)
         ✓ setLotsTicketer() should emit a EscrowTicketerAddressChanged event (15ms)
         ✓ setItemsTicketer() should emit a EscrowTicketerAddressChanged event (15ms)
-        ✓ setVipStakerAmount() should emit a VipStakerAmountChanged event (223ms)
-        ✓ setFeePercentage() should emit a FeePercentageChanged event (26ms)
-        ✓ setMaxRoyaltyPercentage() should emit a MaxRoyaltyPercentageChanged event (16ms)
-        ✓ setOutBidPercentage() should emit a OutBidPercentageChanged event (16ms)
-        ✓ setDefaultTicketerType() should emit a DefaultTicketerTypeChanged event (17ms)
+        ✓ setVipStakerAmount() should emit a VipStakerAmountChanged event (20ms)
+        ✓ setFeePercentage() should emit a FeePercentageChanged event (15ms)
+        ✓ setMaxRoyaltyPercentage() should emit a MaxRoyaltyPercentageChanged event (15ms)
+        ✓ setOutBidPercentage() should emit a OutBidPercentageChanged event (19ms)
+        ✓ setDefaultTicketerType() should emit a DefaultTicketerTypeChanged event (18ms)
       Revert Reasons
-        ✓ setFeePercentage() should revert if percentage is zero (15ms)
-        ✓ setFeePercentage() should revert if percentage is more than 100 (10ms)
-        ✓ setMaxRoyaltyPercentage() should revert if percentage is zero (10ms)
+        ✓ setFeePercentage() should revert if percentage is zero (12ms)
+        ✓ setFeePercentage() should revert if percentage is more than 100 (11ms)
+        ✓ setMaxRoyaltyPercentage() should revert if percentage is zero (11ms)
         ✓ setMaxRoyaltyPercentage() should revert if percentage is more than 100 (9ms)
-        ✓ setOutBidPercentage() should revert if percentage is zero (10ms)
-        ✓ setOutBidPercentage() should revert if percentage is more than 100 (11ms)
+        ✓ setOutBidPercentage() should revert if percentage is zero (22ms)
+        ✓ setOutBidPercentage() should revert if percentage is more than 100 (16ms)
         ✓ setDefaultTicketerType() should revert if ticketer type is Default (11ms)
         ✓ setDefaultTicketerType() should revert if ticketer type is already set as default (12ms)
     Managing Consignments
       Privileged Access
-        ✓ registerConsignment() should require MARKET_HANDLER role (49ms)
-        ✓ setConsignmentTicketer() should require ESCROW_AGENT to set the escrow ticketer type for a consignment (55ms)
+        ✓ registerConsignment() should require MARKET_HANDLER role (44ms)
+        ✓ setConsignmentTicketer() should require ESCROW_AGENT to set the escrow ticketer type for a consignment (53ms)
       Change Events
-        ✓ registerConsignment() should emit a ConsignmentRegistered event (100ms)
-        ✓ marketConsignment() should emit a ConsignmentMarketed event (91ms)
-        ✓ setConsignmentTicketer() should emit a ConsignmentTicketerChanged event (44ms)
-        ✓ releaseConsignment() should emit a ConsignmentReleased event (48ms)
+        ✓ registerConsignment() should emit a ConsignmentRegistered event (28ms)
+        ✓ marketConsignment() should emit a ConsignmentMarketed event (43ms)
+        ✓ setConsignmentTicketer() should emit a ConsignmentTicketerChanged event (39ms)
+        ✓ releaseConsignment() should emit a ConsignmentReleased event (43ms)
       Revert Reasons
-        ✓ setConsignmentTicketer() should revert if consignment doesn't exist (37ms)
+        ✓ setConsignmentTicketer() should revert if consignment doesn't exist (19ms)
       Reading Consignments
         getConsignment()
           ✓ should revert if consignment doesn't exist (10ms)
-          ✓ should return a valid consignment (38ms)
+          ✓ should return a valid consignment (43ms)
         getEscrowTicketer()
           ✓ should revert if consignment doesn't exist (11ms)
-          ✓ should return the default escrow ticketer if not set for given consignment (36ms)
-          ✓ should return the specified escrow ticketer for given consignment if set (44ms)
+          ✓ should return the default escrow ticketer if not set for given consignment (32ms)
+          ✓ should return the specified escrow ticketer for given consignment if set (45ms)
         getSupply()
-          ✓ should revert if consignment doesn't exist (10ms)
+          ✓ should revert if consignment doesn't exist (12ms)
         isConsignor()
           ✓ should revert if consignment doesn't exist (11ms)
       Foreign NFTs
         Foreign ERC-721
           registerConsignment()
-            ✓ should emit a ConsignmentRegistered event (25ms)
-            ✓ subsequent getSupply() should return correct amount (26ms)
+            ✓ should emit a ConsignmentRegistered event (35ms)
+            ✓ subsequent getSupply() should return correct amount (31ms)
           releaseConsignment()
-            ✓ should emit a ConsignmentReleased event (70ms)
-            ✓ asset should be transferred to new owner (25ms)
-            ✓ subsequent getSupply() should return correct amount (71ms)
+            ✓ should emit a ConsignmentReleased event (18ms)
+            ✓ asset should be transferred to new owner (19ms)
+            ✓ subsequent getSupply() should return correct amount (19ms)
         Foreign ERC-1155
           registerConsignment()
-            ✓ should emit a ConsignmentRegistered event (28ms)
-            ✓ subsequent getSupply() should return correct amount (26ms)
+            ✓ should emit a ConsignmentRegistered event (23ms)
+            ✓ subsequent getSupply() should return correct amount (27ms)
           releaseConsignment()
-            ✓ should emit a ConsignmentReleased event (85ms)
-            ✓ asset should be transferred to new owner (54ms)
-            ✓ subsequent getSupply() should return correct amount (39ms)
+            ✓ should emit a ConsignmentReleased event (34ms)
+            ✓ asset should be transferred to new owner (34ms)
+            ✓ subsequent getSupply() should return correct amount (40ms)
 
   MarketDiamond
     DiamondLoupeFacet
       facets()
-        ✓ should return the correct number of objects (1ms)
-        ✓ should return valid Facet objects (4ms)
+        ✓ should return the correct number of objects (0ms)
+        ✓ should return valid Facet objects (1ms)
         ✓ should return expected facet data (0ms)
       facetAddresses()
-        ✓ should return two facet addresses (0ms)
+        ✓ should return two facet addresses (1ms)
         ✓ facet addresses should be correct and in order (0ms)
       facetFunctionSelectors()
-        ✓ should return the correct function selectors for the DiamondCutFacet (16ms)
-        ✓ should return the correct function selectors for the DiamondLoupeFacet (13ms)
+        ✓ should return the correct function selectors for the DiamondCutFacet (9ms)
+        ✓ should return the correct function selectors for the DiamondLoupeFacet (10ms)
       facetAddress()
         ✓ should return the correct facet addresses for all deployed selectors (1ms)
     DiamondCutFacet
       diamondCut()
         Privileged Access
-          ✓ should require UPGRADER to perform cut actions (61ms)
+          ✓ should require UPGRADER to perform cut actions (50ms)
         FacetCutAction.Add
-          ✓ should add functions from Test1Facet (64ms)
-          ✓ should add functions from Test2Facet (48ms)
-          ✓ should allow functions from different facets to be added in one transaction (94ms)
-          Initializer
-            ✓ should call an initializer function if supplied (8ms)
-            ✓ should store initializer state in diamond storage slot when modifier runs (6ms)
-            ✓ should store initializer argument in diamond storage slot when method runs (7ms)
+          ✓ should add functions from Test1Facet (50ms)
+          ✓ should add functions from Test2Facet (62ms)
+          ✓ should allow functions from different facets to be added in one transaction (77ms)
         FacetCutAction.Remove
-          ✓ should properly proxy functions located on Test1Facet (208ms)
-          ✓ should properly proxy functions located on Test2Facet (88ms)
-          ✓ should allow removal of arbitrary functions from Test1Facet (89ms)
-          ✓ should allow removal of arbitrary functions from Test2Facet (72ms)
-          ✓ should remove facets when all their functions are removed (130ms)
+          ✓ should allow removal of arbitrary functions from Test1Facet (71ms)
+          ✓ should allow removal of arbitrary functions from Test2Facet (73ms)
+          ✓ should remove facets when all their functions are removed (215ms)
         FacetCutAction.Replace
-          ✓ should replace a function on Test2Facet (98ms)
+          ✓ should replace a function on Test2Facet (137ms)
+    Initializer
+      Normal operation
+        ✓ should call an initializer function if supplied (7ms)
+        ✓ should store initializer state in diamond storage slot when modifier runs (4ms)
+        ✓ should store initializer argument in diamond storage slot when method runs (4ms)
+      Revert reasons
+        ✓ should revert with reason if supplied by implementation (30ms)
+        ✓ should revert with library reason if not supplied by implementation (23ms)
+    Proxying
+      ✓ should properly proxy functions located on Test1Facet (62ms)
+      ✓ should properly proxy functions located on Test2Facet (86ms)
 
   SaleHandler
     Interfaces
       supportsInterface()
-        ✓ should indicate support for ERC-165 interface (6ms)
-        ✓ should indicate support for ISaleHandler interface (8ms)
-        ✓ should indicate support for ISaleBuilder interface (4ms)
-        ✓ should indicate support for ISaleRunner interface (7ms)
+        ✓ should indicate support for ERC-165 interface (5ms)
+        ✓ should indicate support for ISaleHandler interface (5ms)
+        ✓ should indicate support for ISaleBuilder interface (5ms)
+        ✓ should indicate support for ISaleRunner interface (5ms)
     Managing Sales
       Privileged Access
         New Sales
           createPrimarySale()
-            ✓ should require caller has SELLER role (876ms)
-            ✓ should require caller is the original asset consignor (133ms)
+            ✓ should require caller has SELLER role (66ms)
+            ✓ should require caller is the original asset consignor (115ms)
         Existing Sales
-          ✓ changeAudience() should require caller has ADMIN role (30ms)
-          ✓ cancelSale() should require caller has ADMIN role (311ms)
+          ✓ changeAudience() should require caller has ADMIN role (40ms)
+          ✓ cancelSale() should require caller has ADMIN role (159ms)
       Change Events
         New Sales
           createPrimarySale()
-            ✓ should emit a SalePending event (63ms)
+            ✓ should emit a SalePending event (142ms)
           createSecondarySale()
             Foreign ERC-721
-              ✓ should emit a SalePending event (44ms)
-              ✓ should trigger a ConsignmentRegistered event on MarketController (67ms)
-              ✓ should trigger a ConsignmentMarketed event on MarketController (46ms)
+              ✓ should emit a SalePending event (72ms)
+              ✓ should trigger a ConsignmentRegistered event on MarketController (45ms)
+              ✓ should trigger a ConsignmentMarketed event on MarketController (63ms)
             Foreign ERC-1155
-              ✓ should emit a SalePending event (40ms)
-              ✓ should trigger a ConsignmentRegistered event on MarketController (75ms)
-              ✓ should trigger a ConsignmentMarketed event on MarketController (43ms)
+              ✓ should emit a SalePending event (52ms)
+              ✓ should trigger a ConsignmentRegistered event on MarketController (107ms)
+              ✓ should trigger a ConsignmentMarketed event on MarketController (63ms)
         Existing Sales
           changeAudience()
-            ✓ should emit an AudienceChanged event (17ms)
+            ✓ should emit an AudienceChanged event (24ms)
           buy()
-            ✓ should emit a Purchase event (33ms)
+            ✓ should emit a Purchase event (39ms)
           closeSale()
-            ✓ should emit a SaleEnded event (33ms)
-            ✓ should trigger an PayoutDisbursed event (38ms)
-            ✓ should trigger an FeeDisbursed event (34ms)
-            ✓ should trigger an RoyaltyDisbursed event for secondary market sales (45ms)
+            ✓ should emit a SaleEnded event (65ms)
+            ✓ should trigger an PayoutDisbursed event (41ms)
+            ✓ should trigger an FeeDisbursed event (80ms)
+            ✓ should trigger an RoyaltyDisbursed event for secondary market sales (43ms)
           cancelSale()
-            ✓ should emit a SaleEnded event (48ms)
+            ✓ should emit a SaleEnded event (52ms)
       Sale Behavior
         Existing Sales
-          ✓ should allow buy if audience is STAKER and buyer is a staker (52ms)
-          ✓ should allow buy if audience is VIP_STAKER and buyer is not a VIP staker (51ms)
+          ✓ should allow buy if audience is STAKER and buyer is a staker (148ms)
+          ✓ should allow buy if audience is VIP_STAKER and buyer is not a VIP staker (129ms)
       Revert Reasons
         New Sales
           createPrimarySale()
-            ✓ should revert if Consignment has already been marketed (44ms)
-            ✓ should revert if caller isn't the asset consignor (26ms)
-            ✓ should revert if consignment does not exist (18ms)
-            ✓ should revert if start time is in the past (16ms)
+            ✓ should revert if Consignment has already been marketed (419ms)
+            ✓ should revert if caller isn't the asset consignor (27ms)
+            ✓ should revert if consignment does not exist (17ms)
+            ✓ should revert if start time is in the past (17ms)
           createSecondarySale()
-            ✓ should revert if start time is in the past (13ms)
+            ✓ should revert if start time is in the past (30ms)
             ✓ should revert if contract doesn't have approval to transfer seller's tokens (32ms)
-            ✓ should revert if seller has insufficient balance of given token (35ms)
+            ✓ should revert if seller has insufficient balance of given token (44ms)
         Existing Sales
           changeAudience()
-            ✓ should revert if consignment does not exist (18ms)
-            ✓ should revert if sale doesn't exist (72ms)
-            ✓ should revert if sale already settled (84ms)
+            ✓ should revert if consignment does not exist (19ms)
+            ✓ should revert if sale doesn't exist (98ms)
+            ✓ should revert if sale already settled (59ms)
           buy()
-            ✓ should revert if consignment does not exist (26ms)
-            ✓ should revert if sale doesn't exist (140ms)
+            ✓ should revert if consignment does not exist (17ms)
+            ✓ should revert if sale doesn't exist (179ms)
             ✓ should revert if buyer is a contract (14ms)
-            ✓ should revert if audience is STAKER and buyer is not a staker (27ms)
-            ✓ should revert if audience is VIP_STAKER and buyer is not a VIP staker (34ms)
-            ✓ should revert if quantity is greater than per tx cap (238ms)
-            ✓ should revert if payment does not cover order price (32ms)
+            ✓ should revert if audience is STAKER and buyer is not a staker (26ms)
+            ✓ should revert if audience is VIP_STAKER and buyer is not a VIP staker (28ms)
+            ✓ should revert if quantity is greater than per tx cap (14ms)
+            ✓ should revert if payment does not cover order price (12ms)
           closeSale()
-            ✓ should revert if consignment does not exist (18ms)
-            ✓ should revert if sale doesn't exist (77ms)
-            ✓ should revert if sale is already settled (51ms)
-            ✓ should revert if no purchases have been made (19ms)
+            ✓ should revert if consignment does not exist (16ms)
+            ✓ should revert if sale doesn't exist (69ms)
+            ✓ should revert if sale is already settled (88ms)
+            ✓ should revert if no purchases have been made (16ms)
           cancelSale()
-            ✓ should revert if consignment doesn't exist (16ms)
-            ✓ should revert if sale doesn't exist (72ms)
-            ✓ should revert if sale is already settled (44ms)
+            ✓ should revert if consignment doesn't exist (30ms)
+            ✓ should revert if sale doesn't exist (58ms)
+            ✓ should revert if sale is already settled (51ms)
       Funds Distribution
         Primary Market
-          ✓ multisig contract should be sent half the marketplace fee based on gross (43ms)
-          ✓ staking contract should be sent half the marketplace fee based on gross (44ms)
-          ✓ seller should be sent remainder after marketplace fee (52ms)
+          ✓ multisig contract should be sent half the marketplace fee based on gross (36ms)
+          ✓ staking contract should be sent half the marketplace fee based on gross (34ms)
+          ✓ seller should be sent remainder after marketplace fee (31ms)
         Secondary Market
-          ✓ creator should receive royalty based on gross sale amount (45ms)
-          ✓ multisig contract should be sent half the marketplace fee based on net after royalty (85ms)
-          ✓ staking contract should be sent half the marketplace fee based on net after royalty (68ms)
-          ✓ seller should be sent remainder after royalty and fee (44ms)
+          Foriegn ERC-721
+            ✓ creator should receive royalty based on gross sale amount (38ms)
+            ✓ multisig contract should be sent half the marketplace fee based on net after royalty (41ms)
+            ✓ staking contract should be sent half the marketplace fee based on net after royalty (39ms)
+            ✓ seller should be sent remainder after royalty and fee (38ms)
+          Foriegn ERC-1155
+            ✓ creator should receive royalty based on gross sale amount (36ms)
+            ✓ multisig contract should be sent half the marketplace fee based on net after royalty (37ms)
+            ✓ staking contract should be sent half the marketplace fee based on net after royalty (33ms)
+            ✓ seller should be sent remainder after royalty and fee (95ms)
       Asset Transfers
         New Sales
-          ✓ createSale() should transfer token to SaleHandler contract (43ms)
+          ✓ createSale() should transfer token to SaleHandler contract (50ms)
         Existing Sales
           closeSale()
-            ✓ should transfer consigned balance of token to buyer if digital (42ms)
-            ✓ should transfer consigned balance of token to escrow ticketer if physical (38ms)
-            ✓ should transfer a escrow ticket to buyer if physical (40ms)
+            ✓ should transfer consigned balance of token to buyer if digital (56ms)
+            ✓ should transfer consigned balance of token to escrow ticketer if physical (104ms)
+            ✓ should transfer a escrow ticket to buyer if physical (44ms)
           cancelSale()
-            ✓ should transfer consigned balance of token to seller if digital (51ms)
-            ✓ should transfer consigned balance of token to seller if physical (37ms)
+            ✓ should transfer consigned balance of token to seller if digital (58ms)
+            ✓ should transfer consigned balance of token to seller if physical (44ms)
       Reading Sale Information
-        ✓ getSale() should return a valid Sale struct (6ms)
-        ✓ supply() should return the remaining supply of a consignment on sale (48ms)
+        ✓ getSale() should return a valid Sale struct (8ms)
+        ✓ supply() should return the remaining supply of a consignment on sale (62ms)
 
   SeenHausNFT
     Interfaces
       supportsInterface()
-        ✓ should indicate support for ERC-165 interface (7ms)
-        ✓ should indicate support for ERC-1155 interface (7ms)
-        ✓ should indicate support for ERC-2981 interface (4ms)
+        ✓ should indicate support for ERC-165 interface (6ms)
+        ✓ should indicate support for ERC-1155 interface (6ms)
+        ✓ should indicate support for ERC-2981 interface (8ms)
         ✓ should indicate support for ISeenHausNFT interface (6ms)
     Minting
       Privileged Access
         Proxy
-          ✓ setImplementation() should require UPGRADER to set the implementation address (35ms)
+          ✓ setImplementation() should require UPGRADER to set the implementation address (108ms)
           ✓ setAccessController() should require UPGRADER to set the accessController address (31ms)
           ✓ setMarketController() should require UPGRADER to set the marketController address (29ms)
         Logic
-          ✓ mintDigital() should require MINTER to mint a digital token (193ms)
-          ✓ mintPhysical() should require ESCROW_AGENT to mint a physical token (198ms)
+          ✓ mintDigital() should require MINTER to mint a digital token (62ms)
+          ✓ mintPhysical() should require ESCROW_AGENT to mint a physical token (354ms)
       Change Events
         mintDigital()
-          ✓ should emit a TransferSingle event (46ms)
-          ✓ should trigger a ConsignmentRegistered event on MarketController (140ms)
+          ✓ should emit a TransferSingle event (69ms)
+          ✓ should trigger a ConsignmentRegistered event on MarketController (58ms)
         mintPhysical()
-          ✓ should emit a TransferSingle event (107ms)
-          ✓ should trigger a ConsignmentRegistered event on MarketController (117ms)
+          ✓ should emit a TransferSingle event (56ms)
+          ✓ should trigger a ConsignmentRegistered event on MarketController (146ms)
       Digital vs Physical NFTs
-        ✓ mintDigital() should not record a physical aspect for the token (42ms)
-        ✓ mintPhysical() should record the physical aspect for the token (60ms)
+        ✓ mintDigital() should not record a physical aspect for the token (39ms)
+        ✓ mintPhysical() should record the physical aspect for the token (45ms)
       Token URIs
-        ✓ mintDigital() should record the URI for the token (165ms)
-        ✓ mintPhysical() should record the URI for the token (42ms)
+        ✓ mintDigital() should record the URI for the token (41ms)
+        ✓ mintPhysical() should record the URI for the token (45ms)
       MarketController Receives Token Balance
-        ✓ mintDigital() should send token balance to MarketController (37ms)
-        ✓ mintPhysical() should send token balance to MarketController (72ms)
+        ✓ mintDigital() should send token balance to MarketController (39ms)
+        ✓ mintPhysical() should send token balance to MarketController (36ms)
       Creator Tracking and Royalties
-        ✓ mintDigital() should record the token creator, royalty percentage, supply, and URI (46ms)
-        ✓ mintPhysical() should record the creator address for the token (54ms)
-        ✓ royaltyInfo() should return creator address and correct royalty amount (43ms)
+        ✓ mintDigital() should record the token creator, royalty percentage, supply, and URI (109ms)
+        ✓ mintPhysical() should record the creator address for the token (113ms)
+        ✓ royaltyInfo() should return creator address and correct royalty amount (56ms)
       Revert Reasons
-        ✓ mintDigital() should revert if royalty percentage exceeds maximum (22ms)
-        ✓ mintPhysical() should revert if royalty percentage exceeds maximum (19ms)
+        ✓ mintDigital() should revert if royalty percentage exceeds maximum (122ms)
+        ✓ mintPhysical() should revert if royalty percentage exceeds maximum (16ms)
 
   InterfaceInfo
     Interface Ids
-      ✓ getIAuctionBuilder() should return expected id (5ms)
+      ✓ getIAuctionBuilder() should return expected id (6ms)
       ✓ getIAuctionHandler() should return expected id (5ms)
-      ✓ getIAuctionRunner() should return expected id (3ms)
-      ✓ getIEscrowTicketer() should return expected id (4ms)
+      ✓ getIAuctionRunner() should return expected id (4ms)
+      ✓ getIDiamondCut() should return expected id (4ms)
+      ✓ getIDiamondLoupe() should return expected id (5ms)
+      ✓ getIEscrowTicketer() should return expected id (5ms)
       ✓ getIMarketClientProxy() should return expected id (5ms)
-      ✓ getIMarketClerk() should return expected id (5ms)
-      ✓ getIMarketConfig() should return expected id (5ms)
-      ✓ getIMarketController() should return expected id (6ms)
+      ✓ getIMarketClerk() should return expected id (4ms)
+      ✓ getIMarketConfig() should return expected id (4ms)
+      ✓ getIMarketController() should return expected id (4ms)
       ✓ getISaleBuilder() should return expected id (5ms)
-      ✓ getISaleHandler() should return expected id (7ms)
-      ✓ getISaleRunner() should return expected id (8ms)
-      ✓ getISeenHausNFT() should return expected id (23ms)
+      ✓ getISaleHandler() should return expected id (5ms)
+      ✓ getISaleRunner() should return expected id (5ms)
+      ✓ getISeenHausNFT() should return expected id (4ms)
       ✓ getIERC1155Receiver() should return expected id (4ms)
       ✓ getIERC721Receiver() should return expected id (5ms)
+      ✓ getIERC72981() should return expected id (4ms)
 
 ·---------------------------------------------------------------------------------------------------------------|---------------------------|-------------|-----------------------------·
 |                                              Solc version: 0.8.2                                              ·  Optimizer enabled: true  ·  Runs: 200  ·  Block limit: 12450000 gas  │
 ················································································································|···························|·············|······························
-|  Methods                                                                                                                                                                              │
+|  Methods                                                                                                      ·              300 gwei/gas               ·       3428.41 usd/eth       │
 ························|·······················································································|·············|·············|·············|···············|··············
 |  Contract             ·  Method                                                                               ·  Min        ·  Max        ·  Avg        ·  # calls      ·  usd (avg)  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  AccessController     ·  grantRole(bytes32,address)                                                           ·      27172  ·      51412  ·      51055  ·         1982  ·          -  │
+|  AccessController     ·  grantRole(bytes32,address)                                                           ·      27172  ·      51412  ·      51062  ·         2022  ·      52.52  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  AccessController     ·  renounceRole(bytes32,address)                                                        ·      14852  ·      14858  ·      14858  ·          552  ·          -  │
+|  AccessController     ·  renounceRole(bytes32,address)                                                        ·      14852  ·      14858  ·      14858  ·          562  ·      15.28  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  AccessController     ·  revokeRole(bytes32,address)                                                          ·      19269  ·      19281  ·      19276  ·            5  ·          -  │
+|  AccessController     ·  revokeRole(bytes32,address)                                                          ·      19269  ·      19281  ·      19276  ·            5  ·      19.83  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  AuctionBuilderFacet  ·  createPrimaryAuction(uint256,uint256,uint256,uint256,uint8,uint8)                    ·     160995  ·     180907  ·     163686  ·           37  ·          -  │
+|  AuctionBuilderFacet  ·  createPrimaryAuction(uint256,uint256,uint256,uint256,uint8,uint8)                    ·     160995  ·     180907  ·     163686  ·           37  ·     168.35  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  AuctionBuilderFacet  ·  createSecondaryAuction(address,address,uint256,uint256,uint256,uint256,uint8,uint8)  ·     333229  ·     353153  ·     336717  ·           34  ·          -  │
+|  AuctionBuilderFacet  ·  createSecondaryAuction(address,address,uint256,uint256,uint256,uint256,uint8,uint8)  ·     333229  ·     353153  ·     336790  ·           34  ·     346.40  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  AuctionRunnerFacet   ·  bid(uint256)                                                                         ·      96943  ·     137606  ·     129006  ·           39  ·          -  │
+|  AuctionRunnerFacet   ·  bid(uint256)                                                                         ·      96943  ·     137606  ·     129006  ·           39  ·     132.69  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  AuctionRunnerFacet   ·  cancelAuction(uint256)                                                               ·     118881  ·     127880  ·     122762  ·            9  ·          -  │
+|  AuctionRunnerFacet   ·  cancelAuction(uint256)                                                               ·     118881  ·     127880  ·     122762  ·            9  ·     126.26  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  AuctionRunnerFacet   ·  changeAuctionAudience(uint256,uint8)                                                 ·      65860  ·      85772  ·      80788  ·            8  ·          -  │
+|  AuctionRunnerFacet   ·  changeAuctionAudience(uint256,uint8)                                                 ·      65860  ·      85772  ·      80788  ·            8  ·      83.09  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  AuctionRunnerFacet   ·  closeAuction(uint256)                                                                ·     188115  ·     373906  ·     203025  ·           26  ·          -  │
+|  AuctionRunnerFacet   ·  closeAuction(uint256)                                                                ·     188115  ·     373906  ·     203025  ·           26  ·     208.82  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  DiamondCutFacet      ·  diamondCut((address,uint8,bytes4[])[],address,bytes)                                 ·      55976  ·    1110039  ·     402857  ·         1087  ·          -  │
+|  DiamondCutFacet      ·  diamondCut((address,uint8,bytes4[])[],address,bytes)                                 ·      55976  ·    1110039  ·     401275  ·         1111  ·     412.72  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  ERC1155Upgradeable   ·  safeTransferFrom(address,address,uint256,uint256,bytes)                              ·      46783  ·      61783  ·      56783  ·            3  ·          -  │
+|  ERC1155Upgradeable   ·  safeTransferFrom(address,address,uint256,uint256,bytes)                              ·      46783  ·      61783  ·      56783  ·            3  ·      58.40  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  ERC1155Upgradeable   ·  setApprovalForAll(address,bool)                                                      ·      51280  ·      51304  ·      51302  ·          124  ·          -  │
+|  ERC1155Upgradeable   ·  setApprovalForAll(address,bool)                                                      ·      51280  ·      51304  ·      51302  ·          128  ·      52.77  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  ERC721Upgradeable    ·  transferFrom(address,address,uint256)                                                ·          -  ·          -  ·      52567  ·            1  ·          -  │
+|  ERC721Upgradeable    ·  transferFrom(address,address,uint256)                                                ·          -  ·          -  ·      52567  ·            1  ·      54.07  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  Foreign1155          ·  mint(address,uint256,uint256,uint256)                                                ·      94811  ·      94823  ·      94811  ·          129  ·          -  │
+|  Foreign1155          ·  mint(address,uint256,uint256,uint256)                                                ·      94811  ·      94823  ·      94811  ·          133  ·      97.52  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  Foreign1155          ·  safeTransferFrom(address,address,uint256,uint256,bytes)                              ·      41789  ·      56789  ·      42701  ·           55  ·          -  │
+|  Foreign1155          ·  safeTransferFrom(address,address,uint256,uint256,bytes)                              ·      41789  ·      56789  ·      42701  ·           55  ·      43.92  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  Foreign1155          ·  setApprovalForAll(address,bool)                                                      ·      14592  ·      46295  ·      45790  ·          126  ·          -  │
+|  Foreign1155          ·  setApprovalForAll(address,bool)                                                      ·      14592  ·      46295  ·      45806  ·          130  ·      47.11  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  Foreign721           ·  mint(address,uint256,uint256)                                                        ·     113190  ·     113202  ·     113190  ·          129  ·          -  │
+|  Foreign721           ·  mint(address,uint256,uint256)                                                        ·     113190  ·     113202  ·     113190  ·          133  ·     116.42  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  Foreign721           ·  setApprovalForAll(address,bool)                                                      ·      46119  ·      46143  ·      46141  ·          124  ·          -  │
+|  Foreign721           ·  setApprovalForAll(address,bool)                                                      ·      46119  ·      46143  ·      46141  ·          128  ·      47.46  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  Foreign721           ·  transferFrom(address,address,uint256)                                                ·      47453  ·      47465  ·      47458  ·           11  ·          -  │
+|  Foreign721           ·  transferFrom(address,address,uint256)                                                ·      47453  ·      47465  ·      47457  ·           15  ·      48.81  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  ItemsTicketer        ·  claim(uint256)                                                                       ·      70854  ·     115467  ·      83153  ·            9  ·          -  │
+|  ItemsTicketer        ·  claim(uint256)                                                                       ·      70854  ·     115467  ·      83153  ·            9  ·      85.52  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  ItemsTicketer        ·  issueTicket(uint256,uint256,address)                                                 ·     233133  ·     251558  ·     241144  ·           23  ·          -  │
+|  ItemsTicketer        ·  issueTicket(uint256,uint256,address)                                                 ·     233133  ·     251558  ·     241144  ·           23  ·     248.02  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  MarketClerkFacet     ·  marketConsignment(uint256)                                                           ·          -  ·          -  ·      50246  ·            2  ·          -  │
+|  MarketClerkFacet     ·  marketConsignment(uint256)                                                           ·          -  ·          -  ·      50246  ·            2  ·      51.68  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  MarketClerkFacet     ·  registerConsignment(uint8,address,address,address,uint256,uint256)                   ·     190987  ·     209926  ·     198341  ·           22  ·          -  │
+|  MarketClerkFacet     ·  registerConsignment(uint8,address,address,address,uint256,uint256)                   ·     191194  ·     209926  ·     198397  ·           22  ·     204.06  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  MarketClerkFacet     ·  releaseConsignment(uint256,uint256,address)                                          ·      74808  ·      99016  ·      85623  ·           10  ·          -  │
+|  MarketClerkFacet     ·  releaseConsignment(uint256,uint256,address)                                          ·      74808  ·      99016  ·      85623  ·           10  ·      88.07  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  MarketClerkFacet     ·  setConsignmentTicketer(uint256,uint8)                                                ·          -  ·          -  ·      60826  ·            4  ·          -  │
+|  MarketClerkFacet     ·  setConsignmentTicketer(uint256,uint8)                                                ·          -  ·          -  ·      60826  ·            4  ·      62.56  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  MarketClientProxy    ·  setAccessController(address)                                                         ·          -  ·          -  ·      33909  ·            3  ·          -  │
+|  MarketClientProxy    ·  setAccessController(address)                                                         ·          -  ·          -  ·      33909  ·            3  ·      34.88  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  MarketClientProxy    ·  setImplementation(address)                                                           ·          -  ·          -  ·      35899  ·            3  ·          -  │
+|  MarketClientProxy    ·  setImplementation(address)                                                           ·          -  ·          -  ·      35899  ·            3  ·      36.92  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  MarketClientProxy    ·  setMarketController(address)                                                         ·          -  ·          -  ·      35855  ·            3  ·          -  │
+|  MarketClientProxy    ·  setMarketController(address)                                                         ·          -  ·          -  ·      35855  ·            3  ·      36.88  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  MarketConfigFacet    ·  setDefaultTicketerType(uint8)                                                        ·          -  ·          -  ·      41128  ·            3  ·          -  │
+|  MarketConfigFacet    ·  setDefaultTicketerType(uint8)                                                        ·          -  ·          -  ·      41128  ·            3  ·      42.30  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  MarketConfigFacet    ·  setFeePercentage(uint16)                                                             ·          -  ·          -  ·      40796  ·            3  ·          -  │
+|  MarketConfigFacet    ·  setFeePercentage(uint16)                                                             ·          -  ·          -  ·      40796  ·            3  ·      41.96  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  MarketConfigFacet    ·  setItemsTicketer(address)                                                            ·      41415  ·      41439  ·      41438  ·          203  ·          -  │
+|  MarketConfigFacet    ·  setItemsTicketer(address)                                                            ·      41415  ·      41439  ·      41438  ·          207  ·      42.62  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  MarketConfigFacet    ·  setLotsTicketer(address)                                                             ·      41503  ·      58627  ·      58373  ·          203  ·          -  │
+|  MarketConfigFacet    ·  setLotsTicketer(address)                                                             ·      41503  ·      58627  ·      58378  ·          207  ·      60.04  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  MarketConfigFacet    ·  setMaxRoyaltyPercentage(uint16)                                                      ·          -  ·          -  ·      40862  ·            3  ·          -  │
+|  MarketConfigFacet    ·  setMaxRoyaltyPercentage(uint16)                                                      ·          -  ·          -  ·      40862  ·            3  ·      42.03  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  MarketConfigFacet    ·  setMultisig(address)                                                                 ·          -  ·          -  ·      40992  ·            3  ·          -  │
+|  MarketConfigFacet    ·  setMultisig(address)                                                                 ·          -  ·          -  ·      40992  ·            3  ·      42.16  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  MarketConfigFacet    ·  setNft(address)                                                                      ·      40990  ·      58114  ·      57920  ·          266  ·          -  │
+|  MarketConfigFacet    ·  setNft(address)                                                                      ·      40990  ·      58114  ·      57922  ·          270  ·      59.57  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  MarketConfigFacet    ·  setOutBidPercentage(uint16)                                                          ·          -  ·          -  ·      40817  ·            3  ·          -  │
+|  MarketConfigFacet    ·  setOutBidPercentage(uint16)                                                          ·          -  ·          -  ·      40817  ·            3  ·      41.98  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  MarketConfigFacet    ·  setStaking(address)                                                                  ·          -  ·          -  ·      40971  ·            3  ·          -  │
+|  MarketConfigFacet    ·  setStaking(address)                                                                  ·          -  ·          -  ·      40971  ·            3  ·      42.14  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  MarketConfigFacet    ·  setVipStakerAmount(uint256)                                                          ·          -  ·          -  ·      40652  ·            3  ·          -  │
+|  MarketConfigFacet    ·  setVipStakerAmount(uint256)                                                          ·          -  ·          -  ·      40652  ·            3  ·      41.81  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  SaleBuilderFacet     ·  createPrimarySale(uint256,uint256,uint256,uint256,uint8)                             ·     155281  ·     175193  ·     157770  ·           40  ·          -  │
+|  SaleBuilderFacet     ·  createPrimarySale(uint256,uint256,uint256,uint256,uint8)                             ·     155281  ·     175193  ·     157770  ·           40  ·     162.27  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  SaleBuilderFacet     ·  createSecondarySale(address,address,uint256,uint256,uint256,uint256,uint256,uint8)   ·     327702  ·     337464  ·     330054  ·           25  ·          -  │
+|  SaleBuilderFacet     ·  createSecondarySale(address,address,uint256,uint256,uint256,uint256,uint256,uint8)   ·     327702  ·     337878  ·     331217  ·           29  ·     340.66  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  SaleRunnerFacet      ·  buy(uint256,uint256)                                                                 ·     130840  ·     337403  ·     166694  ·           28  ·          -  │
+|  SaleRunnerFacet      ·  buy(uint256,uint256)                                                                 ·     130840  ·     337403  ·     163101  ·           32  ·     167.75  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  SaleRunnerFacet      ·  cancelSale(uint256)                                                                  ·     131800  ·     187886  ·     157786  ·            9  ·          -  │
+|  SaleRunnerFacet      ·  cancelSale(uint256)                                                                  ·     131800  ·     187886  ·     157786  ·            9  ·     162.29  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  SaleRunnerFacet      ·  changeSaleAudience(uint256,uint8)                                                    ·      65840  ·      85752  ·      80768  ·            8  ·          -  │
+|  SaleRunnerFacet      ·  changeSaleAudience(uint256,uint8)                                                    ·      65840  ·      85752  ·      80768  ·            8  ·      83.07  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  SaleRunnerFacet      ·  closeSale(uint256)                                                                   ·     116322  ·     140617  ·     131872  ·           25  ·          -  │
+|  SaleRunnerFacet      ·  closeSale(uint256)                                                                   ·     116322  ·     140629  ·     133995  ·           33  ·     137.82  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  SeenHausNFT          ·  mintDigital(uint256,address,string,uint16)                                           ·     377396  ·     402896  ·     378625  ·          166  ·          -  │
+|  SeenHausNFT          ·  mintDigital(uint256,address,string,uint16)                                           ·     377396  ·     402896  ·     378596  ·          170  ·     389.39  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  SeenHausNFT          ·  mintPhysical(uint256,address,string,uint16)                                          ·     377329  ·     402829  ·     396377  ·          166  ·          -  │
+|  SeenHausNFT          ·  mintPhysical(uint256,address,string,uint16)                                          ·     377329  ·     402829  ·     396529  ·          170  ·     407.84  │
 ························|·······················································································|·············|·············|·············|···············|··············
-|  SeenStaking          ·  setStakerBalance(address,uint256)                                                    ·      44057  ·      44069  ·      44063  ·            4  ·          -  │
+|  SeenStaking          ·  setStakerBalance(address,uint256)                                                    ·      44057  ·      44069  ·      44063  ·            4  ·      45.32  │
 ························|·······················································································|·············|·············|·············|···············|··············
 |  Deployments                                                                                                  ·                                         ·  % of limit   ·             │
 ················································································································|·············|·············|·············|···············|··············
-|  AccessController                                                                                             ·          -  ·          -  ·     650053  ·        5.2 %  ·          -  │
+|  AccessController                                                                                             ·          -  ·          -  ·     650053  ·        5.2 %  ·     668.59  │
 ················································································································|·············|·············|·············|···············|··············
-|  AuctionBuilderFacet                                                                                          ·          -  ·          -  ·    1179839  ·        9.5 %  ·          -  │
+|  AuctionBuilderFacet                                                                                          ·          -  ·          -  ·    1179839  ·        9.5 %  ·    1213.49  │
 ················································································································|·············|·············|·············|···············|··············
-|  AuctionRunnerFacet                                                                                           ·          -  ·          -  ·    1968397  ·       15.8 %  ·          -  │
+|  AuctionRunnerFacet                                                                                           ·          -  ·          -  ·    1968385  ·       15.8 %  ·    2024.53  │
 ················································································································|·············|·············|·············|···············|··············
-|  DiamondCutFacet                                                                                              ·          -  ·          -  ·    1096233  ·        8.8 %  ·          -  │
+|  DiamondCutFacet                                                                                              ·          -  ·          -  ·    1096233  ·        8.8 %  ·    1127.50  │
 ················································································································|·············|·············|·············|···············|··············
-|  DiamondLoupeFacet                                                                                            ·          -  ·          -  ·     705186  ·        5.7 %  ·          -  │
+|  DiamondLoupeFacet                                                                                            ·          -  ·          -  ·     705210  ·        5.7 %  ·     725.32  │
 ················································································································|·············|·············|·············|···············|··············
-|  Foreign1155                                                                                                  ·          -  ·          -  ·    1366385  ·         11 %  ·          -  │
+|  Foreign1155                                                                                                  ·          -  ·          -  ·    1366385  ·         11 %  ·    1405.36  │
 ················································································································|·············|·············|·············|···············|··············
-|  Foreign721                                                                                                   ·          -  ·          -  ·    1253118  ·       10.1 %  ·          -  │
+|  Foreign721                                                                                                   ·          -  ·          -  ·    1261968  ·       10.1 %  ·    1297.96  │
 ················································································································|·············|·············|·············|···············|··············
-|  InterfaceInfo                                                                                                ·          -  ·          -  ·     177055  ·        1.4 %  ·          -  │
+|  InterfaceInfo                                                                                                ·          -  ·          -  ·     177055  ·        1.4 %  ·     182.11  │
 ················································································································|·············|·············|·············|···············|··············
-|  ItemsTicketer                                                                                                ·          -  ·          -  ·    2160242  ·       17.4 %  ·          -  │
+|  ItemsTicketer                                                                                                ·          -  ·          -  ·    2160242  ·       17.4 %  ·    2221.86  │
 ················································································································|·············|·············|·············|···············|··············
-|  LotsTicketer                                                                                                 ·          -  ·          -  ·    1977537  ·       15.9 %  ·          -  │
+|  LotsTicketer                                                                                                 ·          -  ·          -  ·    1977537  ·       15.9 %  ·    2033.94  │
 ················································································································|·············|·············|·············|···············|··············
-|  MarketClerkFacet                                                                                             ·          -  ·          -  ·    1660259  ·       13.3 %  ·          -  │
+|  MarketClerkFacet                                                                                             ·          -  ·          -  ·    1660259  ·       13.3 %  ·    1707.61  │
 ················································································································|·············|·············|·············|···············|··············
-|  MarketClientProxy                                                                                            ·     410795  ·     410855  ·     410851  ·        3.3 %  ·          -  │
+|  MarketClientProxy                                                                                            ·     410819  ·     410855  ·     410852  ·        3.3 %  ·     422.57  │
 ················································································································|·············|·············|·············|···············|··············
-|  MarketConfigFacet                                                                                            ·          -  ·          -  ·    1309355  ·       10.5 %  ·          -  │
+|  MarketConfigFacet                                                                                            ·          -  ·          -  ·    1309355  ·       10.5 %  ·    1346.70  │
 ················································································································|·············|·············|·············|···············|··············
-|  MarketDiamond                                                                                                ·    1276153  ·    1276201  ·    1276198  ·       10.3 %  ·          -  │
+|  MarketDiamond                                                                                                ·    1276177  ·    1276201  ·    1276199  ·       10.3 %  ·    1312.60  │
 ················································································································|·············|·············|·············|···············|··············
-|  SaleBuilderFacet                                                                                             ·          -  ·          -  ·    1102636  ·        8.9 %  ·          -  │
+|  SaleBuilderFacet                                                                                             ·          -  ·          -  ·    1102648  ·        8.9 %  ·    1134.10  │
 ················································································································|·············|·············|·············|···············|··············
-|  SaleRunnerFacet                                                                                              ·          -  ·          -  ·    1736763  ·       13.9 %  ·          -  │
+|  SaleRunnerFacet                                                                                              ·          -  ·          -  ·    1736775  ·         14 %  ·    1786.31  │
 ················································································································|·············|·············|·············|···············|··············
-|  SeenHausNFT                                                                                                  ·          -  ·          -  ·    1989683  ·         16 %  ·          -  │
+|  SeenHausNFT                                                                                                  ·          -  ·          -  ·    1989683  ·         16 %  ·    2046.43  │
 ················································································································|·············|·············|·············|···············|··············
-|  SeenStaking                                                                                                  ·          -  ·          -  ·     127921  ·          1 %  ·          -  │
+|  SeenStaking                                                                                                  ·          -  ·          -  ·     127921  ·          1 %  ·     131.57  │
 ················································································································|·············|·············|·············|···············|··············
-|  Test1Facet                                                                                                   ·          -  ·          -  ·     137485  ·        1.1 %  ·          -  │
+|  Test1Facet                                                                                                   ·          -  ·          -  ·     137485  ·        1.1 %  ·     141.41  │
 ················································································································|·············|·············|·············|···············|··············
-|  Test2Facet                                                                                                   ·          -  ·          -  ·     166669  ·        1.3 %  ·          -  │
+|  Test2Facet                                                                                                   ·          -  ·          -  ·     166669  ·        1.3 %  ·     171.42  │
 ················································································································|·············|·············|·············|···············|··············
-|  Test2FacetUpgrade                                                                                            ·          -  ·          -  ·     101841  ·        0.8 %  ·          -  │
+|  Test2FacetUpgrade                                                                                            ·          -  ·          -  ·     101841  ·        0.8 %  ·     104.75  │
 ················································································································|·············|·············|·············|···············|··············
-|  Test3Facet                                                                                                   ·          -  ·          -  ·     164341  ·        1.3 %  ·          -  │
+|  Test3Facet                                                                                                   ·          -  ·          -  ·     185947  ·        1.5 %  ·     191.25  │
 ·---------------------------------------------------------------------------------------------------------------|-------------|-------------|-------------|---------------|-------------·
 
-  392 passing (8m)
+  401 passing (10m)
+
+
+Process finished with exit code 0
+
