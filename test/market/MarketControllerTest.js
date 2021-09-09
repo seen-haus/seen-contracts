@@ -3,6 +3,7 @@ const ethers = hre.ethers;
 const { expect } = require("chai");
 const Role = require("../../scripts/domain/Role");
 const Market = require("../../scripts/domain/Market");
+const MarketHandler = require("../../scripts/domain/MarketHandler");
 const Consignment = require("../../scripts/domain/Consignment");
 const Ticketer = require("../../scripts/domain/Ticketer");
 const { InterfaceIds } = require('../../scripts/constants/supported-interfaces.js');
@@ -25,7 +26,7 @@ describe("IMarketController", function() {
     let seenHausNFT;
     let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let lotsTicketer, itemsTicketer, tokenURI, royaltyPercentage;
-    let address, amount, percentage, counter, market, token, tokenId, id, consignment, nextConsignment, escrowTicketer, escrowTicketerType;
+    let address, amount, percentage, counter, market, marketHandlerEnumValue, token, tokenId, id, consignment, nextConsignment, escrowTicketer, escrowTicketerType;
     let replacementAmount, replacementPercentage, supply, support, owner, balance;
     let replacementAddress = "0x2d36143CC2E0E74E007E7600F341dC9D37D81C07";
     let tooLittle, tooMuch, revertReason, result;
@@ -835,6 +836,7 @@ describe("IMarketController", function() {
 
             // Setup values
             market = Market.PRIMARY;
+            marketHandlerEnumValue = MarketHandler.UNHANDLED;
             tokenId = await seenHausNFT.getNextToken();
             supply = "1";
             tokenURI = "ipfs://QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
@@ -926,6 +928,7 @@ describe("IMarketController", function() {
                         seller.address,
                         [
                             market,
+                            marketHandlerEnumValue,
                             seller.address,
                             token.address,
                             tokenId,
@@ -946,13 +949,27 @@ describe("IMarketController", function() {
 
                 // Make change, test event
                 await expect(
-                    marketController.connect(marketHandler).marketConsignment(nextConsignment)
+                    marketController.connect(marketHandler).marketConsignment(nextConsignment, MarketHandler.SALE)
                 ).to.emit(marketController, 'ConsignmentMarketed')
                     .withArgs(
                         associate.address,
                         seller.address,
                         nextConsignment
                     );
+            });
+
+            it("marketConsignment() should revert if it is passed the Unhandled MarketHandler", async function () {
+
+                // Get the expected consignment id
+                nextConsignment = await marketController.getNextConsignment();
+
+                // Make change, test event
+                await marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply);
+
+                // Make change, test event
+                await expect(
+                    marketController.connect(marketHandler).marketConsignment(nextConsignment, MarketHandler.UNHANDLED)
+                ).to.be.revertedWith("Consignment can't be marketed without a valid handler");
             });
 
             it("setConsignmentTicketer() should emit a ConsignmentTicketerChanged event", async function () {
@@ -1039,6 +1056,7 @@ describe("IMarketController", function() {
                     // Convert to entity
                     consignment = new Consignment(
                         response.market,
+                        response.marketHandler,
                         response.seller,
                         response.tokenAddress,
                         response.tokenId.toString(),
@@ -1057,6 +1075,7 @@ describe("IMarketController", function() {
 
                     // Test expected values
                     expect(consignment.market === market).is.true;
+                    expect(consignment.marketHandler === marketHandlerEnumValue).is.true;
                     expect(consignment.seller === seller.address).is.true;
                     expect(consignment.tokenAddress === token.address).is.true;
                     expect(consignment.tokenId === tokenId.toString()).is.true;
@@ -1207,6 +1226,7 @@ describe("IMarketController", function() {
                                 seller.address,
                                 [
                                     market,
+                                    marketHandlerEnumValue,
                                     seller.address,
                                     token.address,
                                     tokenId,
@@ -1321,6 +1341,7 @@ describe("IMarketController", function() {
                             seller.address,
                             [
                                 market,
+                                marketHandlerEnumValue,
                                 seller.address,
                                 token.address,
                                 tokenId,

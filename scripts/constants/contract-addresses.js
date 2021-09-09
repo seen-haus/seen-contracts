@@ -9,19 +9,19 @@
 exports.ContractAddresses = {
     
     "rinkeby": {
-        AccessController: "0x8b7201C4df04d1E68c1e14D787C2BA958F934649",
-        DiamondLoupeFacet: "0x9A8d7bcfaF4E30B414a4C1a6D3Df217E7C19F0D5",
-        DiamondCutFacet: "0xD0101E6aea73e9377d694A0A595Ef12F7da45C07",
-        MarketDiamond: "0x8476d7D8335eeBD2DA99Dee334b4a152f62A7709",
-        MarketConfigFacet: "0x925DF87FddDC83563A1Fb92134b00A63D05e93F6",
-        MarketClerkFacet: "0x753D88Dd5ecF9C25543c23053E3bcF8bf6d00D7a",
-        AuctionBuilderFacet: "0x58AF8476a3A583322583Fe43349f015Fb7D031Cc",
-        AuctionRunnerFacet: "0x8B499EBcf4a40F6d540604a8969B5790Dc346f60",
-        SaleBuilderFacet: "0x2B68c8793b0eBB77a3B2d29563376F491d238c22",
-        SaleRunnerFacet: "0xBDAdCcc92eae7c5eB1E0Ebef3599bF3980C6FD1a",
-        LotsTicketer: "0x127a7cccF606C1030EFA7894eDaC42599Dc00dBA",
-        ItemsTicketer: "0xbF57242Ca1Cd3779B6482b4Cc936ac7851CF0265",
-        SeenHausNFT: "0x3f2F78649D1452607581e33a4ffc953Fb9368f71",
+        AccessController: "0x255f96c522E2f451682Cb12Ed8b9D01eEd25BAE9",
+        DiamondLoupeFacet: "0x1B226F9cb8620183CDf20214f20b33b838c41311",
+        DiamondCutFacet: "0x9789E7Bd0ef07d474DD023205BFDa8737b867141",
+        MarketDiamond: "0x73E60d8b6Fa8Dcd29139EeefC09f2160E1940411",
+        MarketConfigFacet: "0x081a2Ce85AA125acf3c3b0339A648494537C9Ddd",
+        MarketClerkFacet: "0x971534659F2240B59F5b7743b26E317C9AC0B28b",
+        AuctionBuilderFacet: "0xCf1f2380642d33351B1d1ae4fb4A70822a39B09a",
+        AuctionRunnerFacet: "0xAEEcDe5456513641393E618Ce25987D669bDE768",
+        SaleBuilderFacet: "0x693b474bB9c5B9cd7Db5E9d0Ff8ffFD733795C45",
+        SaleRunnerFacet: "0xAA09cc58fbAB9137578C4215BAF0F514471CAd7E",
+        LotsTicketer: "0x3c3CDFDB4CC50F429B214eB50f3032f4D1A48fb2",
+        ItemsTicketer: "0xE2F9650Ea01607CEdc7A5161aF8fcF202017b696",
+        SeenHausNFT: "0x73226abfED390418213411CbCeA578136e7350D6",
     },
 
     "mainnet": {

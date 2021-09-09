@@ -34,13 +34,13 @@ exports.RoleAssignments = {
 
         "Jay's escrow agent / seller address": // For mint+market of physical NFTs
             {
-                address: "0xD2a3F28cD3f3825567e53773C341688E6afa12EC",
+                address: "0x06d95AD7d2F4c868f96203c55Fb0ec7A4ce17026",
                 roles: [Role.ESCROW_AGENT, Role.SELLER]
             },
 
         "Jay's minter / seller address": // For mint+market of digital NFTs
             {
-                address: "0x06d95AD7d2F4c868f96203c55Fb0ec7A4ce17026",
+                address: "0xD2a3F28cD3f3825567e53773C341688E6afa12EC",
                 roles: [Role.MINTER, Role.SELLER]
             },
 
@@ -74,7 +74,7 @@ exports.RoleAssignments = {
 
         "Jay's admin address": // For admin tasks
             {
-                address: "",
+                address: "0xDE7e3ec4442Ba87247797BEA433985449EDEA893",
                 roles: [Role.ADMIN]
             },
 
@@ -86,7 +86,7 @@ exports.RoleAssignments = {
 
         "Jay's minter / seller address": // For mint+market of digital NFTs
             {
-                address: "",
+                address: "0xD2a3F28cD3f3825567e53773C341688E6afa12EC",
                 roles: [Role.MINTER, Role.SELLER]
             },
 

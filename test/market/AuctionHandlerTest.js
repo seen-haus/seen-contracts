@@ -4,6 +4,7 @@ const { expect } = require("chai");
 const { time } = require('@openzeppelin/test-helpers');
 const Role = require("../../scripts/domain/Role");
 const Market = require("../../scripts/domain/Market");
+const MarketHandler = require("../../scripts/domain/MarketHandler");
 const Clock = require("../../scripts/domain/Clock");
 const Auction = require("../../scripts/domain/Auction");
 const State = require("../../scripts/domain/State");
@@ -578,6 +579,7 @@ describe("AuctionHandler", function() {
                                     seller.address,    // seller
                                     [ // Consignment
                                         Market.SECONDARY,
+                                        MarketHandler.UNHANDLED,
                                         seller.address,
                                         tokenAddress,
                                         tokenId,
@@ -684,6 +686,7 @@ describe("AuctionHandler", function() {
                                     seller.address,    // seller
                                     [ // Consignment
                                         Market.SECONDARY,
+                                        MarketHandler.UNHANDLED,
                                         seller.address,
                                         tokenAddress,
                                         tokenId,

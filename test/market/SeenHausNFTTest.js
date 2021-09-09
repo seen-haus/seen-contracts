@@ -4,6 +4,7 @@ const { expect } = require("chai");
 const Role = require("../../scripts/domain/Role");
 const Token = require("../../scripts/domain/Token");
 const Market = require("../../scripts/domain/Market");
+const MarketHandler = require("../../scripts/domain/MarketHandler");
 const Ticketer = require("../../scripts/domain/Ticketer");
 const { InterfaceIds } = require('../../scripts/constants/supported-interfaces.js');
 const { deployMarketDiamond } = require('../../scripts/util/deploy-market-diamond.js');
@@ -392,6 +393,7 @@ describe("SeenHausNFT", function() {
                             creator.address,    // seller
                             [ // Consignment
                                 Market.PRIMARY,
+                                MarketHandler.UNHANDLED,
                                 creator.address,
                                 seenHausNFT.address,
                                 tokenId,
@@ -460,6 +462,7 @@ describe("SeenHausNFT", function() {
                             creator.address,    // seller
                             [ // Consignment
                                 Market.PRIMARY,
+                                MarketHandler.UNHANDLED,
                                 creator.address,
                                 seenHausNFT.address,
                                 tokenId,

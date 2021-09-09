@@ -7,6 +7,7 @@ const Role = require("../../scripts/domain/Role");
 const Sale = require("../../scripts/domain/Sale");
 const State = require("../../scripts/domain/State");
 const Market = require("../../scripts/domain/Market");
+const MarketHandler = require("../../scripts/domain/MarketHandler");
 const Outcome = require("../../scripts/domain/Outcome");
 const Audience = require("../../scripts/domain/Audience");
 const Ticketer = require("../../scripts/domain/Ticketer");
@@ -516,6 +517,7 @@ describe("SaleHandler", function() {
                                     seller.address,    // seller
                                     [ // Consignment
                                         Market.SECONDARY,
+                                        MarketHandler.UNHANDLED,
                                         seller.address,
                                         tokenAddress,
                                         tokenId,
@@ -618,6 +620,7 @@ describe("SaleHandler", function() {
                                     seller.address,    // seller
                                     [ // Consignment
                                         Market.SECONDARY,
+                                        MarketHandler.UNHANDLED,
                                         seller.address,
                                         tokenAddress,
                                         tokenId,

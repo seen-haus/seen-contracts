@@ -1,6 +1,7 @@
 const NODE = (typeof module !== 'undefined' && typeof module.exports !== 'undefined');
 const ethers = require("ethers");
 const Market = require("./Market");
+const MarketHandler = require("./MarketHandler");
 const eip55 = require("eip55");
 
 /**
@@ -12,8 +13,9 @@ const eip55 = require("eip55");
  */
 class Consignment {
 
-    constructor (market, seller, tokenAddress, tokenId, supply, id, multiToken, marketed, released) {
+    constructor (market, marketHandler, seller, tokenAddress, tokenId, supply, id, multiToken, marketed, released) {
         this.market = market;
+        this.marketHandler = marketHandler;
         this.seller = seller;
         this.tokenAddress = tokenAddress;
         this.tokenId = tokenId;
@@ -30,8 +32,8 @@ class Consignment {
      * @returns {Consignment}
      */
     static fromObject(o) {
-        const {market, seller, tokenAddress, tokenId, supply, id, multiToken, marketed, released} = o;
-        return new Consignment(market, seller, tokenAddress, tokenId, supply, id, multiToken, marketed, released);
+        const {market, marketHandler, seller, tokenAddress, tokenId, supply, id, multiToken, marketed, released} = o;
+        return new Consignment(market, marketHandler, seller, tokenAddress, tokenId, supply, id, multiToken, marketed, released);
     }
 
     /**
@@ -68,6 +70,21 @@ class Consignment {
         try {
             valid = (
                 Market.Markets.includes(market)
+            );
+        } catch (e) {}
+        return valid;
+    }
+
+    /**
+     * Is this Consignment instance's marketHandler field valid?
+     * @returns {boolean}
+     */
+     marketHandlerIsValid() {
+        let valid = false;
+        let {marketHandler} = this;
+        try {
+            valid = (
+                MarketHandler.MarketHandlers.includes(marketHandler)
             );
         } catch (e) {}
         return valid;
@@ -209,6 +226,7 @@ class Consignment {
     isValid() {
         return (
             this.marketIsValid() &&
+            this.marketHandlerIsValid() &&
             this.sellerIsValid() &&
             this.tokenAddressIsValid() &&
             this.tokenIdIsValid() &&

@@ -120,7 +120,7 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
         sale.outcome = Outcome.Pending;
 
         // Notify MarketController the consignment has been marketed
-        getMarketController().marketConsignment(consignment.id);
+        getMarketController().marketConsignment(consignment.id, MarketHandler.Sale);
 
         // Notify listeners of state change
         emit SalePending(msg.sender, consignment.seller, sale);
@@ -210,6 +210,7 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
 
         // Register consignment (Secondaries are automatically marketed upon registration)
         Consignment memory consignment = getMarketController().registerConsignment(Market.Secondary, msg.sender, _seller, _tokenAddress, _tokenId, _supply);
+        getMarketController().marketConsignment(consignment.id, MarketHandler.Sale);
 
         // Set up the sale
         setAudience(consignment.id, _audience);

@@ -10,7 +10,7 @@ import "../domain/SeenTypes.sol";
  *
  * @notice Manages consignments for the Seen.Haus contract suite.
  *
- * The ERC-165 identifier for this interface is: 0xab572e9c
+ * The ERC-165 identifier for this interface is: 0xdab9a74c
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
@@ -83,7 +83,7 @@ interface IMarketClerk is IERC1155ReceiverUpgradeable, IERC721ReceiverUpgradeabl
       *
       * @param _consignmentId - the id of the consignment
       */
-    function marketConsignment(uint256 _consignmentId) external;
+    function marketConsignment(uint256 _consignmentId, SeenTypes.MarketHandler _marketHandler) external;
 
     /**
      * @notice Release the consigned item to a given address

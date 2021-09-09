@@ -179,20 +179,17 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUp
         // Get the id for the new consignment and increment counter
         uint256 id = mcs.nextConsignment++;
 
-        // Primary market NFTs (minted here) are not automatically marketed.
-        // Secondary market NFTs are automatically marketed (sale or auction).
-        bool marketed = (_market == Market.Secondary);
-
         // Create and store the consignment
         consignment = Consignment(
             _market,
+            MarketHandler.Unhandled,
             _seller,
             _tokenAddress,
             _tokenId,
             _supply,
             id,
             multiToken,
-            marketed,
+            false,
             false
         );
         mcs.consignments[id] = consignment;
@@ -202,9 +199,6 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUp
 
         // Notify listeners of state change
         emit ConsignmentRegistered(_consignor, _seller , consignment);
-        if (marketed) {
-            emit ConsignmentMarketed(_consignor, consignment.seller, consignment.id);
-        }
     }
 
     /**
@@ -217,12 +211,14 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUp
      *
      * @param _consignmentId - the id of the consignment
      */
-    function marketConsignment(uint256 _consignmentId)
+    function marketConsignment(uint256 _consignmentId, MarketHandler _marketHandler)
     external
     override
     onlyRole(MARKET_HANDLER)
     consignmentExists(_consignmentId)
     {
+        require(_marketHandler != MarketHandler.Unhandled, "Consignment can't be marketed without a valid handler");
+
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
 
         // Get the consignment into memory
@@ -233,6 +229,7 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUp
 
         // Update the consignment
         consignment.marketed = true;
+        consignment.marketHandler = _marketHandler;
 
         // Consignor address
         address consignor = mcs.consignors[_consignmentId];

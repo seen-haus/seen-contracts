@@ -118,7 +118,7 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
         auction.outcome = Outcome.Pending;
 
         // Notify MarketController the consignment has been marketed
-        getMarketController().marketConsignment(consignment.id);
+        getMarketController().marketConsignment(consignment.id, MarketHandler.Auction);
 
         // Notify listeners of state change
         emit AuctionPending(msg.sender, consignment.seller, auction);
@@ -199,6 +199,7 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
 
         // Register consignment (Secondaries are automatically marketed upon registration)
         Consignment memory consignment = getMarketController().registerConsignment(Market.Secondary, msg.sender, _seller, _tokenAddress, _tokenId, 1);
+        getMarketController().marketConsignment(consignment.id, MarketHandler.Auction);
 
         // Set up the auction
         setAudience(consignment.id, _audience);

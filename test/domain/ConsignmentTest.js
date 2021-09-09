@@ -1,6 +1,7 @@
 const { expect } = require("chai");
 const Consignment = require("../../scripts/domain/Consignment");
 const Market = require("../../scripts/domain/Market");
+const MarketHandler = require("../../scripts/domain/MarketHandler");
 
 /**
  *  Test the Consignment domain object
@@ -20,6 +21,7 @@ describe("Consignment", function() {
 
         // Required constructor params
         market = Market.PRIMARY;
+        marketHandler = MarketHandler.UNHANDLED;
         seller = accounts[0].address;
         tokenAddress = "0x7777788200B672A42421017F65EDE4Fc759564C8";
         tokenId = "100";
@@ -35,8 +37,9 @@ describe("Consignment", function() {
 
         it("Should allow creation of valid, fully populated Consignment instance", async function () {
 
-            consignment = new Consignment(market, seller, tokenAddress, tokenId, supply, id,  multiToken, marketed, released);
+            consignment = new Consignment(market, marketHandler, seller, tokenAddress, tokenId, supply, id,  multiToken, marketed, released);
             expect(consignment.marketIsValid()).is.true;
+            expect(consignment.marketHandlerIsValid()).is.true;
             expect(consignment.sellerIsValid()).is.true;
             expect(consignment.tokenAddressIsValid()).is.true;
             expect(consignment.tokenIdIsValid()).is.true;
@@ -54,7 +57,7 @@ describe("Consignment", function() {
         beforeEach( async function () {
 
             // Create a valid consignment, then set fields in tests directly
-            consignment = new Consignment(market, seller, tokenAddress, tokenId, supply, id,  multiToken, marketed, released);
+            consignment = new Consignment(market, marketHandler, seller, tokenAddress, tokenId, supply, id,  multiToken, marketed, released);
         });
 
         it("Always present, market must be equal to a Market enum value", async function() {
@@ -77,6 +80,30 @@ describe("Consignment", function() {
             // Valid field value
             consignment.market = 0;
             expect(consignment.marketIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+        });
+
+        it("Always present, market handler must be equal to a MarketHandler enum value", async function() {
+
+            // Invalid field value
+            consignment.marketHandler = 12;
+            expect(consignment.marketHandlerIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Invalid field value
+            consignment.marketHandler = "zedzdeadbaby";
+            expect(consignment.marketHandlerIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Valid field value
+            consignment.marketHandler = MarketHandler.UNHANDLED;
+            expect(consignment.marketHandlerIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+            // Valid field value
+            consignment.marketHandler = 0;
+            expect(consignment.marketHandlerIsValid()).is.true;
             expect(consignment.isValid()).is.true;
 
         });
@@ -265,7 +292,7 @@ describe("Consignment", function() {
         beforeEach( async function () {
 
             // Create a valid Consignment instance, then operate on its methods in the tests
-            consignment = new Consignment(market, seller, tokenAddress, tokenId, supply, id,  multiToken, marketed, released);
+            consignment = new Consignment(market, marketHandler, seller, tokenAddress, tokenId, supply, id,  multiToken, marketed, released);
 
         })
 
@@ -273,7 +300,7 @@ describe("Consignment", function() {
 
             // Get plain object
             const object = {
-                market, seller, tokenAddress: tokenAddress, tokenId, supply, id,  multiToken, marketed, released
+                market, marketHandler, seller, tokenAddress: tokenAddress, tokenId, supply, id,  multiToken, marketed, released
             }
 
             // Promote to instance

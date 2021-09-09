@@ -15,6 +15,12 @@ contract SeenTypes {
         Secondary
     }
 
+    enum MarketHandler {
+        Unhandled,
+        Auction,
+        Sale
+    }
+
     enum Clock {
         Live,
         Trigger
@@ -55,6 +61,7 @@ contract SeenTypes {
 
     struct Consignment {
         Market market;
+        MarketHandler marketHandler;
         address payable seller;
         address tokenAddress;
         uint256 tokenId;
