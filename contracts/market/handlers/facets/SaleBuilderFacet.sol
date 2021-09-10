@@ -99,7 +99,7 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
         Consignment memory consignment = getMarketController().getConsignment(_consignmentId);
 
         // Make sure the consignment hasn't been marketed
-        require(consignment.marketed == false, "Consignment has already been marketed");
+        require(consignment.marketHandler == MarketHandler.Unhandled, "Consignment has already been marketed");
 
         // Get the storage location for the sale
         Sale storage sale = mhs.sales[consignment.id];
@@ -208,8 +208,9 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
 
         }
 
-        // Register consignment (Secondaries are automatically marketed upon registration)
+        // Register consignment
         Consignment memory consignment = getMarketController().registerConsignment(Market.Secondary, msg.sender, _seller, _tokenAddress, _tokenId, _supply);
+        // Secondaries are marketed directly after registration
         getMarketController().marketConsignment(consignment.id, MarketHandler.Sale);
 
         // Set up the sale

@@ -189,7 +189,6 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUp
             _supply,
             id,
             multiToken,
-            false,
             false
         );
         mcs.consignments[id] = consignment;
@@ -207,7 +206,8 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUp
      * Emits a ConsignmentMarketed event.
      *
      * Reverts if:
-     *  - consignment has already been marketed.
+     *  - _marketHandler of value Unhandled is passed into this function. See {SeenTypes.MarketHandler}.
+     *  - consignment has already been marketed (has a marketHandler other than Unhandled). See {SeenTypes.MarketHandler}.
      *
      * @param _consignmentId - the id of the consignment
      */
@@ -224,11 +224,10 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUp
         // Get the consignment into memory
         Consignment storage consignment = mcs.consignments[_consignmentId];
 
-        // A consignment can only be marketed once
-        require(consignment.marketed == false, "Consignment has already been marketed");
+        // A consignment can only be marketed once, should currently be Unhandled
+        require(consignment.marketHandler == MarketHandler.Unhandled, "Consignment has already been marketed");
 
         // Update the consignment
-        consignment.marketed = true;
         consignment.marketHandler = _marketHandler;
 
         // Consignor address

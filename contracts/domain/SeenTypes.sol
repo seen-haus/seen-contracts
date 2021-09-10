@@ -68,7 +68,6 @@ contract SeenTypes {
         uint256 supply;
         uint256 id;
         bool multiToken;
-        bool marketed;
         bool released;
     }
 

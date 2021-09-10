@@ -13,7 +13,7 @@ const eip55 = require("eip55");
  */
 class Consignment {
 
-    constructor (market, marketHandler, seller, tokenAddress, tokenId, supply, id, multiToken, marketed, released) {
+    constructor (market, marketHandler, seller, tokenAddress, tokenId, supply, id, multiToken, released) {
         this.market = market;
         this.marketHandler = marketHandler;
         this.seller = seller;
@@ -22,7 +22,6 @@ class Consignment {
         this.supply = supply;
         this.id = id;
         this.multiToken = multiToken;
-        this.marketed = marketed;
         this.released = released;
     }
 
@@ -32,8 +31,8 @@ class Consignment {
      * @returns {Consignment}
      */
     static fromObject(o) {
-        const {market, marketHandler, seller, tokenAddress, tokenId, supply, id, multiToken, marketed, released} = o;
-        return new Consignment(market, marketHandler, seller, tokenAddress, tokenId, supply, id, multiToken, marketed, released);
+        const {market, marketHandler, seller, tokenAddress, tokenId, supply, id, multiToken, released} = o;
+        return new Consignment(market, marketHandler, seller, tokenAddress, tokenId, supply, id, multiToken, released);
     }
 
     /**
@@ -189,21 +188,6 @@ class Consignment {
     }
 
     /**
-     * Is this Consignment instance's marketed field valid?
-     * @returns {boolean}
-     */
-    marketedIsValid() {
-        let valid = false;
-        let {marketed} = this;
-        try {
-            valid = (
-                typeof marketed === "boolean"
-            );
-        } catch (e) {}
-        return valid;
-    }
-
-    /**
      * Is this Consignment instance's released field valid?
      * @returns {boolean}
      */
@@ -233,7 +217,6 @@ class Consignment {
             this.supplyIsValid() &&
             this.idIsValid() &&
             this.multiTokenIsValid() &&
-            this.marketedIsValid() &&
             this.releasedIsValid()
         );
     };

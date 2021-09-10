@@ -958,20 +958,6 @@ describe("IMarketController", function() {
                     );
             });
 
-            it("marketConsignment() should revert if it is passed the Unhandled MarketHandler", async function () {
-
-                // Get the expected consignment id
-                nextConsignment = await marketController.getNextConsignment();
-
-                // Make change, test event
-                await marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply);
-
-                // Make change, test event
-                await expect(
-                    marketController.connect(marketHandler).marketConsignment(nextConsignment, MarketHandler.UNHANDLED)
-                ).to.be.revertedWith("Consignment can't be marketed without a valid handler");
-            });
-
             it("setConsignmentTicketer() should emit a ConsignmentTicketerChanged event", async function () {
 
                 // Get the next consignment id
@@ -1023,6 +1009,20 @@ describe("IMarketController", function() {
 
             });
 
+            it("marketConsignment() should revert if it is passed the Unhandled MarketHandler", async function () {
+
+                // Get the expected consignment id
+                nextConsignment = await marketController.getNextConsignment();
+
+                // Make change, test event
+                await marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply);
+
+                // Make change, test event
+                await expect(
+                    marketController.connect(marketHandler).marketConsignment(nextConsignment, MarketHandler.UNHANDLED)
+                ).to.be.revertedWith("Consignment can't be marketed without a valid handler");
+            });
+
         });
 
         context("Reading Consignments", async function () {
@@ -1063,7 +1063,6 @@ describe("IMarketController", function() {
                         response.supply.toString(),
                         response.id.toString(),
                         response.multiToken,
-                        response.marketed,
                         response.released
                     );
 
@@ -1082,7 +1081,6 @@ describe("IMarketController", function() {
                     expect(consignment.supply === supply.toString()).is.true;
                     expect(consignment.id === id).is.true;
                     expect(consignment.multiToken).is.true;
-                    expect(consignment.marketed).is.false;
                     expect(consignment.released).is.false;
                 });
 

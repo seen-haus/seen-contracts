@@ -11,6 +11,7 @@ const State = require("../../scripts/domain/State");
 const Outcome = require("../../scripts/domain/Outcome");
 const Audience = require("../../scripts/domain/Audience");
 const Ticketer = require("../../scripts/domain/Ticketer");
+const Consignment = require("../../scripts/domain/Consignment");
 const { InterfaceIds } = require('../../scripts/constants/supported-interfaces.js');
 const { deployMarketDiamond } = require('../../scripts/util/deploy-market-diamond.js');
 const { deployMarketControllerFacets } = require('../../scripts/util/deploy-market-controller-facets.js');
@@ -967,6 +968,158 @@ describe("AuctionHandler", function() {
             });
 
         });
+
+        context("Market Handler Assignment", async function () {
+
+            context("Primary Market Auction", async function () {
+                
+                it("Assigns a marketHandler of Unhandled to a consignment immediately after mintDigital", async function () {
+                    // Get the consignment id
+                    consignmentId = await marketController.getNextConsignment();
+
+                    // Mint new token on seenHausNFT contract
+                    tokenId = await seenHausNFT.getNextToken();
+                    await seenHausNFT.connect(seller).mintDigital(supply, seller.address, tokenURI, royaltyPercentage);
+
+                    // Get the consignment
+                    const response = await marketController.getConsignment(consignmentId);
+
+                    // Convert to entity
+                    let consignment = new Consignment(
+                        response.market,
+                        response.marketHandler,
+                        response.seller,
+                        response.tokenAddress,
+                        response.tokenId.toString(),
+                        response.supply.toString(),
+                        response.id.toString(),
+                        response.multiToken,
+                        response.released
+                    );
+
+                    // Consignment should have a market handler of MarketHandler.Unhandled
+                    expect(consignment.marketHandler === MarketHandler.UNHANDLED).is.true;
+                })
+
+                it("Assigns a marketHandler of Unhandled to a consignment immediately after mintPhysical", async function () {
+                    // Get the consignment id
+                    physicalConsignmentId = await marketController.getNextConsignment();
+
+                    // Mint new token on seenHausNFT contract
+                    physicalTokenId = await seenHausNFT.getNextToken();
+                    await seenHausNFT.connect(escrowAgent).mintPhysical(supply, seller.address, tokenURI, royaltyPercentage);
+
+                    // Get the consignment
+                    const response = await marketController.getConsignment(consignmentId);
+
+                    // Convert to entity
+                    let consignment = new Consignment(
+                        response.market,
+                        response.marketHandler,
+                        response.seller,
+                        response.tokenAddress,
+                        response.tokenId.toString(),
+                        response.supply.toString(),
+                        response.id.toString(),
+                        response.multiToken,
+                        response.released
+                    );
+
+                    // Consignment should have a market handler of MarketHandler.Unhandled
+                    expect(consignment.marketHandler === MarketHandler.UNHANDLED).is.true;
+                })
+
+                it("Assigns a marketHandler of Auction to a consignment immediately after createPrimaryAuction", async function () {
+                    // Get the consignment id
+                    consignmentId = await marketController.getNextConsignment();
+
+                    // Mint new token on seenHausNFT contract
+                    tokenId = await seenHausNFT.getNextToken();
+                    await seenHausNFT.connect(seller).mintDigital(supply, seller.address, tokenURI, royaltyPercentage);
+
+                    // Let's use the triggered clock this time
+                    clock = Clock.TRIGGERED;
+
+                    // Seller creates auction
+                    await auctionHandler.connect(seller).createPrimaryAuction(
+                        consignmentId,
+                        start,
+                        duration,
+                        reserve,
+                        audience,
+                        clock
+                    );
+                    
+                    // Get the consignment
+                    const response = await marketController.getConsignment(consignmentId);
+
+                    // Convert to entity
+                    let consignment = new Consignment(
+                        response.market,
+                        response.marketHandler,
+                        response.seller,
+                        response.tokenAddress,
+                        response.tokenId.toString(),
+                        response.supply.toString(),
+                        response.id.toString(),
+                        response.multiToken,
+                        response.released
+                    );
+
+                    // Consignment should have a market handler of MarketHandler.Auction
+                    expect(consignment.marketHandler === MarketHandler.AUCTION).is.true;
+                })
+
+            })
+
+            context("Secondary Market Auction", async function () {
+                it("Assigns a marketHandler of Auction to a consignment immediately after createSecondaryAuction", async function () {
+                    // Token is on a foreign contract
+                    tokenAddress = foreign1155.address;
+
+                    // Creator transfers all their tokens to seller
+                    await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
+
+                    // Get the consignment id
+                    consignmentId = await marketController.getNextConsignment();
+
+                    // Let's use the triggered clock this time
+                    clock = Clock.TRIGGERED;
+
+                    // Seller creates auction
+                    await auctionHandler.connect(seller).createSecondaryAuction(
+                        seller.address,
+                        tokenAddress,
+                        tokenId,
+                        start,
+                        duration,
+                        reserve,
+                        audience,
+                        clock
+                    );
+
+                    // Get the consignment
+                    const response = await marketController.getConsignment(consignmentId);
+
+                    // Convert to entity
+                    let consignment = new Consignment(
+                        response.market,
+                        response.marketHandler,
+                        response.seller,
+                        response.tokenAddress,
+                        response.tokenId.toString(),
+                        response.supply.toString(),
+                        response.id.toString(),
+                        response.multiToken,
+                        response.released
+                    );
+
+                    // Consignment should have a market handler of MarketHandler.Auction
+                    expect(consignment.marketHandler === MarketHandler.AUCTION).is.true;
+                });
+            })
+
+        })
 
         context("Auction Behavior", async function () {
 

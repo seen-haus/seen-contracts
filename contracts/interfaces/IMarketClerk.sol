@@ -80,6 +80,7 @@ interface IMarketClerk is IERC1155ReceiverUpgradeable, IERC721ReceiverUpgradeabl
       * Emits a ConsignmentMarketed event.
       *
       * Reverts if consignment has already been marketed.
+      * A consignment is considered as marketed if it has a marketHandler other than Unhandled. See: {SeenTypes.MarketHandler}
       *
       * @param _consignmentId - the id of the consignment
       */
