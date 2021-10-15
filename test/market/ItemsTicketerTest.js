@@ -20,7 +20,7 @@ describe("ItemsTicketer", function() {
     let accounts, deployer, admin, upgrader, escrowAgent, associate, creator, marketHandler, buyer;
     let accessController, marketController;
     let seenHausNFT, itemsTicketer, itemsTicketerProxy;
-    let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
+    let staking, multisig, vipStakerAmount, primaryFeePercentage, secondaryFeePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let ticketId, tokenId, tokenURI, counter, supply, half, balance, royaltyPercentage, consignmentId, support;
     let ticketURI, ticketURIBase = "https://seen.haus/ticket/metadata/items-ticketer/";
     let replacementAddress = "0x2d36143CC2E0E74E007E7600F341dC9D37D81C07";
@@ -43,7 +43,8 @@ describe("ItemsTicketer", function() {
 
         // Market control values
         vipStakerAmount = "500";              // Amount of xSEEN to be VIP
-        feePercentage = "1500";               // 15%   = 1500
+        primaryFeePercentage = "500";         // 5%    = 500
+        secondaryFeePercentage = "250";       // 2.5%  = 250
         maxRoyaltyPercentage = "5000";        // 50%   = 5000
         outBidPercentage = "500";             // 5%    = 500
         defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
@@ -56,7 +57,8 @@ describe("ItemsTicketer", function() {
             staking.address,
             multisig.address,
             vipStakerAmount,
-            feePercentage,
+            primaryFeePercentage,
+            secondaryFeePercentage,
             maxRoyaltyPercentage,
             outBidPercentage,
             defaultTicketerType

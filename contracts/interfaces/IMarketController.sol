@@ -9,7 +9,7 @@ import "./IMarketClerk.sol";
  *
  * @notice Manages configuration and consignments used by the Seen.Haus contract suite.
  *
- * The ERC-165 identifier for this interface is: 0x941c7091
+ * The ERC-165 identifier for this interface is: 0xbb8dba77
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */

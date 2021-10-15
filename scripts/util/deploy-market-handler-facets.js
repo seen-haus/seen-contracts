@@ -25,6 +25,11 @@ async function deployMarketHandlerFacets(diamond, gasLimit) {
     const auctionRunnerFacet = await AuctionRunnerFacet.deploy({gasLimit});
     await auctionRunnerFacet.deployed();
 
+    // Deploy the AuctionEnderFacet contract
+    const AuctionEnderFacet = await ethers.getContractFactory("AuctionEnderFacet");
+    const auctionEnderFacet = await AuctionEnderFacet.deploy({gasLimit});
+    await auctionEnderFacet.deployed();
+
     // Deploy the SaleBuilderFacet contract
     const SaleBuilderFacet = await ethers.getContractFactory("SaleBuilderFacet");
     const saleBuilderFacet = await SaleBuilderFacet.deploy({gasLimit});
@@ -34,6 +39,11 @@ async function deployMarketHandlerFacets(diamond, gasLimit) {
     const SaleRunnerFacet = await ethers.getContractFactory("SaleRunnerFacet");
     const saleRunnerFacet = await SaleRunnerFacet.deploy({gasLimit});
     await saleBuilderFacet.deployed();
+
+    // Deploy the SaleRunnerFacet contract
+    const SaleEnderFacet = await ethers.getContractFactory("SaleEnderFacet");
+    const saleEnderFacet = await SaleEnderFacet.deploy({gasLimit});
+    await saleEnderFacet.deployed();
 
     // Cast Diamond to DiamondCutFacet
     const cutFacet = await ethers.getContractAt('DiamondCutFacet', diamond.address);
@@ -51,6 +61,10 @@ async function deployMarketHandlerFacets(diamond, gasLimit) {
     const auctionRunnerCut = getFacetAddCut(auctionRunnerFacet, [initFunction]);
     await cutFacet.diamondCut([auctionRunnerCut], auctionRunnerFacet.address, callData, {gasLimit});
 
+    // Cut AuctionEnder facet facet, initializing
+    const auctionEnderCut = getFacetAddCut(auctionEnderFacet, [initFunction]);
+    await cutFacet.diamondCut([auctionEnderCut], auctionEnderFacet.address, callData, {gasLimit});
+
     // Cut SaleBuilder facet, initializing
     const saleBuilderCut = getFacetAddCut(saleBuilderFacet, [initFunction]);
     await cutFacet.diamondCut([saleBuilderCut], saleBuilderFacet.address, callData, {gasLimit});
@@ -59,7 +73,11 @@ async function deployMarketHandlerFacets(diamond, gasLimit) {
     const saleRunnerCut = getFacetAddCut(saleRunnerFacet, [initFunction]);
     await cutFacet.diamondCut([saleRunnerCut], saleRunnerFacet.address, callData, {gasLimit});
 
-    return [auctionBuilderFacet, auctionRunnerFacet, saleBuilderFacet, saleRunnerFacet];
+    // Cut SaleEnder facet, initializing
+    const saleEnderCut = getFacetAddCut(saleEnderFacet, [initFunction]);
+    await cutFacet.diamondCut([saleEnderCut], saleEnderFacet.address, callData, {gasLimit});
+
+    return [auctionBuilderFacet, auctionRunnerFacet, auctionEnderFacet, saleBuilderFacet, saleRunnerFacet, saleEnderFacet];
 
 }
 

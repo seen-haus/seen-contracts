@@ -33,6 +33,19 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
     }
 
     /**
+     * @dev Modifier that checks that the caller has a specific role or is a consignor.
+     *
+     * Reverts if caller doesn't have role or is not consignor.
+     *
+     * See: {AccessController.hasRole}
+     */
+    modifier onlyRoleOrConsignor(bytes32 _role, uint256 _consignmentId) {
+        DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
+        require(ds.accessController.hasRole(_role, msg.sender) || getMarketController().getConsignor(_consignmentId) == msg.sender, "Access denied, caller doesn't have role or is not consignor");
+        _;
+    }
+
+    /**
      * @notice Gets the address of the Seen.Haus MarketController contract.
      *
      * @return marketController - the address of the MarketController contract
@@ -119,12 +132,12 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
      *
      * Reverts if caller isn't the consignor
      *
-     * See: {MarketController.isConsignor}
+     * See: {MarketController.getConsignor}
      */
     modifier onlyConsignor(uint256 _consignmentId) {
 
         // Make sure the caller is the consignor
-        require(getMarketController().isConsignor(_consignmentId, msg.sender), "Caller is not consignor");
+        require(getMarketController().getConsignor(_consignmentId) == msg.sender, "Caller is not consignor");
         _;
     }
 
@@ -236,7 +249,12 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
 
         // With the net after royalties, calculate and split
         // the auction fee between SEEN staking and multisig,
-        uint256 feeAmount = getPercentageOf(_netAmount, marketController.getFeePercentage());
+        uint256 feeAmount;
+        if(_consignment.customFeePercentageBasisPoints > 0) {
+            feeAmount = getPercentageOf(_netAmount, _consignment.customFeePercentageBasisPoints);
+        } else {
+            feeAmount = getPercentageOf(_netAmount, marketController.getFeePercentage(_consignment.market));
+        }
         uint256 split = feeAmount / 2;
         address payable staking = marketController.getStaking();
         address payable multisig = marketController.getMultisig();

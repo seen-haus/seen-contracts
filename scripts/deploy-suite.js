@@ -25,9 +25,10 @@ function getConfig() {
 
     // Market configuration params
     const vipStakerAmount = "500";
-    const feePercentage = "20";
-    const maxRoyaltyPercentage = "50";
-    const outBidPercentage = "5";
+    const primaryFeePercentage = "500"; // 5%   = 500
+    const secondaryFeePercentage = "250"; // 2.5%   = 250
+    const maxRoyaltyPercentage = "2500"; // 25%   = 2500
+    const outBidPercentage = "500"; // 5%   = 500
     const defaultTicketerType = Ticketer.ITEMS;  // default escrow ticketer type
 
     // Staking contract address
@@ -48,7 +49,8 @@ function getConfig() {
             staking: STAKING[network],
             multisig: MULTISIG[network],
             vipStakerAmount,
-            feePercentage,
+            primaryFeePercentage,
+            secondaryFeePercentage,
             maxRoyaltyPercentage,
             outBidPercentage,
             defaultTicketerType
@@ -96,7 +98,8 @@ async function main() {
         config.staking,
         config.multisig,
         config.vipStakerAmount,
-        config.feePercentage,
+        config.primaryFeePercentage,
+        config.secondaryFeePercentage,
         config.maxRoyaltyPercentage,
         config.outBidPercentage,
         config.defaultTicketerType
@@ -109,11 +112,13 @@ async function main() {
     const marketController = await ethers.getContractAt('IMarketController', marketDiamond.address);
 
     // Cut the Market Handler facets into the Diamond
-    [auctionBuilderFacet, auctionRunnerFacet, saleBuilderFacet, saleRunnerFacet] = await deployMarketHandlerFacets(marketDiamond, gasLimit);
+    [auctionBuilderFacet, auctionRunnerFacet, auctionEnderFacet, saleBuilderFacet, saleRunnerFacet, saleEnderFacet] = await deployMarketHandlerFacets(marketDiamond, gasLimit);
     deploymentComplete('AuctionBuilderFacet', auctionBuilderFacet.address, [], contracts);
     deploymentComplete('AuctionRunnerFacet', auctionRunnerFacet.address, [], contracts);
+    deploymentComplete('AuctionEnderFacet', auctionEnderFacet.address, [], contracts);
     deploymentComplete('SaleBuilderFacet', saleBuilderFacet.address, [], contracts);
     deploymentComplete('SaleRunnerFacet', saleRunnerFacet.address, [], contracts);
+    deploymentComplete('SaleEnderFacet', saleEnderFacet.address, [], contracts);
 
     console.log(`\n⧉ Deploying Market Client implementation/proxy pairs...`);
 

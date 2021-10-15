@@ -107,9 +107,6 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
         // Make sure sale doesn't exist (start would always be non-zero on an actual sale)
         require(sale.start == 0, "Sale exists");
 
-        // Make sure start time isn't in the past
-        require (_start >= block.timestamp, "Time runs backward?");
-
         // Set up the sale
         setAudience(_consignmentId, _audience);
         sale.consignmentId = _consignmentId;
@@ -168,9 +165,6 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
     {
         // Get Market Handler Storage slot
         MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
-
-        // Make sure start time isn't in the past
-        require (_start >= block.timestamp, "Time runs backward?");
 
         // Make sure supply is non-zero
         require (_supply > 0, "Supply must be non-zero");

@@ -32,10 +32,11 @@ describe("SaleHandler", function() {
     let Foreign721, foreign721;
     let Foreign1155, foreign1155;
     let SeenStaking, seenStaking;
-    let multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
+    let multisig, vipStakerAmount, primaryFeePercentage, secondaryFeePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let market, tokenAddress, tokenId, tokenURI, sale, physicalTokenId, physicalConsignmentId, consignmentId, nextConsignment, block, blockNumber;
     let royaltyPercentage, supply, start, quantity, price, perTxCap, audience, escrowTicketer;
     let royaltyAmount, sellerAmount, feeAmount, multisigAmount, stakingAmount, grossSale, netAfterRoyalties, consignment;
+    let royaltyAmountWithCustomFee, sellerAmountWithCustomFee, feeAmountWithCustomFee, multisigAmountWithCustomFee, stakingAmountWithCustomFee, grossSaleWithCustomFee;
     let sellerBalance, contractBalance, buyerBalance, ticketerBalance, newBalance, buyOutPrice, single, badStartTime, halfSupply, signer;
 
     beforeEach( async function () {
@@ -59,11 +60,13 @@ describe("SaleHandler", function() {
         multisig = accounts[9];               // We just need addresses for these, not functional contracts
 
         // Market control values
-        vipStakerAmount = "500";              // Amount of xSEEN to be VIP
-        feePercentage = "1500";               // 15%   = 1500
-        maxRoyaltyPercentage = "5000";        // 50%   = 5000
-        outBidPercentage = "500";             // 5%    = 500
-        defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
+        vipStakerAmount = "500";                // Amount of xSEEN to be VIP
+        customFeePercentageBasisPoints = "2000" // 20%   = 2000
+        primaryFeePercentage = "500";           // 5%    = 500
+        secondaryFeePercentage = "250";         // 2.5%  = 250
+        maxRoyaltyPercentage = "5000";          // 50%   = 5000
+        outBidPercentage = "500";               // 5%    = 500
+        defaultTicketerType = Ticketer.LOTS;    // default escrow ticketer type
 
         // Deploy the Foreign721 mock contract
         Foreign721 = await ethers.getContractFactory("Foreign721");
@@ -88,7 +91,8 @@ describe("SaleHandler", function() {
             seenStaking.address,
             multisig.address,
             vipStakerAmount,
-            feePercentage,
+            primaryFeePercentage,
+            secondaryFeePercentage,
             maxRoyaltyPercentage,
             outBidPercentage,
             defaultTicketerType
@@ -104,7 +108,7 @@ describe("SaleHandler", function() {
         marketController = await ethers.getContractAt('IMarketController', marketDiamond.address);
 
         // Cut the Market Handler facets into the Diamond
-        [auctionBuilderFacet, auctionRunnerFacet, saleBuilderFacet, saleRunnerFacet] = await deployMarketHandlerFacets(marketDiamond);
+        [auctionBuilderFacet, auctionRunnerFacet, auctionEnderFacet, saleBuilderFacet, saleRunnerFacet, saleEnderFacet] = await deployMarketHandlerFacets(marketDiamond);
 
         // Cast Diamond to IAuctionHandler
         saleHandler = await ethers.getContractAt('ISaleHandler', marketDiamond.address);
@@ -188,6 +192,19 @@ describe("SaleHandler", function() {
                 await expect(
                     support,
                     "ISaleRunner interface not supported"
+                ).is.true;
+
+            });
+
+            it("should indicate support for ISaleEnder interface", async function () {
+
+                // Current interfaceId for ISaleEnder
+                support = await marketController.supportsInterface(InterfaceIds.ISaleEnder);
+
+                // Test
+                await expect(
+                    support,
+                    "ISaleEnder interface not supported"
                 ).is.true;
 
             });
@@ -386,7 +403,7 @@ describe("SaleHandler", function() {
 
                 });
 
-                it("cancelSale() should require caller has ADMIN role", async function () {
+                it("cancelSale() should require caller has ADMIN role or is Consigner - Testing ADMIN", async function () {
 
                     // Wait until sale starts and buy
                     await time.increaseTo(start);
@@ -395,11 +412,29 @@ describe("SaleHandler", function() {
                     // non-ADMIN attempt
                     await expect(
                         saleHandler.connect(associate).cancelSale(consignmentId)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Access denied, caller doesn't have role or is not consignor");
 
                     // ADMIN attempt
                     await expect (
                         saleHandler.connect(admin).cancelSale(consignmentId)
+                    ).to.emit(saleHandler,"SaleEnded");
+
+                });
+
+                it("cancelSale() should require caller has ADMIN role or is Consigner - Testing Consignor", async function () {
+
+                    // Wait until sale starts and buy
+                    await time.increaseTo(start);
+                    await saleHandler.connect(buyer).buy(consignmentId, single, {value: price});
+
+                    // non-ADMIN attempt
+                    await expect(
+                        saleHandler.connect(associate).cancelSale(consignmentId)
+                    ).to.be.revertedWith("Access denied, caller doesn't have role or is not consignor");
+
+                    // ADMIN attempt
+                    await expect (
+                        saleHandler.connect(seller).cancelSale(consignmentId)
                     ).to.emit(saleHandler,"SaleEnded");
 
                 });
@@ -522,7 +557,12 @@ describe("SaleHandler", function() {
                                         tokenAddress,
                                         tokenId,
                                         supply,
-                                        consignmentId
+                                        consignmentId,
+                                        false,
+                                        false,
+                                        0,
+                                        0,
+                                        0
                                     ]
                                 )
 
@@ -625,7 +665,12 @@ describe("SaleHandler", function() {
                                         tokenAddress,
                                         tokenId,
                                         supply,
-                                        consignmentId
+                                        consignmentId,
+                                        true,
+                                        false,
+                                        0,
+                                        0,
+                                        0
                                     ]
                                 )
 
@@ -721,8 +766,26 @@ describe("SaleHandler", function() {
                         ).to.emit(saleHandler, "Purchase")
                             .withArgs(
                                 consignmentId,
+                                buyer.address,
                                 single,
-                                buyer.address
+                                price
+                            );
+
+                    });
+
+                    it("should emit a TokenHistoryTracker event", async function () {
+
+                        // Buy and test event
+                        await expect(
+                            await saleHandler.connect(buyer).buy(consignmentId, single, {value: price})
+                        ).to.emit(saleHandler, "TokenHistoryTracker")
+                            .withArgs(
+                                tokenAddress,
+                                tokenId,
+                                buyer.address,
+                                price,
+                                single,
+                                consignmentId,
                             );
 
                     });
@@ -813,7 +876,7 @@ describe("SaleHandler", function() {
         context("Market Handler Assignment", async function () {
 
             context("Primary Market Sale", async function () {
-                
+
                 it("Assigns a marketHandler of Sale to a consignment immediately after createPrimarySale", async function () {
                     // Get the consignment id
                     consignmentId = await marketController.getNextConsignment();
@@ -844,7 +907,10 @@ describe("SaleHandler", function() {
                         response.supply.toString(),
                         response.id.toString(),
                         response.multiToken,
-                        response.released
+                        response.released,
+                        response.releasedSupply.toString(),
+                        response.customFeePercentageBasisPoints.toString(),
+                        response.pendingPayout.toString(),
                     );
 
                     // Consignment should have a market handler of MarketHandler.Sale
@@ -889,7 +955,10 @@ describe("SaleHandler", function() {
                         response.supply.toString(),
                         response.id.toString(),
                         response.multiToken,
-                        response.released
+                        response.released,
+                        response.releasedSupply.toString(),
+                        response.customFeePercentageBasisPoints.toString(),
+                        response.pendingPayout.toString(),
                     );
 
                     // Consignment should have a market handler of MarketHandler.Auction
@@ -1037,24 +1106,6 @@ describe("SaleHandler", function() {
 
                     });
 
-                    it("should revert if start time is in the past", async function () {
-
-                        // 15 minutes before latest block
-                        badStartTime = ethers.BigNumber.from(block.timestamp).sub('900').toString();
-
-                        // Create auction, expect revert
-                        await expect(
-                            saleHandler.connect(seller).createPrimarySale(
-                                consignmentId,
-                                badStartTime,
-                                price,
-                                perTxCap,
-                                audience
-                            )
-                        ).to.be.revertedWith('Time runs backward?');
-
-                    });
-
                 });
 
                 context("createSecondarySale()", async function () {
@@ -1066,27 +1117,6 @@ describe("SaleHandler", function() {
 
                         // Token is on a foreign contract
                         tokenAddress = foreign1155.address;
-
-                    });
-
-                    it("should revert if start time is in the past", async function () {
-
-                        // 15 minutes before latest block
-                        badStartTime = ethers.BigNumber.from(block.timestamp).sub('900').toString();
-
-                        // Create sale, expect revert
-                        await expect(
-                            saleHandler.connect(seller).createSecondarySale(
-                                seller.address,
-                                tokenAddress,
-                                tokenId,
-                                badStartTime,
-                                quantity,
-                                price,
-                                perTxCap,
-                                audience
-                            )
-                        ).to.be.revertedWith('Time runs backward?');
 
                     });
 
@@ -1423,7 +1453,7 @@ describe("SaleHandler", function() {
 
         context("Funds Distribution", async function () {
 
-            context("Primary Market", async function () {
+            context("Primary Market With Default Fee", async function () {
 
                 beforeEach(async function () {
 
@@ -1443,7 +1473,7 @@ describe("SaleHandler", function() {
 
                     // Calculate the expected distribution of funds
                     grossSale = ethers.BigNumber.from(buyOutPrice);
-                    feeAmount = grossSale.mul(feePercentage).div("10000");
+                    feeAmount = grossSale.mul(primaryFeePercentage).div("10000");
                     multisigAmount = feeAmount.div("2");
                     stakingAmount = feeAmount.div("2");
                     sellerAmount = grossSale.sub(feeAmount);
@@ -1482,9 +1512,78 @@ describe("SaleHandler", function() {
 
             });
 
+            context("Primary Market With Custom Fee", async function () {
+
+                beforeEach(async function () {
+
+                    // Seller creates digital token
+                    consignmentId = await marketController.getNextConsignment();
+                    await seenHausNFT.connect(seller).mintDigital(supply, seller.address, tokenURI, royaltyPercentage);
+
+                    // SELLER creates primary market sale
+                    market = Market.PRIMARY;
+                    await saleHandler.connect(seller).createPrimarySale(
+                        consignmentId,
+                        start,
+                        price,
+                        perTxCap,
+                        audience
+                    );
+
+                    // Set custom fee on consignment
+                    await marketController.connect(admin).setConsignmentCustomFee(
+                        consignmentId,
+                        customFeePercentageBasisPoints
+                    );
+
+                    // Wait until sale starts and bid
+                    await time.increaseTo(start);
+                    await saleHandler.connect(buyer).buy(consignmentId, supply, {value: buyOutPrice});
+
+                    // Calculate the expected distribution of funds
+                    grossSaleWithCustomFee = ethers.BigNumber.from(buyOutPrice);
+                    feeAmountWithCustomFee = grossSaleWithCustomFee.mul(customFeePercentageBasisPoints).div("10000");
+                    multisigAmountWithCustomFee = feeAmountWithCustomFee.div("2");
+                    stakingAmountWithCustomFee = feeAmountWithCustomFee.div("2");
+                    sellerAmountWithCustomFee = grossSaleWithCustomFee.sub(feeAmountWithCustomFee);
+
+                });
+
+                it("multisig contract should be sent half the marketplace fee based on gross", async function () {
+
+                    // Seller closes sale
+                    await expect(
+                        saleHandler.connect(seller).closeSale(consignmentId)
+                    ).to.emit(saleHandler, "FeeDisbursed")
+                        .withArgs(consignmentId, multisig.address, multisigAmountWithCustomFee);
+
+                });
+
+                it("staking contract should be sent half the marketplace fee based on gross", async function () {
+
+                    // Seller closes sale
+                    await expect(
+                        saleHandler.connect(seller).closeSale(consignmentId)
+                    ).to.emit(saleHandler, "FeeDisbursed")
+                        .withArgs(consignmentId, seenStaking.address, stakingAmountWithCustomFee);
+
+                });
+
+                it("seller should be sent remainder after marketplace fee", async function () {
+
+                    // Seller closes sale
+                    await expect(
+                        saleHandler.connect(seller).closeSale(consignmentId)
+                    ).to.emit(saleHandler, "PayoutDisbursed")
+                        .withArgs(consignmentId, seller.address, sellerAmountWithCustomFee);
+
+                });
+
+            });
+
             context("Secondary Market", async function () {
 
-                context("Foriegn ERC-721", async function () {
+                context("Foreign ERC-721", async function () {
 
                     beforeEach(async function () {
 
@@ -1520,7 +1619,7 @@ describe("SaleHandler", function() {
                         grossSale = ethers.BigNumber.from(price);
                         royaltyAmount = grossSale.mul(royaltyPercentage).div("10000");
                         netAfterRoyalties = grossSale.sub(royaltyAmount);
-                        feeAmount = netAfterRoyalties.mul(feePercentage).div("10000");
+                        feeAmount = netAfterRoyalties.mul(secondaryFeePercentage).div("10000");
                         multisigAmount = feeAmount.div("2");
                         stakingAmount = feeAmount.div("2");
                         sellerAmount = netAfterRoyalties.sub(feeAmount);
@@ -1569,7 +1668,7 @@ describe("SaleHandler", function() {
 
                 });
 
-                context("Foriegn ERC-1155", async function () {
+                context("Foreign ERC-1155", async function () {
 
                     beforeEach(async function () {
 
@@ -1602,7 +1701,7 @@ describe("SaleHandler", function() {
                         grossSale = ethers.BigNumber.from(buyOutPrice);
                         royaltyAmount = grossSale.mul(royaltyPercentage).div("10000");
                         netAfterRoyalties = grossSale.sub(royaltyAmount);
-                        feeAmount = netAfterRoyalties.mul(feePercentage).div("10000");
+                        feeAmount = netAfterRoyalties.mul(secondaryFeePercentage).div("10000");
                         multisigAmount = feeAmount.div("2");
                         stakingAmount = feeAmount.div("2");
                         sellerAmount = netAfterRoyalties.sub(feeAmount);
@@ -1723,13 +1822,13 @@ describe("SaleHandler", function() {
                     it("should transfer consigned balance of token to buyer if digital", async function () {
 
                         // Get contract balance of token
-                        contractBalance = await marketController.getSupply(tokenId);
+                        contractBalance = await marketController.getUnreleasedSupply(tokenId);
 
                         // Seller closes sale
                         await saleHandler.connect(seller).closeSale(consignmentId);
 
                         // Get contract's new balance of token
-                        newBalance = await marketController.getSupply(tokenId);
+                        newBalance = await marketController.getUnreleasedSupply(tokenId);
                         expect(contractBalance.sub(supply).eq(newBalance));
 
                         // Get buyer's new balance of token
@@ -1798,7 +1897,7 @@ describe("SaleHandler", function() {
                         await saleHandler.connect(admin).cancelSale(consignmentId);
 
                         // Get contract's new balance of token
-                        newBalance = await marketController.getSupply(tokenId);
+                        newBalance = await marketController.getUnreleasedSupply(tokenId);
                         expect(contractBalance.sub(supply).eq(newBalance));
 
                         // Get seller's new balance of token
@@ -1813,11 +1912,11 @@ describe("SaleHandler", function() {
                         await saleHandler.connect(admin).cancelSale(physicalConsignmentId);
 
                         // Get contract's new balance of token
-                        newBalance = await marketController.getSupply(physicalTokenId);
+                        newBalance = await marketController.getUnreleasedSupply(physicalTokenId);
                         expect(contractBalance.sub(supply).eq(newBalance));
 
                         // Get seller's new balance of token
-                        sellerBalance = await marketController.getSupply(physicalTokenId);
+                        sellerBalance = await marketController.getUnreleasedSupply(physicalTokenId);
                         expect(buyerBalance.eq(contractBalance));
 
                     });
@@ -1867,11 +1966,8 @@ describe("SaleHandler", function() {
 
             it("supply() should return the remaining supply of a consignment on sale", async function () {
 
-                // Create consignment
-                consignment = new Consignment(market, seller.address, tokenAddress, tokenId, consignmentId);
-
                 // Get the supply from the MarketController
-                let result = await marketController.getSupply(consignmentId);
+                let result = await marketController.getUnreleasedSupply(consignmentId);
 
                 // Test result
                 expect(
@@ -1886,7 +1982,7 @@ describe("SaleHandler", function() {
                 await saleHandler.connect(buyer).buy(consignmentId, single, {value: price})
 
                 // Check supply again
-                result = await marketController.getSupply(consignmentId);
+                result = await marketController.getUnreleasedSupply(consignmentId);
 
                 // Test result
                 expect(

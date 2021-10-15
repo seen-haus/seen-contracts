@@ -30,6 +30,9 @@ contract LotsTicketer is IEscrowTicketer, MarketClientBase, StringUtils, ERC721U
     // Ticket ID => Ticket
     mapping (uint256 => EscrowTicket) internal tickets;
 
+    // Consignment ID => Ticket Claimable Count (does not change after ticket burns)
+    mapping (uint256 => uint256) internal consignmentIdToTicketClaimableCount;
+
     /// @dev Next ticket number
     uint256 internal nextTicket;
 
@@ -67,6 +70,18 @@ contract LotsTicketer is IEscrowTicketer, MarketClientBase, StringUtils, ERC721U
     {
         require(_exists(ticketId), "Ticket does not exist");
         return tickets[ticketId];
+    }
+
+    /**
+     * @notice Get how many claims can be made using tickets (does not change after ticket burns)
+     */
+    function getTicketClaimableCount(uint256 _consignmentId)
+    external
+    view
+    override
+    returns (uint256)
+    {
+        return consignmentIdToTicketClaimableCount[_consignmentId];
     }
 
     /**
@@ -166,6 +181,8 @@ contract LotsTicketer is IEscrowTicketer, MarketClientBase, StringUtils, ERC721U
 
         // Mint the ticket and send to the buyer
         _mint(_buyer, ticketId);
+
+        consignmentIdToTicketClaimableCount[_consignmentId] = consignmentIdToTicketClaimableCount[_consignmentId] + _amount;
 
         // Notify listeners about state change
         emit TicketIssued(ticketId, _consignmentId, _buyer, _amount);

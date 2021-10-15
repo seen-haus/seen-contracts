@@ -13,7 +13,7 @@ const eip55 = require("eip55");
  */
 class Consignment {
 
-    constructor (market, marketHandler, seller, tokenAddress, tokenId, supply, id, multiToken, released) {
+    constructor (market, marketHandler, seller, tokenAddress, tokenId, supply, id, multiToken, released, releasedSupply, customFeePercentageBasisPoints, pendingPayout) {
         this.market = market;
         this.marketHandler = marketHandler;
         this.seller = seller;
@@ -23,6 +23,9 @@ class Consignment {
         this.id = id;
         this.multiToken = multiToken;
         this.released = released;
+        this.releasedSupply = releasedSupply;
+        this.customFeePercentageBasisPoints = customFeePercentageBasisPoints;
+        this.pendingPayout = pendingPayout;
     }
 
     /**
@@ -31,8 +34,8 @@ class Consignment {
      * @returns {Consignment}
      */
     static fromObject(o) {
-        const {market, marketHandler, seller, tokenAddress, tokenId, supply, id, multiToken, released} = o;
-        return new Consignment(market, marketHandler, seller, tokenAddress, tokenId, supply, id, multiToken, released);
+        const {market, marketHandler, seller, tokenAddress, tokenId, supply, id, multiToken, released, releasedSupply, customFeePercentageBasisPoints, pendingPayout} = o;
+        return new Consignment(market, marketHandler, seller, tokenAddress, tokenId, supply, id, multiToken, released, releasedSupply, customFeePercentageBasisPoints, pendingPayout);
     }
 
     /**
@@ -202,6 +205,62 @@ class Consignment {
         return valid;
     }
 
+    /**
+     * Is this Consignment instance's releasedSupply field valid?
+     * Must be a string that converts to a valid BigNumber
+     * @returns {boolean}
+     */
+    releasedSupplyIsValid() {
+        let { releasedSupply } = this;
+        let valid = false;
+        try {
+            valid = (
+                typeof releasedSupply === "string" &&
+                ethers.BigNumber.from(releasedSupply).gte("0")
+            )
+        } catch(e){}
+        return valid;
+    }
+
+    /**
+     * Is this Token instance's royaltyPercentage field valid?
+     * Must be a string that converts to a positive BigNumber
+     * Must represent between 1% and 100%
+     *
+     * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
+     *
+     * @returns {boolean}
+     */
+    customFeePercentageBasisPointsIsValid() {
+        let { customFeePercentageBasisPoints } = this;
+        let valid = false;
+        try {
+            valid = (
+                typeof customFeePercentageBasisPoints === "string" &&
+                ethers.BigNumber.from(customFeePercentageBasisPoints).gte("0") &&
+                ethers.BigNumber.from(customFeePercentageBasisPoints).lte("10000")
+            )
+        } catch(e){}
+        return valid;
+    }
+
+    /**
+     * Is this Consignment instance's pendingPayout field valid?
+     * Must be a string that converts to a valid BigNumber
+     * @returns {boolean}
+     */
+    pendingPayoutIsValid() {
+        let { pendingPayout } = this;
+        let valid = false;
+        try {
+            valid = (
+                typeof pendingPayout === "string" &&
+                ethers.BigNumber.from(pendingPayout).gte("0")
+            )
+        } catch(e){}
+        return valid;
+    }
 
     /**
      * Is this Consignment instance valid?
@@ -217,7 +276,10 @@ class Consignment {
             this.supplyIsValid() &&
             this.idIsValid() &&
             this.multiTokenIsValid() &&
-            this.releasedIsValid()
+            this.releasedIsValid() &&
+            this.releasedSupplyIsValid() &&
+            this.customFeePercentageBasisPointsIsValid() &&
+            this.pendingPayoutIsValid()
         );
     };
 

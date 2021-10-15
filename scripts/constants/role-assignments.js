@@ -116,3 +116,5 @@ exports.RoleAssignments = {
     }
 
 };
+
+exports.nftOwner = '0x15884D7a5567725E0306A90262ee120aD8452d58';

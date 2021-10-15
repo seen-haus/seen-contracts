@@ -140,24 +140,32 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
 
         }
 
+        uint256 pendingPayoutValue = consignment.pendingPayout + msg.value;
+        getMarketController().setConsignmentPendingPayout(consignment.id, pendingPayoutValue);
+
         // Announce the purchase
-        emit Purchase(consignment.id, _amount, msg.sender);
+        emit Purchase(consignment.id, msg.sender, _amount, msg.value);
+
+        // Track the sale info against the token itself
+        emit TokenHistoryTracker(consignment.tokenAddress, consignment.tokenId, msg.sender, msg.value, _amount, consignment.id);
     }
 
     /**
-     * @notice Close out a successfully completed sale.
+     * @notice Claim a pending payout on an ongoing sale without closing/cancelling
      *
      * Funds are disbursed as normal. See: {MarketHandlerBase.disburseFunds}
      *
      * Reverts if:
      * - Sale doesn't exist or hasn't started
-     * - There is remaining inventory
+     * - There is no pending payout
+     * - Called by any address other than seller
+     * - The sale is sold out (in which case closeSale should be called)
      *
-     * Emits a SaleEnded event.
+     * Does not emit its own event, but disburseFunds emits an event
      *
      * @param _consignmentId - id of the consignment being sold
      */
-    function closeSale(uint256 _consignmentId)
+    function claimPendingPayout(uint256 _consignmentId)
     external
     override
     {
@@ -167,77 +175,23 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
         // Get consignment
         Consignment memory consignment = getMarketController().getConsignment(_consignmentId);
 
-        // Make sure the sale exists and can be closed normally
+        // Ensure that there is a pending payout
+        require(consignment.pendingPayout > 0, "No pending payout");
+
+        // Ensure that caller is the seller
+        require(consignment.seller == msg.sender, "Can only be called by seller");
+
+        // Ensure that the sale has not yet sold out
+        require((consignment.supply - consignment.releasedSupply) > 0, "Sale is sold out - call closeSale instead");
+
+        // Make sure the sale exists and is running
         Sale storage sale = mhs.sales[_consignmentId];
         require(sale.start != 0, "Sale does not exist");
-        require(sale.state != State.Ended, "Sale has already been settled");
         require(sale.state == State.Running, "Sale hasn't started");
 
-        // Mark sale as settled
-        sale.state = State.Ended;
-        sale.outcome = Outcome.Closed;
-
         // Distribute the funds (handles royalties, staking, multisig, and seller)
-        disburseFunds(_consignmentId, consignment.supply * sale.price);
-
-        // Notify listeners about state change
-        emit SaleEnded(_consignmentId, sale.outcome);
-
-    }
-
-    /**
-     * @notice Cancel a sale that has remaining inventory.
-     *
-     * Remaining tokens are returned to seller. If there have been any purchases,
-     * the funds are distributed normally.
-     *
-     * Reverts if:
-     * - Caller doesn't have ADMIN role
-     * - Sale doesn't exist or has already been settled
-     *
-     * Emits a SaleEnded event
-     *
-     * @param _consignmentId - id of the consignment being sold
-     */
-    function cancelSale(uint256 _consignmentId)
-    external
-    override
-    onlyRole(ADMIN)
-    {
-        // Get Market Handler Storage slot
-        MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
-
-        // Get the consignment
-        Consignment memory consignment = getMarketController().getConsignment(_consignmentId);
-
-        // Make sure the sale exists and can canceled
-        Sale storage sale = mhs.sales[_consignmentId];
-        require(sale.start != 0, "Sale does not exist");
-        require(sale.state != State.Ended, "Sale has already been settled");
-
-        // Mark sale as settled
-        sale.state = State.Ended;
-        sale.outcome = Outcome.Canceled;
-
-        // Determine the amount sold and remaining
-        uint256 remaining = getMarketController().getSupply(_consignmentId);
-        uint256 sold = consignment.supply - remaining;
-
-        // Disburse the funds for the sold items
-        if (sold > 0) {
-            uint256 salesTotal = sold * sale.price;
-            disburseFunds(_consignmentId, salesTotal);
-        }
-
-        if (remaining > 0) {
-
-            // Transfer the remaining supply back to the seller
-            getMarketController().releaseConsignment(_consignmentId, remaining, consignment.seller);
-
-        }
-
-        // Notify listeners about state change
-        emit SaleEnded(_consignmentId, sale.outcome);
+        disburseFunds(_consignmentId, consignment.pendingPayout);
+        getMarketController().setConsignmentPendingPayout(consignment.id, 0);
 
     }
 

@@ -38,11 +38,17 @@ library MarketHandlerLib {
         // AuctionRunnerFacet initialization state
         bool auctionRunnerFacet;
 
+        // AuctionEnderFacet initialization state
+        bool auctionEnderFacet;
+
         // SaleBuilderFacet initialization state
         bool saleBuilderFacet;
 
         // SaleRunnerFacet initialization state
         bool saleRunnerFacet;
+
+        // SaleRunnerFacet initialization state
+        bool saleEnderFacet;
 
     }
 

@@ -69,6 +69,9 @@ contract SeenTypes {
         uint256 id;
         bool multiToken;
         bool released;
+        uint256 releasedSupply;
+        uint16 customFeePercentageBasisPoints;
+        uint256 pendingPayout;
     }
 
     struct Auction {

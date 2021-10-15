@@ -29,14 +29,16 @@ describe("Consignment", function() {
         id = "1";
         multiToken = true;
         released = false;
-
+        releasedSupply = "0";
+        customFeePercentageBasisPoints = "0";
+        pendingPayout = "100";
     });
 
     context("Constructor", async function () {
 
         it("Should allow creation of valid, fully populated Consignment instance", async function () {
 
-            consignment = new Consignment(market, marketHandler, seller, tokenAddress, tokenId, supply, id,  multiToken, released);
+            consignment = new Consignment(market, marketHandler, seller, tokenAddress, tokenId, supply, id,  multiToken, released, releasedSupply, customFeePercentageBasisPoints, pendingPayout);
             expect(consignment.marketIsValid()).is.true;
             expect(consignment.marketHandlerIsValid()).is.true;
             expect(consignment.sellerIsValid()).is.true;
@@ -44,6 +46,9 @@ describe("Consignment", function() {
             expect(consignment.tokenIdIsValid()).is.true;
             expect(consignment.idIsValid()).is.true;
             expect(consignment.multiTokenIsValid()).is.true;
+            expect(consignment.releasedSupplyIsValid()).is.true;
+            expect(consignment.customFeePercentageBasisPointsIsValid()).is.true;
+            expect(consignment.pendingPayoutIsValid()).is.true;
             expect(consignment.isValid()).is.true;
 
         });
@@ -55,7 +60,7 @@ describe("Consignment", function() {
         beforeEach( async function () {
 
             // Create a valid consignment, then set fields in tests directly
-            consignment = new Consignment(market, marketHandler, seller, tokenAddress, tokenId, supply, id,  multiToken, released);
+            consignment = new Consignment(market, marketHandler, seller, tokenAddress, tokenId, supply, id,  multiToken, released, releasedSupply, customFeePercentageBasisPoints, pendingPayout);
         });
 
         it("Always present, market must be equal to a Market enum value", async function() {
@@ -264,6 +269,88 @@ describe("Consignment", function() {
 
         });
 
+        it("Always present, releasedSupply must be the string representation of a BigNumber", async function() {
+
+            // Invalid field value
+            consignment.releasedSupply = 20;
+            expect(consignment.releasedSupplyIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Invalid field value
+            consignment.releasedSupply = "zedzdeadbaby";
+            expect(consignment.releasedSupplyIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Valid field value
+            consignment.releasedSupply = "0";
+            expect(consignment.releasedSupplyIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+            // Valid field value
+            consignment.releasedSupply = "500";
+            expect(consignment.releasedSupplyIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+        });
+
+        it("Always present, customFeePercentageBasisPoints must be the string representation of a BigNumber between 0 - 10000", async function() {
+
+            // Invalid field value
+            consignment.customFeePercentageBasisPoints = 20;
+            expect(consignment.customFeePercentageBasisPointsIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Invalid field value
+            consignment.customFeePercentageBasisPoints = "zedzdeadbaby";
+            expect(consignment.customFeePercentageBasisPointsIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Invalid field value
+            consignment.customFeePercentageBasisPoints = "10001";
+            expect(consignment.customFeePercentageBasisPointsIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Valid field value
+            consignment.customFeePercentageBasisPoints = "0";
+            expect(consignment.customFeePercentageBasisPointsIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+            // Valid field value
+            consignment.customFeePercentageBasisPoints = "10000";
+            expect(consignment.customFeePercentageBasisPointsIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+            // Valid field value
+            consignment.customFeePercentageBasisPoints = "5000";
+            expect(consignment.customFeePercentageBasisPointsIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+        });
+
+        it("Always present, pendingPayout must be the string representation of a BigNumber", async function() {
+
+            // Invalid field value
+            consignment.pendingPayout = 20;
+            expect(consignment.pendingPayoutIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Invalid field value
+            consignment.pendingPayout = "zedzdeadbaby";
+            expect(consignment.pendingPayoutIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Valid field value
+            consignment.pendingPayout = "0";
+            expect(consignment.pendingPayoutIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+            // Valid field value
+            consignment.pendingPayout = "100";
+            expect(consignment.pendingPayoutIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+        });
+
     })
 
     context("Utility functions", async function () {
@@ -271,7 +358,7 @@ describe("Consignment", function() {
         beforeEach( async function () {
 
             // Create a valid Consignment instance, then operate on its methods in the tests
-            consignment = new Consignment(market, marketHandler, seller, tokenAddress, tokenId, supply, id,  multiToken, released);
+            consignment = new Consignment(market, marketHandler, seller, tokenAddress, tokenId, supply, id,  multiToken, released, releasedSupply, customFeePercentageBasisPoints, pendingPayout);
 
         })
 
@@ -279,7 +366,7 @@ describe("Consignment", function() {
 
             // Get plain object
             const object = {
-                market, marketHandler, seller, tokenAddress: tokenAddress, tokenId, supply, id,  multiToken, released
+                market, marketHandler, seller, tokenAddress: tokenAddress, tokenId, supply, id,  multiToken, released, releasedSupply, customFeePercentageBasisPoints, pendingPayout
             }
 
             // Promote to instance

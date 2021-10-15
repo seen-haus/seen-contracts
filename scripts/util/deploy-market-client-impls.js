@@ -1,6 +1,8 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 
+const { nftOwner } = require('../constants/role-assignments');
+
 /**
  * Deploy the Market Client Implementation contracts
  *
@@ -22,16 +24,19 @@ async function deployMarketClientImpls(gasLimit) {
     const LotsTicketer = await ethers.getContractFactory("LotsTicketer");
     const lotsTicketer = await LotsTicketer.deploy({gasLimit});
     await lotsTicketer.deployed();
+    await lotsTicketer.initialize();
 
     // Deploy the ItemsTicketer IEscrowTicketer implementation
     const ItemsTicketer = await ethers.getContractFactory("ItemsTicketer");
     const itemsTicketer = await ItemsTicketer.deploy({gasLimit});
     await itemsTicketer.deployed();
+    await itemsTicketer.initialize();
 
     // Deploy the SeenHausNFT contract
     const SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
     const seenHausNFT = await SeenHausNFT.deploy({gasLimit});
     await seenHausNFT.deployed();
+    await seenHausNFT.initialize(nftOwner);
 
     return [lotsTicketer, itemsTicketer, seenHausNFT];
 

@@ -38,8 +38,11 @@ library MarketControllerLib {
         // the minimum amount of xSEEN ERC-20 a caller must hold to participate in VIP events
         uint256 vipStakerAmount;
 
+        // the percentage that will be taken as a fee from the net of a Seen.Haus sale or auction
+        uint16 primaryFeePercentage;         // 1.75% = 175, 100% = 10000
+
         // the percentage that will be taken as a fee from the net of a Seen.Haus sale or auction (after royalties)
-        uint16 feePercentage;         // 1.75% = 175, 100% = 10000
+        uint16 secondaryFeePercentage;         // 1.75% = 175, 100% = 10000
 
         // the maximum percentage of a Seen.Haus sale or auction that will be paid as a royalty
         uint16 maxRoyaltyPercentage;  // 1.75% = 175, 100% = 10000

@@ -30,7 +30,7 @@ async function deployMarketControllerFacets(diamond, marketConfig, gasLimit) {
     const cutFacet = await ethers.getContractAt('DiamondCutFacet', diamond.address);
 
     // Cut MarketConfig facet, initializing
-    let configInitFunction = "initialize(address payable _staking, address payable _multisig, uint256 _vipStakerAmount, uint16 _feePercentage, uint16 _maxRoyaltyPercentage, uint16 _outBidPercentage, uint8 _defaultTicketerType)";
+    let configInitFunction = "initialize(address payable _staking, address payable _multisig, uint256 _vipStakerAmount, uint16 _primaryFeePercentage, uint16 _secondaryFeePercentage, uint16 _maxRoyaltyPercentage, uint16 _outBidPercentage, uint8 _defaultTicketerType)";
     const configInterface = new ethers.utils.Interface([`function ${configInitFunction}`]);
     const configCallData = configInterface.encodeFunctionData("initialize", marketConfig);
     const marketConfigCut = getFacetAddCut(marketConfigFacet, [configInitFunction]);

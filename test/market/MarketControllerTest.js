@@ -24,10 +24,10 @@ describe("IMarketController", function() {
     let Foreign721, foreign721;
     let Foreign1155, foreign1155;
     let seenHausNFT;
-    let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
+    let staking, multisig, vipStakerAmount, primaryFeePercentage, secondaryFeePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let lotsTicketer, itemsTicketer, tokenURI, royaltyPercentage;
     let address, amount, percentage, counter, market, marketHandlerEnumValue, token, tokenId, id, consignment, nextConsignment, escrowTicketer, escrowTicketerType;
-    let replacementAmount, replacementPercentage, supply, support, owner, balance;
+    let replacementAmount, replacementPercentage, supply, support, owner, balance, releasedSupply, customFeePercentageBasisPoints, pendingPayout;
     let replacementAddress = "0x2d36143CC2E0E74E007E7600F341dC9D37D81C07";
     let tooLittle, tooMuch, revertReason, result;
 
@@ -48,11 +48,13 @@ describe("IMarketController", function() {
         marketHandler = accounts[9];  // .
 
         // Market control values
-        vipStakerAmount = "500";              // Amount of xSEEN to be VIP
-        feePercentage = "1500";               // 15%   = 1500
-        maxRoyaltyPercentage = "5000";        // 50%   = 5000
-        outBidPercentage = "500";             // 5%    = 500
-        defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
+        vipStakerAmount = "500";                 // Amount of xSEEN to be VIP
+        primaryFeePercentage = "500";            // 5%    = 500
+        secondaryFeePercentage = "250";          // 2.5%  = 250
+        customFeePercentageBasisPoints = "3000"; // 30% = 3000
+        maxRoyaltyPercentage = "5000";           // 50%   = 5000
+        outBidPercentage = "500";                // 5%    = 500
+        defaultTicketerType = Ticketer.LOTS;     // default escrow ticketer type
 
         // Deploy the Foreign721 mock contract
         Foreign721 = await ethers.getContractFactory("Foreign721");
@@ -72,7 +74,8 @@ describe("IMarketController", function() {
             staking.address,
             multisig.address,
             vipStakerAmount,
-            feePercentage,
+            primaryFeePercentage,
+            secondaryFeePercentage,
             maxRoyaltyPercentage,
             outBidPercentage,
             defaultTicketerType
@@ -279,14 +282,27 @@ describe("IMarketController", function() {
 
         });
 
-        it("getFeePercentage() should return the % of post-royalty net that will be taken as the marketplace fee", async function () {
+        it("getFeePercentage(Market.PRIMARY) should return the % of net that will be taken as the marketplace fee", async function () {
 
             // Get percentage
-            percentage = await marketController.getFeePercentage();
+            percentage = await marketController.getFeePercentage(Market.PRIMARY);
 
             // Test
             expect(
-                percentage.toString() === feePercentage,
+                percentage.toString() === primaryFeePercentage,
+                "getFeePercentage doesn't return expected amount"
+            ).is.true;
+
+        });
+
+        it("getFeePercentage(Market.SECONDARY) should return the % of post-royalty net that will be taken as the marketplace fee", async function () {
+
+            // Get percentage
+            percentage = await marketController.getFeePercentage(Market.SECONDARY);
+
+            // Test
+            expect(
+                percentage.toString() === secondaryFeePercentage,
                 "getFeePercentage doesn't return expected amount"
             ).is.true;
 
@@ -528,15 +544,15 @@ describe("IMarketController", function() {
 
             });
 
-            it("setFeePercentage() should require ADMIN to set the fee percentage", async function () {
+            it("setPrimaryFeePercentage() should require ADMIN to set the fee percentage", async function () {
 
                 // non-ADMIN attempt
                 await expect(
-                    marketController.connect(associate).setFeePercentage(replacementPercentage)
+                    marketController.connect(associate).setPrimaryFeePercentage(replacementPercentage)
                 ).to.be.revertedWith("Access denied, caller doesn't have role");
 
                 // Get percentage
-                percentage = await marketController.getFeePercentage();
+                percentage = await marketController.getFeePercentage(Market.PRIMARY);
 
                 // Test
                 expect(
@@ -545,10 +561,40 @@ describe("IMarketController", function() {
                 ).is.true;
 
                 // ADMIN attempt
-                await marketController.connect(admin).setFeePercentage(replacementPercentage);
+                await marketController.connect(admin).setPrimaryFeePercentage(replacementPercentage);
 
                 // Get percentage
-                percentage = await marketController.getFeePercentage();
+                percentage = await marketController.getFeePercentage(Market.PRIMARY);
+
+                // Test
+                expect(
+                    percentage.toString() === replacementPercentage,
+                    "ADMIN can't set fee percentage"
+                ).is.true;
+
+            });
+
+            it("setSecondaryFeePercentage() should require ADMIN to set the fee percentage", async function () {
+
+                // non-ADMIN attempt
+                await expect(
+                    marketController.connect(associate).setSecondaryFeePercentage(replacementPercentage)
+                ).to.be.revertedWith("Access denied, caller doesn't have role");
+
+                // Get percentage
+                percentage = await marketController.getFeePercentage(Market.SECONDARY);
+
+                // Test
+                expect(
+                    percentage !== replacementPercentage,
+                    "non-ADMIN can set fee percentage"
+                ).is.true;
+
+                // ADMIN attempt
+                await marketController.connect(admin).setSecondaryFeePercentage(replacementPercentage);
+
+                // Get percentage
+                percentage = await marketController.getFeePercentage(Market.SECONDARY);
 
                 // Test
                 expect(
@@ -706,12 +752,21 @@ describe("IMarketController", function() {
                     .withArgs(replacementAmount);
             });
 
-            it("setFeePercentage() should emit a FeePercentageChanged event", async function () {
+            it("setPrimaryFeePercentage() should emit a PrimaryFeePercentageChanged event", async function () {
 
                 // Make change, test event
                 await expect(
-                    marketController.connect(admin).setFeePercentage(replacementPercentage)
-                ).to.emit(marketController, 'FeePercentageChanged')
+                    marketController.connect(admin).setPrimaryFeePercentage(replacementPercentage)
+                ).to.emit(marketController, 'PrimaryFeePercentageChanged')
+                    .withArgs(Number(replacementPercentage));
+            });
+
+            it("setSecondaryFeePercentage() should emit a SecondaryFeePercentageChanged event", async function () {
+
+                // Make change, test event
+                await expect(
+                    marketController.connect(admin).setSecondaryFeePercentage(replacementPercentage)
+                ).to.emit(marketController, 'SecondaryFeePercentageChanged')
                     .withArgs(Number(replacementPercentage));
             });
 
@@ -754,19 +809,35 @@ describe("IMarketController", function() {
                 revertReason = "Percentage representation must be between 1 and 10000";
             });
 
-            it("setFeePercentage() should revert if percentage is zero", async function () {
+            it("setPrimaryFeePercentage() should revert if percentage is zero", async function () {
 
                 // Make change, test event
                 await expect(
-                    marketController.connect(admin).setFeePercentage(tooLittle)
+                    marketController.connect(admin).setPrimaryFeePercentage(tooLittle)
                 ).to.be.revertedWith(revertReason);
             });
 
-            it("setFeePercentage() should revert if percentage is more than 100", async function () {
+            it("setSecondaryFeePercentage() should revert if percentage is zero", async function () {
 
                 // Make change, test event
                 await expect(
-                    marketController.connect(admin).setFeePercentage(tooMuch)
+                    marketController.connect(admin).setSecondaryFeePercentage(tooLittle)
+                ).to.be.revertedWith(revertReason);
+            });
+
+            it("setPrimaryFeePercentage() should revert if percentage is more than 100", async function () {
+
+                // Make change, test event
+                await expect(
+                    marketController.connect(admin).setPrimaryFeePercentage(tooMuch)
+                ).to.be.revertedWith(revertReason);
+            });
+
+            it("setSecondaryFeePercentage() should revert if percentage is more than 100", async function () {
+
+                // Make change, test event
+                await expect(
+                    marketController.connect(admin).setSecondaryFeePercentage(tooMuch)
                 ).to.be.revertedWith(revertReason);
             });
 
@@ -839,6 +910,8 @@ describe("IMarketController", function() {
             marketHandlerEnumValue = MarketHandler.UNHANDLED;
             tokenId = await seenHausNFT.getNextToken();
             supply = "1";
+            releasedSupply = "0"
+            pendingPayout = "0"
             tokenURI = "ipfs://QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
             royaltyPercentage = maxRoyaltyPercentage;
             token = seenHausNFT;
@@ -880,6 +953,46 @@ describe("IMarketController", function() {
                     counter.gt(nextConsignment),
                     "MARKET_HANDLER can't register a consignment"
                 ).is.true;
+
+            });
+
+            it("setConsignmentCustomFee() should require ADMIN to set the escrow ticketer type for a consignment", async function () {
+
+                // Get the next consignment id
+                nextConsignment = await marketController.getNextConsignment();
+
+                // Register a consignment
+                await marketController.connect(marketHandler).registerConsignment(market, seller.address, seller.address, token.address, tokenId, supply)
+
+                // non-ADMIN attempt
+                await expect(
+                    marketController.connect(associate).setConsignmentCustomFee(nextConsignment, customFeePercentageBasisPoints)
+                ).to.be.revertedWith("Access denied, caller doesn't have role");
+
+                // ESCROW_AGENT attempt
+                await marketController.connect(admin).setConsignmentCustomFee(nextConsignment, customFeePercentageBasisPoints)
+
+                // Get consignment
+                const response = await marketController.getConsignment(nextConsignment);
+
+                // Convert to entity
+                consignment = new Consignment(
+                    response.market,
+                    response.marketHandler,
+                    response.seller,
+                    response.tokenAddress,
+                    response.tokenId.toString(),
+                    response.supply.toString(),
+                    response.id.toString(),
+                    response.multiToken,
+                    response.released,
+                    response.releasedSupply.toString(),
+                    response.customFeePercentageBasisPoints.toString(),
+                    response.pendingPayout.toString(),
+                );
+
+                // Test
+                expect(consignment.customFeePercentageBasisPoints).to.equal(customFeePercentageBasisPoints.toString());
 
             });
 
@@ -933,7 +1046,12 @@ describe("IMarketController", function() {
                             token.address,
                             tokenId,
                             supply,
-                            nextConsignment
+                            nextConsignment,
+                            true,
+                            false,
+                            0,
+                            0,
+                            0
                         ]
                     );
 
@@ -1063,7 +1181,10 @@ describe("IMarketController", function() {
                         response.supply.toString(),
                         response.id.toString(),
                         response.multiToken,
-                        response.released
+                        response.released,
+                        response.releasedSupply.toString(),
+                        response.customFeePercentageBasisPoints.toString(),
+                        response.pendingPayout.toString(),
                     );
 
                     // Test validity
@@ -1143,7 +1264,7 @@ describe("IMarketController", function() {
 
             });
 
-            context("getSupply()", async function() {
+            context("getUnreleasedSupply()", async function() {
 
                 it("should revert if consignment doesn't exist", async function () {
 
@@ -1152,14 +1273,14 @@ describe("IMarketController", function() {
 
                     // Attempt to get supply for non-existent consignment
                     await expect(
-                        marketController.getSupply(nextConsignment)
+                        marketController.getUnreleasedSupply(nextConsignment)
                     ).to.be.revertedWith("Consignment does not exist");
 
                 });
 
             });
 
-            context("isConsignor()", async function() {
+            context("getConsignor()", async function() {
 
                 it("should revert if consignment doesn't exist", async function () {
 
@@ -1168,7 +1289,7 @@ describe("IMarketController", function() {
 
                     // Attempt to get supply for non-existent consignment
                     await expect(
-                        marketController.isConsignor(nextConsignment, seller.address)
+                        marketController.getConsignor(nextConsignment)
                     ).to.be.revertedWith("Consignment does not exist");
 
                 });
@@ -1229,19 +1350,24 @@ describe("IMarketController", function() {
                                     token.address,
                                     tokenId,
                                     supply,
-                                    nextConsignment
+                                    nextConsignment,
+                                    false,
+                                    false,
+                                    0,
+                                    0,
+                                    0
                                 ]
                             );
 
                     });
 
-                    it("subsequent getSupply() should return correct amount", async function () {
+                    it("subsequent getUnreleasedSupply() should return correct amount", async function () {
 
                         // Register consignment
                         await marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply);
 
                         // Get supply
-                        result = await marketController.getSupply(nextConsignment)
+                        result = await marketController.getUnreleasedSupply(nextConsignment)
 
                         // Get supply
                         await expect(result).to.equal(supply);
@@ -1286,13 +1412,13 @@ describe("IMarketController", function() {
 
                     });
 
-                    it("subsequent getSupply() should return correct amount", async function () {
+                    it("subsequent getUnreleasedSupply() should return correct amount", async function () {
 
                         // Release the consignment
                         await marketController.connect(marketHandler).releaseConsignment(nextConsignment, supply, associate.address)
 
                         // Get supply
-                        result = await marketController.getSupply(nextConsignment)
+                        result = await marketController.getUnreleasedSupply(nextConsignment)
 
                         // Get supply
                         await expect(result).to.equal("0");
@@ -1344,19 +1470,24 @@ describe("IMarketController", function() {
                                 token.address,
                                 tokenId,
                                 supply,
-                                nextConsignment
+                                nextConsignment,
+                                true,
+                                false,
+                                0,
+                                0,
+                                0
                             ]
                         );
 
                 });
 
-                    it("subsequent getSupply() should return correct amount", async function () {
+                    it("subsequent getUnreleasedSupply() should return correct amount", async function () {
 
                         // Register consignment
                         await marketController.connect(marketHandler).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply)
 
                         // Get supply
-                        result = await marketController.getSupply(nextConsignment)
+                        result = await marketController.getUnreleasedSupply(nextConsignment)
 
                         // Get supply
                         await expect(result).to.equal(supply);
@@ -1401,13 +1532,13 @@ describe("IMarketController", function() {
 
                     });
 
-                    it("subsequent getSupply() should return correct amount", async function () {
+                    it("subsequent getUnreleasedSupply() should return correct amount", async function () {
 
                         // Release the consignment
                         await marketController.connect(marketHandler).releaseConsignment(nextConsignment, supply, associate.address);
 
                         // Get supply
-                        result = await marketController.getSupply(nextConsignment)
+                        result = await marketController.getUnreleasedSupply(nextConsignment)
 
                         // Get supply
                         await expect(result).to.equal("0");

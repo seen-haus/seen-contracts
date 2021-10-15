@@ -23,7 +23,7 @@ describe("SeenHausNFT", function() {
     let accounts, deployer, admin, upgrader, escrowAgent, associate, minter, creator, recipient, owner;
     let accessController, marketController;
     let seenHausNFT, seenHausNFTProxy;
-    let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
+    let staking, multisig, vipStakerAmount, primaryFeePercentage, secondaryFeePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let counter, tokenURI, tokenId, supply, salePrice, royaltyAmount, expectedRoyalty, percentage, royaltyPercentage;
     let token, isPhysical, balance, uri, invalidRoyaltyPercentage, address, support, consignmentId;
     let replacementAddress = "0x2d36143CC2E0E74E007E7600F341dC9D37D81C07";
@@ -48,7 +48,8 @@ describe("SeenHausNFT", function() {
 
         // Market control values
         vipStakerAmount = "500";              // Amount of xSEEN to be l33t
-        feePercentage = "1500";               // 15%   = 1500
+        primaryFeePercentage = "500";         // 5%    = 500
+        secondaryFeePercentage = "250";       // 2.5%  = 250
         maxRoyaltyPercentage = "1500";        // 15%   = 1500
         outBidPercentage = "500";             // 5%    = 500
         defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
@@ -61,7 +62,8 @@ describe("SeenHausNFT", function() {
             staking.address,
             multisig.address,
             vipStakerAmount,
-            feePercentage,
+            primaryFeePercentage,
+            secondaryFeePercentage,
             maxRoyaltyPercentage,
             outBidPercentage,
             defaultTicketerType
@@ -399,7 +401,12 @@ describe("SeenHausNFT", function() {
                                 seenHausNFT.address,
                                 tokenId,
                                 supply,
-                                consignmentId
+                                consignmentId,
+                                true,
+                                false,
+                                0,
+                                0,
+                                0
                             ]
                         )
 
@@ -468,7 +475,12 @@ describe("SeenHausNFT", function() {
                                 seenHausNFT.address,
                                 tokenId,
                                 supply,
-                                consignmentId
+                                consignmentId,
+                                true,
+                                false,
+                                0,
+                                0,
+                                0
                             ]
                         )
 
@@ -511,7 +523,12 @@ describe("SeenHausNFT", function() {
                             seenHausNFT.address,
                             tokenId,
                             supply,
-                            consignmentId
+                            consignmentId,
+                            true,
+                            false,
+                            0,
+                            0,
+                            0
                         ]
                     )
 
@@ -528,7 +545,10 @@ describe("SeenHausNFT", function() {
                     response.supply.toString(),
                     response.id.toString(),
                     response.multiToken,
-                    response.released
+                    response.released,
+                    response.releasedSupply.toString(),
+                    response.customFeePercentageBasisPoints.toString(),
+                    response.pendingPayout.toString(),
                 );
 
                 // Consignment should have a market handler of MarketHandler.Unhandled
@@ -558,7 +578,12 @@ describe("SeenHausNFT", function() {
                             seenHausNFT.address,
                             tokenId,
                             supply,
-                            consignmentId
+                            consignmentId,
+                            true,
+                            false,
+                            0,
+                            0,
+                            0
                         ]
                     )
 
@@ -575,7 +600,10 @@ describe("SeenHausNFT", function() {
                     response.supply.toString(),
                     response.id.toString(),
                     response.multiToken,
-                    response.released
+                    response.released,
+                    response.releasedSupply.toString(),
+                    response.customFeePercentageBasisPoints.toString(),
+                    response.pendingPayout.toString(),
                 );
 
                 // Consignment should have a market handler of MarketHandler.Unhandled

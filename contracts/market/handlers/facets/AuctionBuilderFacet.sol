@@ -66,6 +66,7 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
      * Reverts if:
      *  - Consignment doesn't exist
      *  - Consignment has already been marketed
+     *  - Consignment has a supply other than 1
      *  - Auction already exists for consignment
      *  - Start time is in the past
      *
@@ -95,6 +96,9 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
         // Get the consignment (reverting if consignment doesn't exist)
         Consignment memory consignment = getMarketController().getConsignment(_consignmentId);
 
+        // For auctions, ensure that the consignment supply is 1 (we don't facilitate a single auction for multiple tokens)
+        require(consignment.supply == 1, "Auctions can only be made with consignments that have a supply of 1");
+
         // Make sure the consignment hasn't been marketed
         require(consignment.marketHandler == MarketHandler.Unhandled, "Consignment has already been marketed");
 
@@ -104,8 +108,12 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
         // Make sure auction doesn't exist (start would always be non-zero on an actual auction)
         require(auction.start == 0, "Auction exists");
 
-        // Make sure start time isn't in the past
-        require(_start >= block.timestamp, "Time runs backward?");
+        // Make sure start time isn't in the past if the clock type is not trigger type
+        // It doesn't matter if the start is in the past if clock type is trigger type
+        // Because when the first bid comes in, that gets set to the start time anyway
+        if(_clock != Clock.Trigger) {
+            require(_start >= block.timestamp, "Non-trigger clock type requires start time in future");
+        }
 
         // Set up the auction
         setAudience(_consignmentId, _audience);
@@ -161,8 +169,12 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
         // Get Market Handler Storage struct
         MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
 
-        // Make sure start time isn't in the past
-        require (_start >= block.timestamp, "Time runs backward?");
+        // Make sure start time isn't in the past if the clock type is not trigger type
+        // It doesn't matter if the start is in the past if clock type is trigger type
+        // Because when the first bid comes in, that gets set to the start time anyway
+        if(_clock != Clock.Trigger) {
+            require(_start >= block.timestamp, "Non-trigger clock type requires start time in future");
+        }
 
         // Make sure this contract is approved to transfer the token
         // N.B. The following will work because isApprovedForAll has the same signature on both IERC721 and IERC1155
