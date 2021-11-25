@@ -102,6 +102,14 @@ describe("InterfaceInfo", function() {
 
         });
 
+        it("getIMarketConfigAdditional() should return expected id", async function () {
+
+            const expected = InterfaceIds.IMarketConfigAdditional;
+            const actual = await interfaceInfo.getIMarketConfigAdditional();
+            assert.equal(actual, expected);
+
+        });
+
         it("getIMarketController() should return expected id", async function () {
 
             const expected = InterfaceIds.IMarketController;

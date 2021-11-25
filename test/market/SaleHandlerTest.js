@@ -67,6 +67,7 @@ describe("SaleHandler", function() {
         maxRoyaltyPercentage = "5000";          // 50%   = 5000
         outBidPercentage = "500";               // 5%    = 500
         defaultTicketerType = Ticketer.LOTS;    // default escrow ticketer type
+        allowExternalTokensOnSecondary = false; // By default, don't allow external tokens to be sold via secondary market
 
         // Deploy the Foreign721 mock contract
         Foreign721 = await ethers.getContractFactory("Foreign721");
@@ -95,14 +96,17 @@ describe("SaleHandler", function() {
             secondaryFeePercentage,
             maxRoyaltyPercentage,
             outBidPercentage,
-            defaultTicketerType
+            defaultTicketerType,
+        ];
+        const marketConfigAdditional = [
+            allowExternalTokensOnSecondary,
         ];
 
         // Temporarily grant UPGRADER role to deployer account
         await accessController.grantRole(Role.UPGRADER, deployer.address);
 
         // Cut the MarketController facet into the Diamond
-        await deployMarketControllerFacets(marketDiamond, marketConfig);
+        await deployMarketControllerFacets(marketDiamond, marketConfig, marketConfigAdditional);
 
         // Cast Diamond to MarketController
         marketController = await ethers.getContractAt('IMarketController', marketDiamond.address);
@@ -123,6 +127,7 @@ describe("SaleHandler", function() {
         await marketController.setNft(seenHausNFT.address);
         await marketController.setLotsTicketer(lotsTicketer.address);
         await marketController.setItemsTicketer(itemsTicketer.address);
+        await marketController.setAllowExternalTokensOnSecondary(true);
 
         // Renounce temporarily granted UPGRADER role for deployer account
         await accessController.renounceRole(Role.UPGRADER, deployer.address);
@@ -137,6 +142,7 @@ describe("SaleHandler", function() {
         // Grant MARKET_HANDLER to SeenHausNFT and SaleHandler
         await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
         await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, saleHandler.address);
+        await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, lotsTicketer.address);
 
     });
 
@@ -231,6 +237,11 @@ describe("SaleHandler", function() {
             await foreign721.connect(seller).setApprovalForAll(saleHandler.address, true);
             await foreign1155.connect(seller).setApprovalForAll(saleHandler.address, true);
             await seenHausNFT.connect(seller).setApprovalForAll(saleHandler.address, true);
+
+            // Associate approves SaleHandler contract to transfer their tokens
+            await foreign721.connect(associate).setApprovalForAll(saleHandler.address, true);
+            await foreign1155.connect(associate).setApprovalForAll(saleHandler.address, true);
+            await seenHausNFT.connect(associate).setApprovalForAll(saleHandler.address, true);
 
             // Mint a balance of 50 of the token for sale
             tokenURI = "ipfs://QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
@@ -366,6 +377,158 @@ describe("SaleHandler", function() {
 
                 });
 
+                context("createSecondarySale()", async function () {
+
+                    it("should fail if external tokens are not allowed to be listed on secondary", async function () {
+
+                        // Get the next consignment id
+                        consignmentId = await marketController.getNextConsignment();
+
+                        // Creator transfers all their tokens to seller
+                        await foreign721.connect(creator).transferFrom(creator.address, seller.address, tokenId);
+
+                        await marketController.connect(admin).setAllowExternalTokensOnSecondary(false);
+
+                        // Seller sends tokens to associate address
+                        await foreign721.connect(seller).transferFrom(seller.address, associate.address, tokenId);
+
+                        await expect(
+                            saleHandler.connect(associate).createSecondarySale(
+                                seller.address,
+                                foreign721.address,
+                                tokenId,
+                                start,
+                                "1",
+                                price,
+                                perTxCap,
+                                audience
+                            )
+                        ).to.be.revertedWith("Listing external tokens is not currently enabled");
+
+                        await marketController.connect(admin).setAllowExternalTokensOnSecondary(true);
+
+                        // Make change, test event
+                        await expect(
+                            saleHandler.connect(associate).createSecondarySale(
+                                seller.address,
+                                foreign721.address,
+                                tokenId,
+                                start,
+                                "1",
+                                price,
+                                perTxCap,
+                                audience
+                            )
+                        ).to.emit(saleHandler, 'SalePending')
+                            .withArgs(
+                                associate.address, // consignor
+                                seller.address,    // seller
+                                [ // Sale
+                                    consignmentId,
+                                    start,
+                                    price,
+                                    perTxCap,
+                                    ethers.BigNumber.from(State.PENDING),
+                                    ethers.BigNumber.from(Outcome.PENDING)
+                                ]
+                            );
+
+
+
+                    });
+
+                    it("should require caller has ESCROW_AGENT role if listing a physical NFT", async function () {
+
+                        let buyerBalance = await seenHausNFT.balanceOf(buyer.address, physicalTokenId);
+                        expect(buyerBalance.eq(0));
+
+                        await saleHandler.connect(escrowAgent).createPrimarySale(
+                            physicalConsignmentId,
+                            start,
+                            price,
+                            perTxCap,
+                            audience
+                        );
+
+                        await time.increaseTo(start);
+
+                        let ticketId = await lotsTicketer.getNextTicket();
+
+                        await expect(
+                            await saleHandler.connect(buyer).buy(physicalConsignmentId, perTxCap, {value: ethers.BigNumber.from(price).mul(ethers.BigNumber.from(perTxCap)).toString()})
+                        ).to.emit(saleHandler, "Purchase")
+
+                        buyerBalance = await seenHausNFT.balanceOf(buyer.address, physicalTokenId);
+                        expect(buyerBalance.eq(0));
+
+                        // Buyer closes sale
+                        await expect(
+                            await saleHandler.connect(buyer).closeSale(physicalConsignmentId)
+                        ).to.emit(saleHandler, "SaleEnded")
+                            .withArgs(
+                                physicalConsignmentId,
+                                Outcome.CLOSED
+                            );
+                        
+                        await expect(
+                            lotsTicketer.connect(buyer).claim(ticketId)
+                        ).to.emit(marketController, 'ConsignmentReleased')
+                            .withArgs(
+                                physicalConsignmentId,
+                                supply,
+                                buyer.address
+                            );
+                        buyerBalance = await seenHausNFT.balanceOf(buyer.address, physicalTokenId);
+                        expect(buyerBalance.eq(perTxCap));
+
+                        // non-ESCROW_AGENT attempt
+                        await expect(
+                            saleHandler.connect(buyer).createSecondarySale(
+                                escrowAgent.address,
+                                tokenAddress,
+                                physicalTokenId,
+                                start,
+                                supply,
+                                price,
+                                perTxCap,
+                                audience
+                            )
+                        ).to.be.revertedWith("Physical NFT secondary listings require ESCROW_AGENT role");
+
+                        // Transfer physical tokens to escrow agent
+                        await seenHausNFT.connect(buyer).safeTransferFrom(
+                            buyer.address,
+                            escrowAgent.address,
+                            physicalTokenId,
+                            supply,
+                            0x0
+                        );
+
+                        let escrowAgentBalance = await seenHausNFT.balanceOf(escrowAgent.address, physicalTokenId);
+                        expect(escrowAgentBalance.eq(supply));
+
+                        await seenHausNFT.connect(escrowAgent).setApprovalForAll(saleHandler.address, true);
+
+                        let latestTime = await time.latest();
+                        start = ethers.BigNumber.from(latestTime.toString()).add('900').toString(); // 15 minutes from latest block
+
+                        // ESCROW_AGENT attempt
+                        await expect(
+                            saleHandler.connect(escrowAgent).createSecondarySale(
+                                escrowAgent.address,
+                                tokenAddress,
+                                physicalTokenId,
+                                start,
+                                supply,
+                                price,
+                                perTxCap,
+                                audience
+                            )
+                        ).to.emit(saleHandler, 'SalePending')
+                    });
+
+                });
+
             });
 
             context("Existing Sales", async function () {
@@ -489,6 +652,9 @@ describe("SaleHandler", function() {
                             // Creator transfers all their tokens to seller
                             await foreign721.connect(creator).transferFrom(creator.address, seller.address, tokenId);
 
+                            // Seller transfers all their tokens to associate
+                            await foreign721.connect(seller).transferFrom(seller.address, associate.address, tokenId);
+
                             // Get the next consignment id
                             consignmentId = await marketController.getNextConsignment();
 
@@ -599,6 +765,9 @@ describe("SaleHandler", function() {
 
                             // Creator transfers all their tokens to seller
                             await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
+
+                            // Creator transfers all their tokens to seller
+                            await foreign1155.connect(seller).safeTransferFrom(seller.address, associate.address, tokenId, supply, []);
 
                             // Get the next consignment id
                             consignmentId = await marketController.getNextConsignment();

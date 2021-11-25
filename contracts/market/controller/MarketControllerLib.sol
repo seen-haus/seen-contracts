@@ -53,6 +53,9 @@ library MarketControllerLib {
         // next consignment id
         uint256 nextConsignment;
 
+        // whether or not external NFTs can be sold via secondary market
+        bool allowExternalTokensOnSecondary;
+
         // consignment id => consignment
         mapping(uint256 => SeenTypes.Consignment) consignments;
 
@@ -62,12 +65,18 @@ library MarketControllerLib {
         // consignment id => ticketer type
         mapping(uint256 => SeenTypes.Ticketer) consignmentTicketers;
 
+        // escrow agent address => feeBasisPoints
+        mapping(address => uint16) escrowAgentToFeeBasisPoints;
+
     }
 
     struct MarketControllerInitializers {
 
         // MarketConfigFacet initialization state
         bool configFacet;
+
+        // MarketConfigFacet initialization state
+        bool configAdditionalFacet;
 
         // MarketClerkFacet initialization state
         bool clerkFacet;

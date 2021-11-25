@@ -44,6 +44,18 @@ exports.RoleAssignments = {
                 roles: [Role.MINTER, Role.SELLER]
             },
 
+        "Liquid Fruit's escrow agent / seller address": // For mint+market of physical NFTs
+            {
+                address: "0x30651410055c12613c68D60bFf220F6D78DF7Acb",
+                roles: [Role.ESCROW_AGENT, Role.SELLER]
+            },
+
+        "Liquid Fruit's minter / seller address": // For mint+market of digital NFTs
+            {
+                address: "0x30651410055c12613c68D60bFf220F6D78DF7Acb",
+                roles: [Role.MINTER, Role.SELLER]
+            },
+
         "MarketDiamond contract": // For Market Handler facets
             {
                 address: ContractAddresses.rinkeby.MarketDiamond,
@@ -72,21 +84,21 @@ exports.RoleAssignments = {
 
     "mainnet": {
 
-        "Jay's admin address": // For admin tasks
+        "SEEN's admin address": // For admin tasks
             {
-                address: "0xDE7e3ec4442Ba87247797BEA433985449EDEA893",
+                address: "",
                 roles: [Role.ADMIN]
             },
 
-        "Jay's escrow agent / seller address": // For mint+market of physical NFTs
+        "SEEN's escrow agent / seller address": // For mint+market of physical NFTs
             {
                 address: "",
                 roles: [Role.ESCROW_AGENT, Role.SELLER]
             },
 
-        "Jay's minter / seller address": // For mint+market of digital NFTs
+        "SEEN's minter / seller address": // For mint+market of digital NFTs
             {
-                address: "0xD2a3F28cD3f3825567e53773C341688E6afa12EC",
+                address: "",
                 roles: [Role.MINTER, Role.SELLER]
             },
 

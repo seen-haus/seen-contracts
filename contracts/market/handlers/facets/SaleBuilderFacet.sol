@@ -140,7 +140,7 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
      *
      * Emits a SalePending event.
      *
-     * @param _seller - the current owner of the consignment
+     * @param _seller - the address that procedes of the sale should go to
      * @param _tokenAddress - the contract address issuing the NFT behind the consignment
      * @param _tokenId - the id of the token being consigned
      * @param _start - the scheduled start time of the sale
@@ -161,27 +161,40 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
     )
     external
     override
-    onlyRole(SELLER)
     {
         // Get Market Handler Storage slot
         MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
+
+        // Get the MarketController
+        IMarketController marketController = getMarketController();
+
+        // Determine if consignment is physical
+        address nft = marketController.getNft();
+        if (nft == _tokenAddress && ISeenHausNFT(nft).isPhysical(_tokenId)) {
+            // Is physical NFT, require that msg.sender has ESCROW_AGENT role
+            require(checkHasRole(msg.sender, ESCROW_AGENT), "Physical NFT secondary listings require ESCROW_AGENT role");
+        } else if (nft != _tokenAddress) {
+            // Is external NFT, require that listing external NFTs is enabled
+            bool isEnabled = marketController.getAllowExternalTokensOnSecondary();
+            require(isEnabled, "Listing external tokens is not currently enabled");
+        }
 
         // Make sure supply is non-zero
         require (_supply > 0, "Supply must be non-zero");
 
         // Make sure this contract is approved to transfer the token
         // N.B. The following will work because isApprovedForAll has the same signature on both IERC721 and IERC1155
-        require(IERC1155Upgradeable(_tokenAddress).isApprovedForAll(_seller, address(this)), "Not approved to transfer seller's tokens");
+        require(IERC1155Upgradeable(_tokenAddress).isApprovedForAll(msg.sender, address(this)), "Not approved to transfer seller's tokens");
 
         // To register the consignment, tokens must first be in MarketController's possession
         if (IERC165Upgradeable(_tokenAddress).supportsInterface(type(IERC1155Upgradeable).interfaceId)) {
 
             // Ensure seller owns sufficient supply of token
-            require(IERC1155Upgradeable(_tokenAddress).balanceOf(_seller, _tokenId) >= _supply, "Seller has insufficient balance of token");
+            require(IERC1155Upgradeable(_tokenAddress).balanceOf(msg.sender, _tokenId) >= _supply, "Seller has insufficient balance of token");
 
             // Transfer supply to MarketController
             IERC1155Upgradeable(_tokenAddress).safeTransferFrom(
-                _seller,
+                msg.sender,
                 address(getMarketController()),
                 _tokenId,
                 _supply,
@@ -195,7 +208,7 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
 
             // Transfer tokenId to MarketController
             IERC721Upgradeable(_tokenAddress).safeTransferFrom(
-                _seller,
+                msg.sender,
                 address(getMarketController()),
                 _tokenId
             );

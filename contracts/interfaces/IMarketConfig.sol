@@ -193,5 +193,4 @@ interface IMarketConfig {
      * @return ticketer = the address of the escrow ticketer to use
      */
     function getEscrowTicketer(uint256 _consignmentId) external view returns (address ticketer);
-
 }

@@ -5,6 +5,7 @@ import "@openzeppelin/contracts-upgradeable/utils/introspection/IERC165Upgradeab
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "../../interfaces/IMarketController.sol";
 import "../../interfaces/IMarketHandler.sol";
+import "../../interfaces/ISeenHausNFT.sol";
 import "../../domain/SeenConstants.sol";
 import "../../interfaces/IERC2981.sol";
 import "../../domain/SeenTypes.sol";
@@ -43,6 +44,18 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
         require(ds.accessController.hasRole(_role, msg.sender) || getMarketController().getConsignor(_consignmentId) == msg.sender, "Access denied, caller doesn't have role or is not consignor");
         _;
+    }
+
+    /**
+     * @dev Function that checks that the caller has a specific role.
+     *
+     * Reverts if caller doesn't have role.
+     *
+     * See: {AccessController.hasRole}
+     */
+    function checkHasRole(address _address, bytes32 _role) internal view returns (bool) {
+        DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
+        return ds.accessController.hasRole(_role, _address);
     }
 
     /**
@@ -182,18 +195,17 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
     internal
     returns (uint256 net)
     {
-        // Get the MarketController
-        IMarketController marketController = getMarketController();
-
         // Only pay royalties on secondary market sales
         uint256 royaltyAmount = 0;
         if (_consignment.market == Market.Secondary) {
-
             // Determine if NFT contract supports NFT Royalty Standard EIP-2981
             try IERC165Upgradeable(_consignment.tokenAddress).supportsInterface(type(IERC2981).interfaceId) returns (bool supported) {
 
                 // If so, find out the who to pay and how much
                 if (supported == true) {
+
+                    // Get the MarketController
+                    IMarketController marketController = getMarketController();
 
                     // Get the royalty recipient and expected payment
                     (address recipient, uint256 expected) = IERC2981(_consignment.tokenAddress).royaltyInfo(_consignment.tokenId, _grossSale);
@@ -223,6 +235,56 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
 
         // Return the net amount after royalty deduction
         net = _grossSale - royaltyAmount;
+    }
+
+    /**
+     * @notice Deduct and pay escrow agent fees on sold physical secondary market consignments.
+     *
+     * Does nothing if this is a primary market sale.
+     *
+     * Deducts escrow agent fee and pays to consignor
+     * - entire expected amount
+     *
+     * Emits a EscrowAgentFeeDisbursed event with the amount actually paid.
+     *
+     * @param _consignment - the consigned item
+     * @param _grossSale - the gross sale amount
+     *
+     * @return net - the net amount of the sale after the royalty has been paid
+     */
+    function deductEscrowAgentFee(Consignment memory _consignment, uint256 _grossSale, uint256 _netAfterRoyalties)
+    internal
+    returns (uint256 net)
+    {
+        // Only pay royalties on secondary market sales
+        uint256 escrowAgentFeeAmount = 0;
+        if (_consignment.market == Market.Secondary) {
+            // Get the MarketController
+            IMarketController marketController = getMarketController();
+            address consignor = marketController.getConsignor(_consignment.id);
+            if(consignor != _consignment.seller) {
+                uint16 escrowAgentBasisPoints = marketController.getEscrowAgentFeeBasisPoints(consignor);
+                if(escrowAgentBasisPoints > 0) {
+                    // Determine if consignment is physical
+                    address nft = marketController.getNft();
+                    if (nft == _consignment.tokenAddress && ISeenHausNFT(nft).isPhysical(_consignment.tokenId)) {
+                        // Consignor is not seller, consigner has a positive escrowAgentBasisPoints value, consignment is of a physical item
+                        // Therefore, pay consignor the escrow agent fees
+                        escrowAgentFeeAmount = getPercentageOf(_grossSale, escrowAgentBasisPoints);
+
+                        // If escrow agent fee is expected...
+                        if (escrowAgentFeeAmount > 0) {
+                            payable(consignor).transfer(escrowAgentFeeAmount);
+                            // Notify listeners of payment
+                            emit EscrowAgentFeeDisbursed(_consignment.id, consignor, escrowAgentFeeAmount);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Return the net amount after royalty deduction
+        net = _netAfterRoyalties - escrowAgentFeeAmount;
     }
 
     /**
@@ -292,10 +354,13 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
         SeenTypes.Consignment memory consignment = marketController.getConsignment(_consignmentId);
 
         // Pay royalties if needed
-        uint256 net = deductRoyalties(consignment, _saleAmount);
+        uint256 netAfterRoyalties = deductRoyalties(consignment, _saleAmount);
+
+        // Pay escrow agent fees if needed
+        uint256 netAfterEscrowAgentFees = deductEscrowAgentFee(consignment, _saleAmount, netAfterRoyalties);
 
         // Pay marketplace fee
-        uint256 payout = deductFee(consignment, net);
+        uint256 payout = deductFee(consignment, netAfterEscrowAgentFees);
 
         // Pay seller
         consignment.seller.transfer(payout);

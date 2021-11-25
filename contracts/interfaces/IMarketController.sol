@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./IMarketConfig.sol";
+import "./IMarketConfigAdditional.sol";
 import "./IMarketClerk.sol";
 
 /**
@@ -13,4 +14,4 @@ import "./IMarketClerk.sol";
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-interface IMarketController is IMarketClerk, IMarketConfig {}
+interface IMarketController is IMarketClerk, IMarketConfig, IMarketConfigAdditional {}

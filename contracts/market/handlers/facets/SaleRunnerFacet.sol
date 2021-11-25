@@ -176,10 +176,10 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
         Consignment memory consignment = getMarketController().getConsignment(_consignmentId);
 
         // Ensure that there is a pending payout
-        require(consignment.pendingPayout > 0, "No pending payout");
+        require(consignment.pendingPayout > 0);
 
         // Ensure that caller is the seller
-        require(consignment.seller == msg.sender, "Can only be called by seller");
+        require(consignment.seller == msg.sender);
 
         // Ensure that the sale has not yet sold out
         require((consignment.supply - consignment.releasedSupply) > 0, "Sale is sold out - call closeSale instead");

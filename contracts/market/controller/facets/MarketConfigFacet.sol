@@ -436,5 +436,4 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
         Ticketer ticketerType = (specified == Ticketer.Default) ? mcs.defaultTicketerType : specified;
         return (ticketerType == Ticketer.Lots) ? mcs.lotsTicketer : mcs.itemsTicketer;
     }
-
 }

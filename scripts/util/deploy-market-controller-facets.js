@@ -14,14 +14,19 @@ const ethers = hre.ethers;
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-async function deployMarketControllerFacets(diamond, marketConfig, gasLimit) {
+async function deployMarketControllerFacets(diamond, marketConfig, marketConfigAdditional, gasLimit) {
 
     // Deploy the MarketConfig Facet
     const MarketConfigFacet = await ethers.getContractFactory("MarketConfigFacet");
     const marketConfigFacet = await MarketConfigFacet.deploy({gasLimit});
     await marketConfigFacet.deployed();
 
-    // sDeploy the MarketClerkFacet Facet
+    // Deploy the MarketConfigAdditional Facet (needed due to contract size of MarketConfig)
+    const MarketConfigAdditionalFacet = await ethers.getContractFactory("MarketConfigAdditionalFacet");
+    const marketConfigAdditionalFacet = await MarketConfigAdditionalFacet.deploy({gasLimit});
+    await marketConfigAdditionalFacet.deployed();
+
+    // Deploy the MarketClerkFacet Facet
     const MarketClerkFacet = await ethers.getContractFactory("MarketClerkFacet");
     const marketClerkFacet = await MarketClerkFacet.deploy({gasLimit});
     await marketClerkFacet.deployed();
@@ -36,6 +41,13 @@ async function deployMarketControllerFacets(diamond, marketConfig, gasLimit) {
     const marketConfigCut = getFacetAddCut(marketConfigFacet, [configInitFunction]);
     await cutFacet.diamondCut([marketConfigCut], marketConfigFacet.address, configCallData, {gasLimit});
 
+    // Cut MarketConfigAdditional facet, initializing
+    let configAdditionalInitFunction = "initialize(bool _allowExternalTokensOnSecondary)";
+    const configAdditionalInterface = new ethers.utils.Interface([`function ${configAdditionalInitFunction}`]);
+    const configAdditionalCallData = configAdditionalInterface.encodeFunctionData("initialize", marketConfigAdditional);
+    const marketConfigAdditionalCut = getFacetAddCut(marketConfigAdditionalFacet, [configAdditionalInitFunction]);
+    await cutFacet.diamondCut([marketConfigAdditionalCut], marketConfigAdditionalFacet.address, configAdditionalCallData, {gasLimit});
+
     // Cut MarketClerk facet, initializing
     let clerkInitFunction = "initialize()";
     const clerkInterface = new ethers.utils.Interface([`function ${clerkInitFunction}`]);
@@ -43,7 +55,7 @@ async function deployMarketControllerFacets(diamond, marketConfig, gasLimit) {
     const marketClerkCut = getFacetAddCut(marketClerkFacet, ['supportsInterface(bytes4)', clerkInitFunction]);
     await cutFacet.diamondCut([marketClerkCut], marketClerkFacet.address, clerkCallData, {gasLimit});
 
-    return [marketConfigFacet, marketClerkFacet];
+    return [marketConfigFacet, marketConfigAdditionalFacet, marketClerkFacet];
 }
 
 if (require.main === module) {

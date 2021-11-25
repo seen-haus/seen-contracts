@@ -30,6 +30,7 @@ function getConfig() {
     const maxRoyaltyPercentage = "2500"; // 25%   = 2500
     const outBidPercentage = "500"; // 5%   = 500
     const defaultTicketerType = Ticketer.ITEMS;  // default escrow ticketer type
+    const allowExternalTokensOnSecondary = false;
 
     // Staking contract address
     const STAKING = {
@@ -53,7 +54,8 @@ function getConfig() {
             secondaryFeePercentage,
             maxRoyaltyPercentage,
             outBidPercentage,
-            defaultTicketerType
+            defaultTicketerType,
+            allowExternalTokensOnSecondary
         };
 }
 
@@ -104,8 +106,12 @@ async function main() {
         config.outBidPercentage,
         config.defaultTicketerType
     ];
-    [marketConfigFacet, marketClerkFacet] = await deployMarketControllerFacets(marketDiamond, marketConfig, gasLimit);
+    const marketConfigAdditional = [
+        config.allowExternalTokensOnSecondary,
+    ];
+    [marketConfigFacet, marketConfigAdditionalFacet, marketClerkFacet] = await deployMarketControllerFacets(marketDiamond, marketConfig, marketConfigAdditional, gasLimit);
     deploymentComplete('MarketConfigFacet', marketConfigFacet.address, [], contracts);
+    deploymentComplete('MarketConfigAdditionalFacet', marketConfigAdditionalFacet.address, [], contracts);
     deploymentComplete('MarketClerkFacet', marketClerkFacet.address, [], contracts);
 
     // Cast Diamond to the IMarketController interface for further interaction with it

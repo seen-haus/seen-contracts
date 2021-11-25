@@ -15,6 +15,7 @@ import "../interfaces/IEscrowTicketer.sol";
 import "../interfaces/IMarketClerk.sol";
 import "../interfaces/IMarketClientProxy.sol";
 import "../interfaces/IMarketConfig.sol";
+import "../interfaces/IMarketConfigAdditional.sol";
 import "../interfaces/IMarketController.sol";
 import "../interfaces/IMarketHandler.sol";
 import "../interfaces/ISaleBuilder.sol";
@@ -98,6 +99,12 @@ contract InterfaceInfo {
     public pure
     returns(bytes4 id) {
         id = type(IMarketConfig).interfaceId;
+    }
+
+    function getIMarketConfigAdditional()
+    public pure
+    returns(bytes4 id) {
+        id = type(IMarketConfigAdditional).interfaceId;
     }
 
     function getIMarketController()

@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol"
 import "../../../interfaces/IAuctionHandler.sol";
 import "../../../interfaces/IAuctionBuilder.sol";
 import "../../../interfaces/IAuctionRunner.sol";
+import "../../../interfaces/ISeenHausNFT.sol";
 import "../MarketHandlerBase.sol";
 
 /**
@@ -143,7 +144,7 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
      *  - Seller doesn't own the asset(s) to be auctioned
      *  - Token contract does not implement either IERC1155 or IERC721
      *
-     * @param _seller - the current owner of the consignment
+     * @param _seller - the address that proceeds of the auction should go to
      * @param _tokenAddress - the contract address issuing the NFT behind the consignment
      * @param _tokenId - the id of the token being consigned
      * @param _start - the scheduled start time of the auction
@@ -164,10 +165,22 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
     )
     external
     override
-    onlyRole(SELLER)
     {
         // Get Market Handler Storage struct
         MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
+
+        // Get the MarketController
+        IMarketController marketController = getMarketController();
+
+        // Determine if consignment is physical
+        address nft = marketController.getNft();
+        if (nft == _tokenAddress && ISeenHausNFT(nft).isPhysical(_tokenId)) {
+            // Is physical NFT, require that msg.sender has ESCROW_AGENT role
+            require(checkHasRole(msg.sender, ESCROW_AGENT), "Physical NFT secondary listings require ESCROW_AGENT role");
+        } else if (nft != _tokenAddress) {
+            // Is external NFT, require that listing external NFTs is enabled
+            require(marketController.getAllowExternalTokensOnSecondary(), "Listing external tokens is not currently enabled");
+        }
 
         // Make sure start time isn't in the past if the clock type is not trigger type
         // It doesn't matter if the start is in the past if clock type is trigger type
@@ -178,17 +191,17 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
 
         // Make sure this contract is approved to transfer the token
         // N.B. The following will work because isApprovedForAll has the same signature on both IERC721 and IERC1155
-        require(IERC1155Upgradeable(_tokenAddress).isApprovedForAll(_seller, address(this)), "Not approved to transfer seller's tokens");
+        require(IERC1155Upgradeable(_tokenAddress).isApprovedForAll(msg.sender, address(this)), "Not approved to transfer seller's tokens");
 
         // To register the consignment, tokens must first be in MarketController's possession
         if (IERC165Upgradeable(_tokenAddress).supportsInterface(type(IERC1155Upgradeable).interfaceId)) {
 
             // Ensure seller a positive number of tokens
-            require(IERC1155Upgradeable(_tokenAddress).balanceOf(_seller, _tokenId) > 0, "Seller has zero balance of consigned token");
+            require(IERC1155Upgradeable(_tokenAddress).balanceOf(msg.sender, _tokenId) > 0, "Seller has zero balance of consigned token");
 
             // Transfer supply to MarketController
             IERC1155Upgradeable(_tokenAddress).safeTransferFrom(
-                _seller,
+                msg.sender,
                 address(getMarketController()),
                 _tokenId,
                 1, // Supply is always 1 for auction
@@ -202,7 +215,7 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
 
             // Transfer tokenId to MarketController
             IERC721Upgradeable(_tokenAddress).safeTransferFrom(
-                _seller,
+                msg.sender,
                 address(getMarketController()),
                 _tokenId
             );
