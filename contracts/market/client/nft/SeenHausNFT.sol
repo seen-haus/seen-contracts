@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "../../../interfaces/ISeenHausNFT.sol";
 import "../../../interfaces/IERC2981.sol";
 import "../MarketClientBase.sol";
