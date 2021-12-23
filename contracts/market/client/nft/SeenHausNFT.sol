@@ -38,7 +38,7 @@ contract SeenHausNFT is ISeenHausNFT, MarketClientBase, ERC1155Upgradeable {
      */
     function initialize(address _initOwner)
     public {
-        __ERC1155_init_unchained("");
+        __ERC1155_init("");
         _transferOwnership(_initOwner);
     }
 

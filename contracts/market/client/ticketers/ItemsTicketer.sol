@@ -43,7 +43,7 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClientBase, ERC115
      */
     function initialize()
     public {
-        __ERC1155_init_unchained(ESCROW_TICKET_URI);
+        __ERC1155_init(ESCROW_TICKET_URI);
     }
 
     /**
