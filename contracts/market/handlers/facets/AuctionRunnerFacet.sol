@@ -145,7 +145,6 @@ contract AuctionRunnerFacet is IAuctionRunner, MarketHandlerBase {
 
                 // Set start time
                 auction.start = block.timestamp;
-                endTime = auction.start + auction.duration;
 
             }
 
