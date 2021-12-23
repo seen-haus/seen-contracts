@@ -44,7 +44,7 @@ contract MarketClientProxy is IMarketClientProxy, SeenConstants, Proxy {
         address _accessController,
         address _marketController,
         address _impl
-    ) payable {
+    ) {
 
         // Get the ProxyStorage struct
         MarketClientLib.ProxyStorage storage ps = MarketClientLib.proxyStorage();
