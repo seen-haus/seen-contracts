@@ -321,7 +321,7 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
         address payable staking = marketController.getStaking();
         address payable multisig = marketController.getMultisig();
         staking.transfer(split);
-        multisig.transfer(split);
+        multisig.transfer(feeAmount - split);
 
         // Return the seller payout amount after fee deduction
         payout = _netAmount - feeAmount;
