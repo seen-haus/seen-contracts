@@ -274,6 +274,9 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUp
             // Get the current remaining consignment supply
             uint256 remainingSupply = consignment.supply - consignment.releasedSupply;
 
+            // Safety check
+            require(_amount <= remainingSupply, "Attempting to release more than is available to consignment");
+
             // Mark the consignment when the entire consignment supply has been released
             if (remainingSupply == _amount) consignment.released = true;
             consignment.releasedSupply = consignment.releasedSupply + _amount;
