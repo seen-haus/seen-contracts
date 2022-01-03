@@ -17,7 +17,7 @@ import "../MarketHandlerBase.sol";
 contract AuctionRunnerFacet is IAuctionRunner, MarketHandlerBase {
 
     // Threshold to auction extension window
-    uint256 constant extensionWindow = 15 minutes;
+    uint256 constant public extensionWindow = 15 minutes;
 
     /**
      * @dev Modifier to protect initializer function from being invoked twice.
