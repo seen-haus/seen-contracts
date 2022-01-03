@@ -34,7 +34,7 @@ interface ISaleBuilder is IMarketHandler {
      * Reverts if:
      *  - Sale exists for consignment
      *  - Consignment has already been marketed
-     *  - Sale starts in the past
+     *  - Sale start is zero
      *
      * Emits a SalePending event.
      *
@@ -62,7 +62,7 @@ interface ISaleBuilder is IMarketHandler {
      *
      * Reverts if:
      *  - Sale exists for consignment
-     *  - Sale starts in the past
+     *  - Sale start is zero
      *  - This contract isn't approved to transfer seller's tokens
      *
      * Emits a SalePending event.
