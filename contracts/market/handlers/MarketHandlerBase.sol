@@ -132,9 +132,9 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
         Audience audience = mhs.audiences[_consignmentId];
         if (audience != Audience.Open) {
             if (audience == Audience.Staker) {
-                require(isStaker() == true, "Buyer is not a staker");
+                require(isStaker(), "Buyer is not a staker");
             } else if (audience == Audience.VipStaker) {
-                require(isVipStaker() == true, "Buyer is not a VIP staker");
+                require(isVipStaker(), "Buyer is not a VIP staker");
             }
         }
         _;
