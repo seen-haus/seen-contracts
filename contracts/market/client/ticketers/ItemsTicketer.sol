@@ -150,6 +150,11 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClientBase, ERC115
         // Make sure amount is non-zero
         require(_amount > 0, "Token amount cannot be zero.");
 
+        consignmentIdToTicketClaimableCount[_consignmentId] += _amount;
+
+        // Make sure that there can't be more tickets issued than the maximum possible consignment allocation
+        require(consignmentIdToTicketClaimableCount[_consignmentId] <= consignment.supply, "Can't issue more tickets than max possible allowed for consignment");
+
         // Get the ticketed token
         Token memory token = ISeenHausNFT(consignment.tokenAddress).getTokenInfo(consignment.tokenId);
 
@@ -160,8 +165,6 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClientBase, ERC115
         ticket.consignmentId = _consignmentId;
         ticket.id = ticketId;
         ticket.itemURI = token.uri;
-
-        consignmentIdToTicketClaimableCount[_consignmentId] += _amount;
 
         // Mint escrow ticket and send to buyer
         _mint(_buyer, ticketId, _amount, new bytes(0x0));

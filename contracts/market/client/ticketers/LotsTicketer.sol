@@ -168,6 +168,11 @@ contract LotsTicketer is IEscrowTicketer, MarketClientBase, StringUtils, ERC721U
         // Make sure amount is non-zero
         require(_amount > 0, "Token amount cannot be zero.");
 
+        consignmentIdToTicketClaimableCount[_consignmentId] += _amount;
+
+        // Make sure that there can't be more tickets issued than the maximum possible consignment allocation
+        require(consignmentIdToTicketClaimableCount[_consignmentId] <= consignment.supply, "Can't issue more tickets than max possible allowed consignment");
+
         // Get the ticketed token
         Token memory token = ISeenHausNFT(consignment.tokenAddress).getTokenInfo(consignment.tokenId);
 
@@ -181,8 +186,6 @@ contract LotsTicketer is IEscrowTicketer, MarketClientBase, StringUtils, ERC721U
 
         // Mint the ticket and send to the buyer
         _mint(_buyer, ticketId);
-
-        consignmentIdToTicketClaimableCount[_consignmentId] = consignmentIdToTicketClaimableCount[_consignmentId] + _amount;
 
         // Notify listeners about state change
         emit TicketIssued(ticketId, _consignmentId, _buyer, _amount);
