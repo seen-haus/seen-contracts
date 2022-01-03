@@ -203,6 +203,8 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
 
         } else {
 
+            require(_supply == 1, "ERC721 listings must use a supply of 1");
+
             // Token must be a single token NFT
             require(IERC165Upgradeable(_tokenAddress).supportsInterface(type(IERC721Upgradeable).interfaceId), "Invalid token type");
 
