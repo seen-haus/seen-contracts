@@ -114,6 +114,8 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
         // Because when the first bid comes in, that gets set to the start time anyway
         if(_clock != Clock.Trigger) {
             require(_start >= block.timestamp, "Non-trigger clock type requires start time in future");
+        } else {
+            require(_start > 0, "Start time must be more than zero");
         }
 
         // Set up the auction
@@ -187,6 +189,8 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
         // Because when the first bid comes in, that gets set to the start time anyway
         if(_clock != Clock.Trigger) {
             require(_start >= block.timestamp, "Non-trigger clock type requires start time in future");
+        } else {
+            require(_start > 0, "Start time must be more than zero");
         }
 
         // Make sure this contract is approved to transfer the token
