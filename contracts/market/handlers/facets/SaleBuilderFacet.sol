@@ -68,7 +68,7 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
      * for the duration of the sale.
      *
      * Reverts if:
-     *  - Sale starts in the past
+     *  - Sale start is zero
      *  - Sale exists for consignment
      *  - Consignment has already been marketed
      *
@@ -92,6 +92,8 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
     onlyRole(SELLER)
     onlyConsignor(_consignmentId)
     {
+        require(_start > 0, "_start may not be zero");
+
         // Get Market Handler Storage slot
         MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
 
@@ -132,7 +134,7 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
      * for the duration of the sale.
      *
      * Reverts if:
-     *  - Sale starts in the past
+     *  - Sale start is zero
      *  - Supply is zero
      *  - Sale exists for consignment
      *  - This contract isn't approved to transfer seller's tokens
@@ -162,6 +164,9 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
     external
     override
     {
+        // Make sure sale start is not set to zero
+        require(_start > 0, "_start may not be zero");
+
         // Get Market Handler Storage slot
         MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
 
