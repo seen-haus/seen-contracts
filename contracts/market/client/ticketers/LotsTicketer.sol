@@ -211,6 +211,7 @@ contract LotsTicketer is IEscrowTicketer, MarketClientBase, StringUtils, ERC721U
 
         // Burn the ticket
         _burn(_ticketId);
+        delete tickets[_ticketId];
 
         // Release the consignment to claimant
         marketController.releaseConsignment(ticket.consignmentId, ticket.amount, msg.sender);
