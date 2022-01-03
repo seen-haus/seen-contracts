@@ -202,7 +202,7 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
             try IERC165Upgradeable(_consignment.tokenAddress).supportsInterface(type(IERC2981).interfaceId) returns (bool supported) {
 
                 // If so, find out the who to pay and how much
-                if (supported == true) {
+                if (supported) {
 
                     // Get the MarketController
                     IMarketController marketController = getMarketController();
