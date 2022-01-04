@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/utils/introspection/IERC165Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "../../interfaces/IMarketController.sol";
 import "../../interfaces/IMarketHandler.sol";
 import "../../interfaces/ISeenHausNFT.sol";
@@ -218,7 +219,7 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
 
                         // Lets pay, but only up to our platform policy maximum
                         royaltyAmount = (expected <= maxRoyalty) ? expected : maxRoyalty;
-                        payable(recipient).transfer(royaltyAmount);
+                        AddressUpgradeable.sendValue(payable(recipient), royaltyAmount);
 
                         // Notify listeners of payment
                         emit RoyaltyDisbursed(_consignment.id, recipient, royaltyAmount);
@@ -274,7 +275,7 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
 
                         // If escrow agent fee is expected...
                         if (escrowAgentFeeAmount > 0) {
-                            payable(consignor).transfer(escrowAgentFeeAmount);
+                            AddressUpgradeable.sendValue(payable(consignor), escrowAgentFeeAmount);
                             // Notify listeners of payment
                             emit EscrowAgentFeeDisbursed(_consignment.id, consignor, escrowAgentFeeAmount);
                         }
@@ -320,8 +321,8 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
         uint256 split = feeAmount / 2;
         address payable staking = marketController.getStaking();
         address payable multisig = marketController.getMultisig();
-        staking.transfer(split);
-        multisig.transfer(feeAmount - split);
+        AddressUpgradeable.sendValue(staking, split);
+        AddressUpgradeable.sendValue(multisig, feeAmount - split);
 
         // Return the seller payout amount after fee deduction
         payout = _netAmount - feeAmount;
@@ -363,7 +364,7 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
         uint256 payout = deductFee(consignment, netAfterEscrowAgentFees);
 
         // Pay seller
-        consignment.seller.transfer(payout);
+        AddressUpgradeable.sendValue(consignment.seller, payout);
 
         // Notify listeners of payment
         emit PayoutDisbursed(_consignmentId, consignment.seller, payout);
