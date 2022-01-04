@@ -125,7 +125,7 @@ contract AuctionRunnerFacet is IAuctionRunner, MarketHandlerBase {
         // - Give back the previous bidder's money
         if (auction.bid > 0) {
             require(msg.value >= (auction.bid + getPercentageOf(auction.bid, getMarketController().getOutBidPercentage())), "Bid too small");
-            auction.buyer.transfer(auction.bid);
+            AddressUpgradeable.sendValue(auction.buyer, auction.bid);
             emit BidReturned(consignment.id, auction.buyer, auction.bid);
         }
 

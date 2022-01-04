@@ -153,7 +153,7 @@ contract AuctionEnderFacet is IAuctionEnder, MarketHandlerBase {
 
         // Give back the previous bidder's money
         if (auction.bid > 0) {
-            auction.buyer.transfer(auction.bid);
+            AddressUpgradeable.sendValue(auction.buyer, auction.bid);
             emit CanceledAuctionBidReturned(_consignmentId, auction.buyer, auction.bid);
         }
 
