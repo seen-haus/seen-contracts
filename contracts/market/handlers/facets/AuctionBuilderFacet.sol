@@ -18,6 +18,9 @@ import "../MarketHandlerBase.sol";
  */
 contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
 
+    // Threshold to auction extension window
+    uint256 constant extensionWindow = 15 minutes;
+
     /**
      * @dev Modifier to protect initializer function from being invoked twice.
      */
@@ -69,7 +72,7 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
      *  - Consignment has already been marketed
      *  - Consignment has a supply other than 1
      *  - Auction already exists for consignment
-     *  - Start time is in the past
+     *  - Duration is less than 15 minutes
      *
      * @param _consignmentId - the id of the consignment being sold
      * @param _start - the scheduled start time of the auction
@@ -91,6 +94,8 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
     onlyRole(SELLER)
     onlyConsignor(_consignmentId)
     {
+        require(_duration >= extensionWindow, "Duration must be equal to or longer than 15 minutes");
+
         // Get Market Handler Storage struct
         MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
 
@@ -141,10 +146,10 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
      * Emits an AuctionPending event.
      *
      * Reverts if:
-     *  - Start time is in the past
      *  - This contract not approved to transfer seller's tokens
      *  - Seller doesn't own the asset(s) to be auctioned
      *  - Token contract does not implement either IERC1155 or IERC721
+     *  - Duration is less than 15 minutes
      *
      * @param _seller - the address that proceeds of the auction should go to
      * @param _tokenAddress - the contract address issuing the NFT behind the consignment
@@ -168,6 +173,8 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
     external
     override
     {
+        require(_duration >= extensionWindow, "Duration must be equal to or longer than 15 minutes");
+
         // Get Market Handler Storage struct
         MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
 
