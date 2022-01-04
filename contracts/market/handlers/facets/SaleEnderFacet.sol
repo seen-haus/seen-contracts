@@ -68,8 +68,7 @@ contract SaleEnderFacet is ISaleEnder, MarketHandlerBase {
         // Make sure the sale exists and can be closed normally
         Sale storage sale = mhs.sales[_consignmentId];
         require(sale.start != 0, "Sale does not exist");
-        require(sale.state != State.Ended, "Sale has already been settled");
-        require(sale.state == State.Running, "Sale hasn't started");
+        require(sale.state == State.Running, "Sale isn't currently running");
 
         // Determine if consignment is physical
         address nft = getMarketController().getNft();
