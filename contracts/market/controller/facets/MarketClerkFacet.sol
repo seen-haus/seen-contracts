@@ -167,11 +167,9 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUp
             // Token must be a single token NFT
             require(IERC165Upgradeable(_tokenAddress).supportsInterface(type(IERC721Upgradeable).interfaceId), "Invalid token type");
 
-            // Ensure the consigned token has been transferred to this contract
-            require(IERC721Upgradeable(_tokenAddress).ownerOf(_tokenId) == (address(this)), "MarketController must own token");
-
-            // Ensure the supply is set to 1
-            require(_supply == 1, "Invalid supply for token");
+            // Ensure the consigned token has been transferred to this contract & that supply = 1
+            // Rolled into a single require due to contract size
+            require((IERC721Upgradeable(_tokenAddress).ownerOf(_tokenId) == (address(this))) && (_supply == 1), "MarketController must own token & supply must be 1");
 
         }
 
@@ -219,7 +217,7 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUp
     onlyRole(MARKET_HANDLER)
     consignmentExists(_consignmentId)
     {
-        require(_marketHandler != MarketHandler.Unhandled, "Consignment can't be marketed without a valid handler");
+        require(_marketHandler != MarketHandler.Unhandled, "requires valid handler");
 
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
 
@@ -227,7 +225,7 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUp
         Consignment storage consignment = mcs.consignments[_consignmentId];
 
         // A consignment can only be marketed once, should currently be Unhandled
-        require(consignment.marketHandler == MarketHandler.Unhandled, "Consignment has already been marketed");
+        require(consignment.marketHandler == MarketHandler.Unhandled, "Consignment already marketed");
 
         // Update the consignment
         consignment.marketHandler = _marketHandler;
@@ -266,7 +264,7 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUp
         Consignment storage consignment = mcs.consignments[_consignmentId];
 
         // Ensure the consignment has not been released
-        require(!consignment.released, "Consigned token has already been released");
+        require(!consignment.released, "Consigned token already released");
 
         // Handle transfer, marking of consignment
         if (consignment.multiToken) {
