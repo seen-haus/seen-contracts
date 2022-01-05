@@ -182,7 +182,7 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
         require(consignment.seller == msg.sender);
 
         // Ensure that the sale has not yet sold out
-        require((consignment.supply - consignment.releasedSupply) > 0, "Sale is sold out - call closeSale instead");
+        require((consignment.supply - consignment.releasedSupply) > 0, "sold out - use closeSale");
 
         // Make sure the sale exists and is running
         Sale storage sale = mhs.sales[_consignmentId];
