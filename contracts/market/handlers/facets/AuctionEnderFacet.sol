@@ -88,8 +88,8 @@ contract AuctionEnderFacet is IAuctionEnder, MarketHandlerBase {
         auction.outcome = Outcome.Closed;
 
         // Distribute the funds (pay royalties, staking, multisig, and seller)
-        disburseFunds(_consignmentId, consignment.pendingPayout);
         getMarketController().setConsignmentPendingPayout(consignment.id, 0);
+        disburseFunds(_consignmentId, consignment.pendingPayout);
 
         // Determine if consignment is physical
         address nft = getMarketController().getNft();
@@ -151,13 +151,13 @@ contract AuctionEnderFacet is IAuctionEnder, MarketHandlerBase {
         auction.state = State.Ended;
         auction.outcome = Outcome.Canceled;
 
+        getMarketController().setConsignmentPendingPayout(consignment.id, 0);
+
         // Give back the previous bidder's money
         if (auction.bid > 0) {
             AddressUpgradeable.sendValue(auction.buyer, auction.bid);
             emit CanceledAuctionBidReturned(_consignmentId, auction.buyer, auction.bid);
         }
-
-        getMarketController().setConsignmentPendingPayout(consignment.id, 0);
 
         // Release the consigned token supply to seller
         getMarketController().releaseConsignment(_consignmentId, 1, consignment.seller);

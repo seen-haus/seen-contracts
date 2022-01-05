@@ -125,6 +125,9 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
 
         }
 
+        uint256 pendingPayoutValue = consignment.pendingPayout + msg.value;
+        getMarketController().setConsignmentPendingPayout(consignment.id, pendingPayoutValue);
+
         // Determine if consignment is physical
         address nft = getMarketController().getNft();
         if (nft == consignment.tokenAddress && ISeenHausNFT(nft).isPhysical(consignment.tokenId)) {
@@ -139,9 +142,6 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
             getMarketController().releaseConsignment(_consignmentId, _amount, msg.sender);
 
         }
-
-        uint256 pendingPayoutValue = consignment.pendingPayout + msg.value;
-        getMarketController().setConsignmentPendingPayout(consignment.id, pendingPayoutValue);
 
         // Announce the purchase
         emit Purchase(consignment.id, msg.sender, _amount, msg.value);
@@ -190,8 +190,8 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
         require(sale.state == State.Running, "Sale hasn't started");
 
         // Distribute the funds (handles royalties, staking, multisig, and seller)
-        disburseFunds(_consignmentId, consignment.pendingPayout);
         getMarketController().setConsignmentPendingPayout(consignment.id, 0);
+        disburseFunds(_consignmentId, consignment.pendingPayout);
 
     }
 
