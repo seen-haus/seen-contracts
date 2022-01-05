@@ -93,8 +93,9 @@ contract SaleEnderFacet is ISaleEnder, MarketHandlerBase {
         sale.outcome = Outcome.Closed;
 
         // Distribute the funds (handles royalties, staking, multisig, and seller)
-        disburseFunds(_consignmentId, consignment.pendingPayout);
+        // First nullify pending payout in case of re-entrancy
         getMarketController().setConsignmentPendingPayout(consignment.id, 0);
+        disburseFunds(_consignmentId, consignment.pendingPayout);
 
         // Notify listeners about state change
         emit SaleEnded(_consignmentId, sale.outcome);
@@ -163,8 +164,9 @@ contract SaleEnderFacet is ISaleEnder, MarketHandlerBase {
 
         // Disburse the funds for the sold items
         if (sold > 0) {
-            disburseFunds(_consignmentId, consignment.pendingPayout);
+            // First nullify pending payout in case of re-entrancy
             getMarketController().setConsignmentPendingPayout(consignment.id, 0);
+            disburseFunds(_consignmentId, consignment.pendingPayout);
         }
 
         if (remaining > 0) {
