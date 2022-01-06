@@ -250,6 +250,7 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
      *
      * @param _consignment - the consigned item
      * @param _grossSale - the gross sale amount
+     * @param _netAfterRoyalties - the funds left to be distributed
      *
      * @return net - the net amount of the sale after the royalty has been paid
      */
@@ -275,6 +276,7 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
 
                         // If escrow agent fee is expected...
                         if (escrowAgentFeeAmount > 0) {
+                            require(escrowAgentFeeAmount <= _netAfterRoyalties, "escrowAgentFeeAmount exceeds remaining funds");
                             AddressUpgradeable.sendValue(payable(consignor), escrowAgentFeeAmount);
                             // Notify listeners of payment
                             emit EscrowAgentFeeDisbursed(_consignment.id, consignor, escrowAgentFeeAmount);
@@ -299,11 +301,12 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
      * Emits a FeeDisbursed event for multisig payment.
      *
      * @param _consignment - the consigned item
-     * @param _netAmount - the net amount after royalties
+     * @param _grossSale - the gross sale amount
+     * @param _netAmount - the net amount after royalties (total remaining to be distributed as part of payout process)
      *
      * @return payout - the payout amount for the seller
      */
-    function deductFee(Consignment memory _consignment, uint256 _netAmount)
+    function deductFee(Consignment memory _consignment, uint256 _grossSale, uint256 _netAmount)
     internal
     returns (uint256 payout)
     {
@@ -314,10 +317,11 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
         // the auction fee between SEEN staking and multisig,
         uint256 feeAmount;
         if(_consignment.customFeePercentageBasisPoints > 0) {
-            feeAmount = getPercentageOf(_netAmount, _consignment.customFeePercentageBasisPoints);
+            feeAmount = getPercentageOf(_grossSale, _consignment.customFeePercentageBasisPoints);
         } else {
-            feeAmount = getPercentageOf(_netAmount, marketController.getFeePercentage(_consignment.market));
+            feeAmount = getPercentageOf(_grossSale, marketController.getFeePercentage(_consignment.market));
         }
+        require(feeAmount <= _netAmount, "feeAmount exceeds remaining funds");
         uint256 splitStaking = feeAmount / 2;
         uint256 splitMultisig = feeAmount - splitStaking;
         address payable staking = marketController.getStaking();
@@ -362,7 +366,7 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
         uint256 netAfterEscrowAgentFees = deductEscrowAgentFee(consignment, _saleAmount, netAfterRoyalties);
 
         // Pay marketplace fee
-        uint256 payout = deductFee(consignment, netAfterEscrowAgentFees);
+        uint256 payout = deductFee(consignment, _saleAmount, netAfterEscrowAgentFees);
 
         // Pay seller
         AddressUpgradeable.sendValue(consignment.seller, payout);

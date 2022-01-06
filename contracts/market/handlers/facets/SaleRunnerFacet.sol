@@ -65,8 +65,7 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
 
         // Make sure the sale exists and hasn't been settled
         Sale storage sale = mhs.sales[consignment.id];
-        require(sale.start != 0, "Sale does not exist");
-        require(sale.state != State.Ended, "Sale has already been settled");
+        require((sale.state != State.Ended) && (sale.start != 0), "Sale already settled or non-existent");
 
         // Set the new audience for the consignment
         setAudience(_consignmentId, _audience);
@@ -104,12 +103,9 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
         // Get the consignment
         Consignment memory consignment = getMarketController().getConsignment(_consignmentId);
 
-        // Make sure the sale exists
+        // Make sure we can accept the buy order & that the sale exists
         Sale storage sale = mhs.sales[_consignmentId];
-        require(sale.start != 0, "Sale does not exist");
-
-        // Make sure we can accept the buy order
-        require(block.timestamp >= sale.start, "Sale hasn't started");
+        require((block.timestamp >= sale.start) && (sale.start != 0), "Sale hasn't started or non-existent");
         require(!AddressUpgradeable.isContract(msg.sender), "Contracts may not buy");
         require(_amount <= sale.perTxCap, "Per transaction limit for this sale exceeded");
         require(msg.value == sale.price * _amount, "Payment does not cover order price");
@@ -175,19 +171,15 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
         // Get consignment
         Consignment memory consignment = getMarketController().getConsignment(_consignmentId);
 
-        // Ensure that there is a pending payout
-        require(consignment.pendingPayout > 0);
-
-        // Ensure that caller is the seller
-        require(consignment.seller == msg.sender);
+        // Ensure that there is a pending payout & that caller is the seller
+        require((consignment.pendingPayout > 0) && (consignment.seller == msg.sender));
 
         // Ensure that the sale has not yet sold out
         require((consignment.supply - consignment.releasedSupply) > 0, "sold out - use closeSale");
 
         // Make sure the sale exists and is running
         Sale storage sale = mhs.sales[_consignmentId];
-        require(sale.start != 0, "Sale does not exist");
-        require(sale.state == State.Running, "Sale hasn't started");
+        require((sale.state == State.Running) && (sale.start != 0), "Sale hasn't started or non-existent");
 
         // Distribute the funds (handles royalties, staking, multisig, and seller)
         getMarketController().setConsignmentPendingPayout(consignment.id, 0);
