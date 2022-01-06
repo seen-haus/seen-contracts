@@ -101,7 +101,7 @@ contract MarketConfigAdditionalFacet is IMarketConfigAdditional, MarketControlle
      * @notice The escrow agent fee setter
      *
      * Reverts if:
-     * - _basisPoints are more than 10000
+     * - _basisPoints are more than 5000 (50%)
      *
      * @param _escrowAgentAddress - the address of the escrow agent
      * @param _basisPoints - the escrow agent's fee in basis points
@@ -111,9 +111,8 @@ contract MarketConfigAdditionalFacet is IMarketConfigAdditional, MarketControlle
     override
     onlyRole(ADMIN)
     {
-        // Ensure the consignment exists, has not been released and that basis points don't exceed 10000
-        // Rolled into one require due to contract size being near max
-        // require(_basisPoints <= 10000, "_basisPoints over 10000");
+        // Ensure the consignment exists, has not been released and that basis points don't exceed 5000 (50%)
+        require(_basisPoints <= 5000, "_basisPoints over 5000");
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         mcs.escrowAgentToFeeBasisPoints[_escrowAgentAddress] = _basisPoints;
         emit EscrowAgentFeeChanged(_escrowAgentAddress, _basisPoints);
