@@ -318,18 +318,19 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
         } else {
             feeAmount = getPercentageOf(_netAmount, marketController.getFeePercentage(_consignment.market));
         }
-        uint256 split = feeAmount / 2;
+        uint256 splitStaking = feeAmount / 2;
+        uint256 splitMultisig = feeAmount - splitStaking;
         address payable staking = marketController.getStaking();
         address payable multisig = marketController.getMultisig();
-        AddressUpgradeable.sendValue(staking, split);
-        AddressUpgradeable.sendValue(multisig, feeAmount - split);
+        AddressUpgradeable.sendValue(staking, splitStaking);
+        AddressUpgradeable.sendValue(multisig, splitMultisig);
 
         // Return the seller payout amount after fee deduction
         payout = _netAmount - feeAmount;
 
         // Notify listeners of payment
-        emit FeeDisbursed(_consignment.id, staking, split);
-        emit FeeDisbursed(_consignment.id, multisig, split);
+        emit FeeDisbursed(_consignment.id, staking, splitStaking);
+        emit FeeDisbursed(_consignment.id, multisig, splitMultisig);
     }
 
     /**
