@@ -25,7 +25,7 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
     modifier onlyUnInitialized()
     {
         MarketHandlerLib.MarketHandlerInitializers storage mhi = MarketHandlerLib.marketHandlerInitializers();
-        require(!mhi.saleRunnerFacet, "Initializer: contract is already initialized");
+        require(!mhi.saleRunnerFacet, "already initialized");
         mhi.saleRunnerFacet = true;
         _;
     }
@@ -65,7 +65,7 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
 
         // Make sure the sale exists and hasn't been settled
         Sale storage sale = mhs.sales[consignment.id];
-        require((sale.state != State.Ended) && (sale.start != 0), "Sale already settled or non-existent");
+        require((sale.state != State.Ended) && (sale.start != 0), "already settled or non-existent");
 
         // Set the new audience for the consignment
         setAudience(_consignmentId, _audience);
@@ -106,9 +106,8 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
         // Make sure we can accept the buy order & that the sale exists
         Sale storage sale = mhs.sales[_consignmentId];
         require((block.timestamp >= sale.start) && (sale.start != 0), "Sale hasn't started or non-existent");
-        require(!AddressUpgradeable.isContract(msg.sender), "Contracts may not buy");
-        require(_amount <= sale.perTxCap, "Per transaction limit for this sale exceeded");
-        require(msg.value == sale.price * _amount, "Payment does not cover order price");
+        require(_amount <= sale.perTxCap, "Per tx limit exceeded");
+        require(msg.value == sale.price * _amount, "Value doesn't cover price");
 
         // If this was the first successful purchase...
         if (sale.state == State.Pending) {

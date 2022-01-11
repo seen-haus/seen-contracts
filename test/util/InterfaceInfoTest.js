@@ -54,6 +54,14 @@ describe("InterfaceInfo", function() {
 
         });
 
+        it("getIEthCreditRecovery() should return expected id", async function () {
+
+            const expected = InterfaceIds.IEthCreditRecovery;
+            const actual = await interfaceInfo.getIEthCreditRecovery();
+            assert.equal(actual, expected);
+
+        });
+
         it("getIDiamondCut() should return expected id", async function () {
 
             const expected = InterfaceIds.IDiamondCut;

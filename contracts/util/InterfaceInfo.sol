@@ -23,6 +23,7 @@ import "../interfaces/ISaleHandler.sol";
 import "../interfaces/ISaleRunner.sol";
 import "../interfaces/ISaleEnder.sol";
 import "../interfaces/ISeenHausNFT.sol";
+import "../interfaces/IEthCreditRecovery.sol";
 
 /**
  * @title Interface Info
@@ -63,6 +64,12 @@ contract InterfaceInfo {
     public pure
     returns(bytes4 id) {
         id = type(IAuctionEnder).interfaceId;
+    }
+
+    function getIEthCreditRecovery()
+    public pure
+    returns(bytes4 id) {
+        id = type(IEthCreditRecovery).interfaceId;
     }
 
     function getIDiamondCut()

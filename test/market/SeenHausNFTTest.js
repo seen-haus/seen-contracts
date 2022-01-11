@@ -198,7 +198,7 @@ describe("SeenHausNFT", function() {
                     // non-UPGRADER attempt
                     await expect(
                         seenHausNFTProxy.connect(associate).setImplementation(replacementAddress)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role");
 
                     // Get address
                     address = await seenHausNFTProxy.getImplementation();
@@ -228,7 +228,7 @@ describe("SeenHausNFT", function() {
                     // non-UPGRADER attempt
                     await expect(
                         seenHausNFTProxy.connect(associate).setAccessController(replacementAddress)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role");
 
                     // Get address
                     address = await seenHausNFTProxy.getAccessController();
@@ -258,7 +258,7 @@ describe("SeenHausNFT", function() {
                     // non-UPGRADER attempt
                     await expect(
                         seenHausNFTProxy.connect(associate).setMarketController(replacementAddress)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role");
 
                     // Get address
                     address = await seenHausNFTProxy.getMarketController();
@@ -292,7 +292,7 @@ describe("SeenHausNFT", function() {
                     // non-MINTER attempt
                     await expect(
                         seenHausNFT.connect(associate).mintDigital(supply, creator.address, tokenURI, royaltyPercentage)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role");
 
                     // Get counter
                     counter = await seenHausNFT.getNextToken();
@@ -322,7 +322,7 @@ describe("SeenHausNFT", function() {
                     // non-ESCROW_AGENT attempt
                     await expect(
                         seenHausNFT.connect(associate).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role");
 
                     // Get counter
                     counter = await seenHausNFT.getNextToken();

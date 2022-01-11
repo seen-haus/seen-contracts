@@ -15,6 +15,11 @@ const ethers = hre.ethers;
  */
 async function deployMarketHandlerFacets(diamond, gasLimit) {
 
+    // Deploy the EthCreditRecoveryFacet contract
+    const EthCreditRecoveryFacet = await ethers.getContractFactory("EthCreditRecoveryFacet");
+    const ethCreditRecoveryFacet = await EthCreditRecoveryFacet.deploy({gasLimit});
+    await ethCreditRecoveryFacet.deployed();
+
     // Deploy the AuctionBuilderFacet contract
     const AuctionBuilderFacet = await ethers.getContractFactory("AuctionBuilderFacet");
     const auctionBuilderFacet = await AuctionBuilderFacet.deploy({gasLimit});
@@ -53,6 +58,10 @@ async function deployMarketHandlerFacets(diamond, gasLimit) {
     let initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
     let callData = initInterface.encodeFunctionData("initialize");
 
+    // Cut EthCreditRecovery facet, initializing
+    const ethCreditRecoveryCut = getFacetAddCut(ethCreditRecoveryFacet, [initFunction]);
+    await cutFacet.diamondCut([ethCreditRecoveryCut], ethCreditRecoveryFacet.address, callData, {gasLimit});
+
     // Cut AuctionBuilder facet facet, initializing
     const auctionBuilderCut = getFacetAddCut(auctionBuilderFacet, [initFunction]);
     await cutFacet.diamondCut([auctionBuilderCut], auctionBuilderFacet.address, callData, {gasLimit});
@@ -77,7 +86,7 @@ async function deployMarketHandlerFacets(diamond, gasLimit) {
     const saleEnderCut = getFacetAddCut(saleEnderFacet, [initFunction]);
     await cutFacet.diamondCut([saleEnderCut], saleEnderFacet.address, callData, {gasLimit});
 
-    return [auctionBuilderFacet, auctionRunnerFacet, auctionEnderFacet, saleBuilderFacet, saleRunnerFacet, saleEnderFacet];
+    return [auctionBuilderFacet, auctionRunnerFacet, auctionEnderFacet, saleBuilderFacet, saleRunnerFacet, saleEnderFacet, ethCreditRecoveryFacet];
 
 }
 
