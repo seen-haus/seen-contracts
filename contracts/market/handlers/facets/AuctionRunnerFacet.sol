@@ -119,14 +119,9 @@ contract AuctionRunnerFacet is IAuctionRunner, MarketHandlerBase {
         }
         require(msg.value >= auction.reserve, "Bid below reserve price");
 
-        // If a standing bid exists:
-        // - Be sure new bid outbids previous
-        // - Give back the previous bidder's money
-        if (auction.bid > 0) {
-            require(msg.value >= (auction.bid + getPercentageOf(auction.bid, getMarketController().getOutBidPercentage())), "Bid too small");
-            sendValueOrCreditAccount(auction.buyer, auction.bid);
-            emit BidReturned(consignment.id, auction.buyer, auction.bid);
-        }
+        // Store current required refund values in memory
+        uint256 previousBid = auction.bid;
+        address payable previousBidder = payable(auction.buyer);
 
         // Record the new bid
         auction.bid = msg.value;
@@ -163,6 +158,15 @@ contract AuctionRunnerFacet is IAuctionRunner, MarketHandlerBase {
         }
 
         mhs.auctions[_consignmentId] = auction;
+
+        // If a standing bid exists:
+        // - Be sure new bid outbids previous
+        // - Give back the previous bidder's money
+        if (previousBid > 0) {
+            require(msg.value >= (previousBid + getPercentageOf(previousBid, getMarketController().getOutBidPercentage())), "Bid too small");
+            sendValueOrCreditAccount(previousBidder, previousBid);
+            emit BidReturned(consignment.id, previousBidder, previousBid);
+        }
 
         // Announce the bid
         emit BidAccepted(_consignmentId, auction.buyer, auction.bid);
