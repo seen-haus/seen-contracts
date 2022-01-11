@@ -118,13 +118,14 @@ async function main() {
     const marketController = await ethers.getContractAt('IMarketController', marketDiamond.address);
 
     // Cut the Market Handler facets into the Diamond
-    [auctionBuilderFacet, auctionRunnerFacet, auctionEnderFacet, saleBuilderFacet, saleRunnerFacet, saleEnderFacet] = await deployMarketHandlerFacets(marketDiamond, gasLimit);
+    [auctionBuilderFacet, auctionRunnerFacet, auctionEnderFacet, saleBuilderFacet, saleRunnerFacet, saleEnderFacet, ethCreditRecoveryFacet] = await deployMarketHandlerFacets(marketDiamond, gasLimit);
     deploymentComplete('AuctionBuilderFacet', auctionBuilderFacet.address, [], contracts);
     deploymentComplete('AuctionRunnerFacet', auctionRunnerFacet.address, [], contracts);
     deploymentComplete('AuctionEnderFacet', auctionEnderFacet.address, [], contracts);
     deploymentComplete('SaleBuilderFacet', saleBuilderFacet.address, [], contracts);
     deploymentComplete('SaleRunnerFacet', saleRunnerFacet.address, [], contracts);
     deploymentComplete('SaleEnderFacet', saleEnderFacet.address, [], contracts);
+    deploymentComplete('EthCreditRecoveryFacet', ethCreditRecoveryFacet.address, [], contracts);
 
     console.log(`\n⧉ Deploying Market Client implementation/proxy pairs...`);
 

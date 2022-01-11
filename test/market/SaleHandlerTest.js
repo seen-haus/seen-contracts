@@ -296,7 +296,7 @@ describe("SaleHandler", function() {
                                 perTxCap,
                                 audience
                             )
-                        ).to.be.revertedWith("Access denied, caller doesn't have role");
+                        ).to.be.revertedWith("Caller doesn't have role");
 
                         // Test
                         expect(
@@ -554,7 +554,7 @@ describe("SaleHandler", function() {
                             consignmentId,
                             Audience.VIP_STAKER
                         )
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role");
 
                     // ADMIN attempt
                     await expect (
@@ -575,7 +575,7 @@ describe("SaleHandler", function() {
                     // non-ADMIN attempt
                     await expect(
                         saleHandler.connect(associate).cancelSale(consignmentId)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role or is not consignor");
+                    ).to.be.revertedWith("Caller doesn't have role or is not consignor");
 
                     // ADMIN attempt
                     await expect (
@@ -593,7 +593,7 @@ describe("SaleHandler", function() {
                     // non-ADMIN attempt
                     await expect(
                         saleHandler.connect(associate).cancelSale(consignmentId)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role or is not consignor");
+                    ).to.be.revertedWith("Caller doesn't have role or is not consignor");
 
                     // ADMIN attempt
                     await expect (
@@ -1388,7 +1388,7 @@ describe("SaleHandler", function() {
                                 consignmentId,
                                 Audience.OPEN
                             )
-                        ).to.be.revertedWith("Sale does not exist");
+                        ).to.be.revertedWith("already settled or non-existent");
 
                     });
 
@@ -1406,7 +1406,7 @@ describe("SaleHandler", function() {
                                 consignmentId,
                                 Audience.VIP_STAKER
                             )
-                        ).to.be.revertedWith("Sale has already been settled");
+                        ).to.be.revertedWith("already settled or non-existent");
 
                     });
 
@@ -1443,17 +1443,7 @@ describe("SaleHandler", function() {
                         // ADMIN attempts to set cancel when sale doesn't exist
                         await expect(
                             saleHandler.connect(buyer).buy(consignmentId, single, {value: price})
-                        ).to.be.revertedWith("Sale does not exist");
-
-                    });
-
-                    it("should revert if buyer is a contract", async function () {
-
-                        // Try to buy with a contract
-                        signer = new ethers.VoidSigner(lotsTicketer.address, ethers.provider)
-                        await expect(
-                            saleHandler.connect(signer).callStatic.buy(consignmentId, single, {value: price})
-                        ).to.be.revertedWith("Contracts may not buy");
+                        ).to.be.revertedWith("Sale hasn't started or non-existent");
 
                     });
 
@@ -1468,7 +1458,7 @@ describe("SaleHandler", function() {
                         // Try to buy
                         await expect(
                             saleHandler.connect(buyer).buy(consignmentId, single, {value: price})
-                        ).to.be.revertedWith("Buyer is not a staker");
+                        ).to.be.revertedWith("");
 
                     });
 
@@ -1483,7 +1473,7 @@ describe("SaleHandler", function() {
                         // Try to buy
                         await expect(
                             saleHandler.connect(buyer).buy(consignmentId, single, {value: price})
-                        ).to.be.revertedWith("Buyer is not a VIP staker");
+                        ).to.be.revertedWith("");
 
                     });
 
@@ -1494,16 +1484,16 @@ describe("SaleHandler", function() {
                         // Try to buy entire supply when per tx cap is lower
                         await expect(
                             saleHandler.connect(buyer).buy(consignmentId, supply, {value: total})
-                        ).to.be.revertedWith("Per transaction limit for this sale exceeded");
+                        ).to.be.revertedWith("Per tx limit exceeded");
 
                     });
 
-                    it("should revert if payment does not cover order price", async function () {
+                    it("should revert if Value doesn't cover price", async function () {
 
                         // Try to buy two and pay for one
                         await expect(
                             saleHandler.connect(buyer).buy(consignmentId, "2", {value: price})
-                        ).to.be.revertedWith("Payment does not cover order price");
+                        ).to.be.revertedWith("Value doesn't cover price");
 
                     });
 
@@ -1552,7 +1542,7 @@ describe("SaleHandler", function() {
                         // ADMIN attempts to close a sale that has been settled
                         await expect(
                             saleHandler.connect(seller).closeSale(consignmentId)
-                        ).to.be.revertedWith("Sale has already been settled");
+                        ).to.be.revertedWith("Sale isn't currently running");
 
                     });
 
@@ -1561,7 +1551,7 @@ describe("SaleHandler", function() {
                         // ADMIN attempts to close a sale that hasn't even started
                         await expect(
                             saleHandler.connect(seller).closeSale(consignmentId)
-                        ).to.be.revertedWith("Sale hasn't started");
+                        ).to.be.revertedWith("Sale isn't currently running");
 
                     });
 
@@ -1788,10 +1778,10 @@ describe("SaleHandler", function() {
                         grossSale = ethers.BigNumber.from(price);
                         royaltyAmount = grossSale.mul(royaltyPercentage).div("10000");
                         netAfterRoyalties = grossSale.sub(royaltyAmount);
-                        feeAmount = netAfterRoyalties.mul(secondaryFeePercentage).div("10000");
-                        multisigAmount = feeAmount.div("2");
+                        feeAmount = grossSale.mul(secondaryFeePercentage).div("10000");
                         stakingAmount = feeAmount.div("2");
-                        sellerAmount = netAfterRoyalties.sub(feeAmount);
+                        multisigAmount = feeAmount.sub(stakingAmount);
+                        sellerAmount = grossSale.sub(feeAmount).sub(royaltyAmount);
 
                     });
 
@@ -1870,10 +1860,10 @@ describe("SaleHandler", function() {
                         grossSale = ethers.BigNumber.from(buyOutPrice);
                         royaltyAmount = grossSale.mul(royaltyPercentage).div("10000");
                         netAfterRoyalties = grossSale.sub(royaltyAmount);
-                        feeAmount = netAfterRoyalties.mul(secondaryFeePercentage).div("10000");
+                        feeAmount = grossSale.mul(secondaryFeePercentage).div("10000");
                         multisigAmount = feeAmount.div("2");
-                        stakingAmount = feeAmount.div("2");
-                        sellerAmount = netAfterRoyalties.sub(feeAmount);
+                        stakingAmount = feeAmount.sub(multisigAmount);
+                        sellerAmount = grossSale.sub(feeAmount).sub(royaltyAmount);
 
                     });
 

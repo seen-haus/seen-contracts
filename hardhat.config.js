@@ -2,6 +2,7 @@ const environments = require('./environments');
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-web3");
+require("hardhat-contract-sizer");
 require("hardhat-gas-reporter");
 require("solidity-coverage");
 
@@ -55,5 +56,11 @@ module.exports = {
     tests: "./test",
     cache: "./cache",
     artifacts: "./artifacts"
+  },
+  contractSizer: {
+    alphaSort: true,
+    disambiguatePaths: false,
+    runOnCompile: true,
+    strict: true,
   }
 };

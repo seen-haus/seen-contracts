@@ -36,7 +36,7 @@ contract MarketClientProxy is IMarketClientProxy, SeenConstants, Proxy {
  * See: {AccessController.hasRole}
  */
     modifier onlyRole(bytes32 role) {
-        require(MarketClientLib.hasRole(role), "Access denied, caller doesn't have role");
+        require(MarketClientLib.hasRole(role), "Caller doesn't have role");
         _;
     }
 

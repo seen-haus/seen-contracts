@@ -113,7 +113,6 @@ contract AuctionRunnerFacet is IAuctionRunner, MarketHandlerBase {
         uint256 endTime = auction.start + auction.duration;
 
         // Make sure we can accept the caller's bid
-        require(!AddressUpgradeable.isContract(msg.sender), "Contracts may not bid");
         require(block.timestamp >= auction.start, "Auction hasn't started");
         if ((auction.state != State.Pending) || (auction.clock != Clock.Trigger)) {
             require(block.timestamp <= endTime, "Auction timer has elapsed");
@@ -125,7 +124,7 @@ contract AuctionRunnerFacet is IAuctionRunner, MarketHandlerBase {
         // - Give back the previous bidder's money
         if (auction.bid > 0) {
             require(msg.value >= (auction.bid + getPercentageOf(auction.bid, getMarketController().getOutBidPercentage())), "Bid too small");
-            AddressUpgradeable.sendValue(auction.buyer, auction.bid);
+            sendValueOrCreditAccount(auction.buyer, auction.bid);
             emit BidReturned(consignment.id, auction.buyer, auction.bid);
         }
 

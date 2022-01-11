@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/utils/introspection/IERC165Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "../../interfaces/IMarketController.sol";
 import "../../interfaces/IMarketHandler.sol";
 import "../../interfaces/ISeenHausNFT.sol";
@@ -30,7 +29,7 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
      */
     modifier onlyRole(bytes32 _role) {
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
-        require(ds.accessController.hasRole(_role, msg.sender), "Access denied, caller doesn't have role");
+        require(ds.accessController.hasRole(_role, msg.sender), "Caller doesn't have role");
         _;
     }
 
@@ -43,7 +42,7 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
      */
     modifier onlyRoleOrConsignor(bytes32 _role, uint256 _consignmentId) {
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
-        require(ds.accessController.hasRole(_role, msg.sender) || getMarketController().getConsignor(_consignmentId) == msg.sender, "Access denied, caller doesn't have role or is not consignor");
+        require(ds.accessController.hasRole(_role, msg.sender) || getMarketController().getConsignor(_consignmentId) == msg.sender, "Caller doesn't have role or is not consignor");
         _;
     }
 
@@ -133,9 +132,9 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
         Audience audience = mhs.audiences[_consignmentId];
         if (audience != Audience.Open) {
             if (audience == Audience.Staker) {
-                require(isStaker(), "Buyer is not a staker");
+                require(isStaker());
             } else if (audience == Audience.VipStaker) {
-                require(isVipStaker(), "Buyer is not a VIP staker");
+                require(isVipStaker());
             }
         }
         _;
@@ -219,7 +218,7 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
 
                         // Lets pay, but only up to our platform policy maximum
                         royaltyAmount = (expected <= maxRoyalty) ? expected : maxRoyalty;
-                        AddressUpgradeable.sendValue(payable(recipient), royaltyAmount);
+                        sendValueOrCreditAccount(payable(recipient), royaltyAmount);
 
                         // Notify listeners of payment
                         emit RoyaltyDisbursed(_consignment.id, recipient, royaltyAmount);
@@ -277,7 +276,7 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
                         // If escrow agent fee is expected...
                         if (escrowAgentFeeAmount > 0) {
                             require(escrowAgentFeeAmount <= _netAfterRoyalties, "escrowAgentFeeAmount exceeds remaining funds");
-                            AddressUpgradeable.sendValue(payable(consignor), escrowAgentFeeAmount);
+                            sendValueOrCreditAccount(payable(consignor), escrowAgentFeeAmount);
                             // Notify listeners of payment
                             emit EscrowAgentFeeDisbursed(_consignment.id, consignor, escrowAgentFeeAmount);
                         }
@@ -326,8 +325,8 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
         uint256 splitMultisig = feeAmount - splitStaking;
         address payable staking = marketController.getStaking();
         address payable multisig = marketController.getMultisig();
-        AddressUpgradeable.sendValue(staking, splitStaking);
-        AddressUpgradeable.sendValue(multisig, splitMultisig);
+        sendValueOrCreditAccount(staking, splitStaking);
+        sendValueOrCreditAccount(multisig, splitMultisig);
 
         // Return the seller payout amount after fee deduction
         payout = _netAmount - feeAmount;
@@ -369,9 +368,35 @@ abstract contract MarketHandlerBase is IMarketHandler, SeenTypes, SeenConstants 
         uint256 payout = deductFee(consignment, _saleAmount, netAfterEscrowAgentFees);
 
         // Pay seller
-        AddressUpgradeable.sendValue(consignment.seller, payout);
+        sendValueOrCreditAccount(consignment.seller, payout);
 
         // Notify listeners of payment
         emit PayoutDisbursed(_consignmentId, consignment.seller, payout);
     }
+
+    /**
+     * @notice Attempts an ETH transfer, else adds a pull-able credit
+     *
+     * In cases where ETH is unable to be transferred to a particular address
+     * either due to malicious agents or bugs in receiver addresses
+     * the payout process should not fail for all parties involved 
+     * (or funds can become stuck for benevolent parties)
+     *
+     * @param _recipient - the recipient of the transfer
+     * @param _value - the transfer value
+     */
+    function sendValueOrCreditAccount(address payable _recipient, uint256 _value)
+    internal
+    {
+        // Attempt to send funds to recipient
+        require(address(this).balance >= _value);
+        (bool success, ) = _recipient.call{value: _value}("");
+        if(!success) {
+            // Credit the account
+            MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
+            mhs.addressToEthCredit[_recipient] += _value;
+            emit EthCredited(_recipient, _value);
+        }
+    }
+
 }

@@ -373,7 +373,7 @@ describe("IMarketController", function() {
                 // non-ADMIN attempt
                 await expect(
                     marketController.connect(associate).setStaking(replacementAddress)
-                ).to.be.revertedWith("Access denied, caller doesn't have role");
+                ).to.be.revertedWith("Caller doesn't have role");
 
                 // Get address
                 address = await marketController.getStaking();
@@ -403,7 +403,7 @@ describe("IMarketController", function() {
                 // non-ADMIN attempt
                 await expect(
                     marketController.connect(associate).setMultisig(replacementAddress)
-                ).to.be.revertedWith("Access denied, caller doesn't have role");
+                ).to.be.revertedWith("Caller doesn't have role");
 
                 // Get address
                 address = await marketController.getMultisig();
@@ -433,7 +433,7 @@ describe("IMarketController", function() {
                 // non-ADMIN attempt
                 await expect(
                     marketController.connect(associate).setNft(replacementAddress)
-                ).to.be.revertedWith("Access denied, caller doesn't have role");
+                ).to.be.revertedWith("Caller doesn't have role");
 
                 // Get address
                 address = await marketController.getNft();
@@ -463,7 +463,7 @@ describe("IMarketController", function() {
                 // non-ADMIN attempt
                 await expect(
                     marketController.connect(associate).setLotsTicketer(replacementAddress)
-                ).to.be.revertedWith("Access denied, caller doesn't have role");
+                ).to.be.revertedWith("Caller doesn't have role");
 
                 // Get address
                 address = await marketController.getLotsTicketer();
@@ -493,7 +493,7 @@ describe("IMarketController", function() {
                 // non-ADMIN attempt
                 await expect(
                     marketController.connect(associate).setItemsTicketer(replacementAddress)
-                ).to.be.revertedWith("Access denied, caller doesn't have role");
+                ).to.be.revertedWith("Caller doesn't have role");
 
                 // Get address
                 address = await marketController.getItemsTicketer();
@@ -523,7 +523,7 @@ describe("IMarketController", function() {
                 // non-ADMIN attempt
                 await expect(
                     marketController.connect(associate).setVipStakerAmount(replacementAmount)
-                ).to.be.revertedWith("Access denied, caller doesn't have role");
+                ).to.be.revertedWith("Caller doesn't have role");
 
                 // Get amount
                 amount = await marketController.getVipStakerAmount();
@@ -553,7 +553,7 @@ describe("IMarketController", function() {
                 // non-ADMIN attempt
                 await expect(
                     marketController.connect(associate).setPrimaryFeePercentage(replacementPercentage)
-                ).to.be.revertedWith("Access denied, caller doesn't have role");
+                ).to.be.revertedWith("Caller doesn't have role");
 
                 // Get percentage
                 percentage = await marketController.getFeePercentage(Market.PRIMARY);
@@ -583,7 +583,7 @@ describe("IMarketController", function() {
                 // non-ADMIN attempt
                 await expect(
                     marketController.connect(associate).setSecondaryFeePercentage(replacementPercentage)
-                ).to.be.revertedWith("Access denied, caller doesn't have role");
+                ).to.be.revertedWith("Caller doesn't have role");
 
                 // Get percentage
                 percentage = await marketController.getFeePercentage(Market.SECONDARY);
@@ -613,7 +613,7 @@ describe("IMarketController", function() {
                 // non-ADMIN attempt
                 await expect(
                     marketController.connect(associate).setMaxRoyaltyPercentage(replacementPercentage)
-                ).to.be.revertedWith("Access denied, caller doesn't have role");
+                ).to.be.revertedWith("Caller doesn't have role");
 
                 // Get percentage
                 percentage = await marketController.getMaxRoyaltyPercentage();
@@ -643,7 +643,7 @@ describe("IMarketController", function() {
                 // non-ADMIN attempt
                 await expect(
                     marketController.connect(associate).setOutBidPercentage(replacementPercentage)
-                ).to.be.revertedWith("Access denied, caller doesn't have role");
+                ).to.be.revertedWith("Caller doesn't have role");
 
                 // Get percentage
                 percentage = await marketController.getOutBidPercentage();
@@ -673,7 +673,7 @@ describe("IMarketController", function() {
                 // non-ADMIN attempt
                 await expect(
                     marketController.connect(associate).setDefaultTicketerType(Ticketer.ITEMS)
-                ).to.be.revertedWith("Access denied, caller doesn't have role");
+                ).to.be.revertedWith("Caller doesn't have role");
 
                 // Get type
                 escrowTicketerType = await marketController.getDefaultTicketerType();
@@ -934,7 +934,7 @@ describe("IMarketController", function() {
                 // non-MARKET_HANDLER attempt
                 await expect(
                     marketController.connect(associate).registerConsignment(market, associate.address, seller.address, token.address, tokenId, supply)
-                ).to.be.revertedWith("Access denied, caller doesn't have role");
+                ).to.be.revertedWith("Caller doesn't have role");
 
 
                 // Get counter
@@ -971,7 +971,7 @@ describe("IMarketController", function() {
                 // non-ADMIN attempt
                 await expect(
                     marketController.connect(associate).setConsignmentCustomFee(nextConsignment, customFeePercentageBasisPoints)
-                ).to.be.revertedWith("Access denied, caller doesn't have role");
+                ).to.be.revertedWith("Caller doesn't have role");
 
                 // ESCROW_AGENT attempt
                 await marketController.connect(admin).setConsignmentCustomFee(nextConsignment, customFeePercentageBasisPoints)
@@ -1011,7 +1011,7 @@ describe("IMarketController", function() {
                 // non-ADMIN attempt
                 await expect(
                     marketController.connect(associate).setConsignmentTicketer(nextConsignment, Ticketer.ITEMS)
-                ).to.be.revertedWith("Access denied, caller doesn't have role");
+                ).to.be.revertedWith("Caller doesn't have role");
 
                 // ESCROW_AGENT attempt
                 await marketController.connect(escrowAgent).setConsignmentTicketer(nextConsignment, Ticketer.ITEMS)
@@ -1142,7 +1142,7 @@ describe("IMarketController", function() {
                 // Make change, test event
                 await expect(
                     marketController.connect(marketHandler).marketConsignment(nextConsignment, MarketHandler.UNHANDLED)
-                ).to.be.revertedWith("Consignment can't be marketed without a valid handler");
+                ).to.be.revertedWith("requires valid handler");
             });
 
         });

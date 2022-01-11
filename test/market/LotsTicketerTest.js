@@ -22,7 +22,7 @@ describe("LotsTicketer", function() {
     let seenHausNFT, lotsTicketer, lotsTicketerProxy;
     let staking, multisig, vipStakerAmount, primaryFeePercentage, secondaryFeePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let ticket, ticketId, tokenId, tokenURI, counter, supply, balance, royaltyPercentage, owner, consignmentId, support;
-    let ticketURI, ticketURIBase = "https://seen.haus/ticket/metadata/lots-ticketer/";
+    let ticketURI, ticketURIBase = "https://api.seen.haus/ticket/metadata/lots-ticketer/";
     let replacementAddress = "0x2d36143CC2E0E74E007E7600F341dC9D37D81C07";
 
     beforeEach( async function () {
@@ -187,7 +187,7 @@ describe("LotsTicketer", function() {
                     // non-UPGRADER attempt
                     await expect(
                         lotsTicketerProxy.connect(associate).setImplementation(replacementAddress)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role");
 
                     // Get address
                     address = await lotsTicketerProxy.getImplementation();
@@ -217,7 +217,7 @@ describe("LotsTicketer", function() {
                     // non-ADMIN attempt
                     await expect(
                         lotsTicketerProxy.connect(associate).setAccessController(replacementAddress)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role");
 
                     // Get address
                     address = await lotsTicketerProxy.getAccessController();
@@ -247,7 +247,7 @@ describe("LotsTicketer", function() {
                     // non-UPGRADER attempt
                     await expect(
                         lotsTicketerProxy.connect(associate).setMarketController(replacementAddress)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role");
 
                     // Get address
                     address = await lotsTicketerProxy.getMarketController();
@@ -281,7 +281,7 @@ describe("LotsTicketer", function() {
                     // non-MARKET_HANDLER attempt
                     await expect(
                         lotsTicketer.connect(associate).issueTicket(consignmentId, supply, buyer.address)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role");
 
                     // Get counter
                     counter = await lotsTicketer.getNextTicket();

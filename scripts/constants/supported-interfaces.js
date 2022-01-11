@@ -9,6 +9,7 @@ exports.InterfaceIds = {
     IAuctionHandler:            "0xa8190853",
     IAuctionRunner:             "0x195ea158",
     IAuctionEnder:              "0xb5db7fa6",
+    IEthCreditRecovery:         "0x7cc1d554",
     IDiamondCut:                "0x1f931c1c",
     IDiamondLoupe:              "0x48e2b093",
     IEscrowTicketer:            "0x73811679",

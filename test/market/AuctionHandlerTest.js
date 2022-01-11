@@ -34,6 +34,7 @@ describe("AuctionHandler", function() {
     let Foreign721, foreign721;
     let Foreign1155, foreign1155;
     let SeenStaking, seenStaking;
+    let FallbackRevert, fallbackRevert;
     let multisig, vipStakerAmount, primaryFeePercentage, secondaryFeePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let market, tokenAddress, tokenId, tokenURI, auction, physicalTokenId, physicalConsignmentId, secondaryMarketPhysicalTokenIdEscrowOwned, secondaryMarketPhysicalTokenIdNonEscrowOwned, consignmentId, nextConsignment, block, blockNumber;
     let royaltyPercentage, supply, start, duration, reserve, secondBidAmount, audience, clock, escrowTicketer;
@@ -89,6 +90,11 @@ describe("AuctionHandler", function() {
         seenStaking = await SeenStaking.deploy();
         await seenStaking.deployed();
 
+        // Deploy FallbackRevert mock contract
+        FallbackRevert = await ethers.getContractFactory("FallbackRevert");
+        fallbackRevert = await FallbackRevert.deploy();
+        await fallbackRevert.deployed();
+
         // Deploy the Diamond
         [marketDiamond, diamondLoupe, diamondCut, accessController] = await deployMarketDiamond();
 
@@ -117,10 +123,13 @@ describe("AuctionHandler", function() {
         marketController = await ethers.getContractAt('IMarketController', marketDiamond.address);
 
         // Cut the Market Handler facets into the Diamond
-        [auctionBuilderFacet, auctionRunnerFacet, auctionEnderFacet, saleBuilderFacet, saleRunnerFacet, saleEnderFacet] = await deployMarketHandlerFacets(marketDiamond);
+        [auctionBuilderFacet, auctionRunnerFacet, auctionEnderFacet, saleBuilderFacet, saleRunnerFacet, saleEnderFacet, ethCreditRecoveryFacet] = await deployMarketHandlerFacets(marketDiamond);
 
         // Cast Diamond to IAuctionHandler
         auctionHandler = await ethers.getContractAt('IAuctionHandler', marketDiamond.address);
+
+        // Cast Diamond to ethCreditRecoveryFacet
+        ethCreditRecoveryHandler = await ethers.getContractAt('IEthCreditRecovery', marketDiamond.address);
 
         // Deploy the Market Client implementation/proxy pairs
         const marketClientArgs = [accessController.address, marketController.address];
@@ -297,7 +306,7 @@ describe("AuctionHandler", function() {
                                 audience,
                                 clock
                             )
-                        ).to.be.revertedWith("Access denied, caller doesn't have role");
+                        ).to.be.revertedWith("Caller doesn't have role");
 
                         // Test
                         expect(
@@ -568,7 +577,7 @@ describe("AuctionHandler", function() {
                             consignmentId,
                             Audience.VIP_STAKER
                         )
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role");
 
                     // ADMIN attempt
                     await expect (
@@ -599,7 +608,7 @@ describe("AuctionHandler", function() {
                     // non-ADMIN attempt
                     await expect(
                         auctionHandler.connect(associate).cancelAuction(consignmentId)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role or is not consignor");
+                    ).to.be.revertedWith("Caller doesn't have role or is not consignor");
 
                     // ADMIN attempt
                     await expect (
@@ -627,7 +636,7 @@ describe("AuctionHandler", function() {
                     // non-ADMIN attempt
                     await expect(
                         auctionHandler.connect(associate).cancelAuction(consignmentId)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role or is not consignor");
+                    ).to.be.revertedWith("Caller doesn't have role or is not consignor");
 
                     // ADMIN attempt
                     await expect (
@@ -754,7 +763,8 @@ describe("AuctionHandler", function() {
                                 .withArgs(
                                     associate.address, // consignor
                                     seller.address,    // seller
-                                    [ // Consignment
+                                    [
+                                        // Consignment
                                         Market.SECONDARY,
                                         MarketHandler.UNHANDLED,
                                         seller.address,
@@ -1035,6 +1045,124 @@ describe("AuctionHandler", function() {
 
                     });
 
+                    it("Should allow an account to recover ETH credits if the initial bid return is unsuccessful", async function () {
+
+                        // First bidder meets reserve
+                        await fallbackRevert.connect(bidder).bidOnAuction(marketDiamond.address, consignmentId, {value: reserve});
+
+                        // Double previous bid
+                        outbid = ethers.BigNumber.from(reserve).mul("2");
+
+                        // Outbids previous bidder, but previous bidder can't receive their initial bid due to a fallback reversion
+                        await expect(
+                            auctionHandler.connect(rival).bid(consignmentId, {value: outbid})
+                        ).to.emit(auctionHandler, "BidReturned")
+                            .withArgs(
+                                consignmentId,
+                                fallbackRevert.address,
+                                reserve
+                            );
+
+                        // Check that original bidder was properly credited
+                        let creditBeforeRecovery = await ethCreditRecoveryHandler.availableCredits(fallbackRevert.address);
+                        await expect(
+                            creditBeforeRecovery.toString()
+                        ).to.equal(reserve.toString());
+
+                        // Attempt to recover funds
+                        await expect(
+                            ethCreditRecoveryHandler.recoverEthCredits(fallbackRevert.address)
+                        ).to.be.revertedWith("Failed to disburse ETH credits");
+
+                        // Check balance of account before recovery
+                        let balanceBeforeRecovery = await ethers.provider.getBalance(fallbackRevert.address);
+                        await expect (
+                            balanceBeforeRecovery.toString()
+                        ).to.equal("0");
+
+                        // Disable reversion on ETH receives
+                        await fallbackRevert.setShouldRevert(false);
+
+                        // Attempt to recover funds
+                        await expect(
+                            ethCreditRecoveryHandler.recoverEthCredits(fallbackRevert.address)
+                        ).to.emit(ethCreditRecoveryHandler, "EthCreditRecovered")
+                            .withArgs(
+                                fallbackRevert.address,
+                                reserve
+                            );
+
+                        // Check balance of account after recovery
+                        let balanceAfterRecovery = await ethers.provider.getBalance(fallbackRevert.address);
+                        await expect (
+                            balanceAfterRecovery.toString()
+                        ).to.equal(reserve.toString());
+
+                        // Check that credit has successfully been zeroed out
+                        let creditAfterRecovery = await ethCreditRecoveryHandler.availableCredits(fallbackRevert.address);
+                        await expect(
+                            creditAfterRecovery.toString()
+                        ).to.equal("0");
+
+                    });
+
+                    it("Should allow an account to recover ETH credits via admin fallback method if the bid returns & credit returns are unsuccessful", async function () {
+
+                        // First bidder meets reserve
+                        await fallbackRevert.connect(bidder).bidOnAuction(marketDiamond.address, consignmentId, {value: reserve});
+
+                        // Double previous bid
+                        outbid = ethers.BigNumber.from(reserve).mul("2");
+
+                        // Outbids previous bidder, but previous bidder can't receive their initial bid due to a fallback reversion
+                        await expect(
+                            auctionHandler.connect(rival).bid(consignmentId, {value: outbid})
+                        ).to.emit(auctionHandler, "BidReturned")
+                            .withArgs(
+                                consignmentId,
+                                fallbackRevert.address,
+                                reserve
+                            );
+
+                        // Check that original bidder was properly credited
+                        let creditBeforeRecovery = await ethCreditRecoveryHandler.availableCredits(fallbackRevert.address);
+                        await expect(
+                            creditBeforeRecovery.toString()
+                        ).to.equal(reserve.toString());
+
+                        // Attempt to recover funds
+                        await expect(
+                            ethCreditRecoveryHandler.recoverEthCredits(fallbackRevert.address)
+                        ).to.be.revertedWith("Failed to disburse ETH credits");
+
+                        // Check balance of account before recovery
+                        let multisigBalanceBeforeRecovery = await ethers.provider.getBalance(multisig.address);
+
+                        // Attempt to recover funds via admin method
+                        await expect(
+                            ethCreditRecoveryHandler.connect(admin).fallbackRecoverEthCredit(fallbackRevert.address)
+                        ).to.emit(ethCreditRecoveryHandler, "EthCreditFallbackRecovered")
+                            .withArgs(
+                                fallbackRevert.address,
+                                reserve,
+                                admin.address,
+                                multisig.address
+                            );
+
+                        // Check balance of account after recovery
+                        let multisigBalanceAfterRecovery = await ethers.provider.getBalance(multisig.address);
+                        await expect (
+                            multisigBalanceAfterRecovery.toString()
+                        ).to.equal(multisigBalanceBeforeRecovery.add(reserve).toString());
+
+                        // Check that credit has successfully been zeroed out
+                        let creditAfterRecovery = await ethCreditRecoveryHandler.availableCredits(fallbackRevert.address);
+                        await expect(
+                            creditAfterRecovery.toString()
+                        ).to.equal("0");
+
+                    });
+
                     it("should emit a AuctionStarted event on first bid", async function () {
 
                         // First bidder meets reserve
@@ -1070,7 +1198,6 @@ describe("AuctionHandler", function() {
 
                         // Check that the duration of the auction was actually extended
                         let auction = await auctionHandler.getAuction(consignmentId);
-                        console.log({"auction['duration']": auction['duration'], 'ethers.BigNumber.from(duration).add(oneMinute)': ethers.BigNumber.from(duration).add(oneMinute)})
                         expect(
                             // Bids within last 15 minutes should set the countdown to 15 minutes
                             // Therefore, should add one minute to duration, since bid was placed with 14 minutes remaining
@@ -1273,7 +1400,6 @@ describe("AuctionHandler", function() {
 
                     // Wait until auction starts and bid
                     let latest = await time.latest();
-                    console.log({'time.latest': latest.toString()})
                     await time.increaseTo(start);
                     await auctionHandler.connect(bidder).bid(consignmentId, {value: reserve});
 
@@ -1983,19 +2109,6 @@ describe("AuctionHandler", function() {
 
                     });
 
-                    it("should revert if bidder is a contract", async function () {
-
-                        // Fast forward to auction start time
-                        await time.increaseTo(start);
-
-                        // Try to bid with a contract
-                        signer = new ethers.VoidSigner(lotsTicketer.address, ethers.provider)
-                        await expect(
-                            auctionHandler.connect(signer).callStatic.bid(consignmentId, {value: reserve})
-                        ).to.be.revertedWith("Contracts may not bid");
-
-                    });
-
                     it("should revert if auction start time hasn't arrived", async function () {
 
                         // Try to bid before auction has started
@@ -2031,7 +2144,7 @@ describe("AuctionHandler", function() {
                         // Try to bid when not in audience
                         await expect(
                             auctionHandler.connect(bidder).bid(consignmentId, {value: reserve})
-                        ).to.be.revertedWith("Buyer is not a staker");
+                        ).to.be.revertedWith("");
 
                     });
 
@@ -2049,7 +2162,7 @@ describe("AuctionHandler", function() {
                         // Try to bid when not in audience
                         await expect(
                             auctionHandler.connect(bidder).bid(consignmentId, {value: reserve})
-                        ).to.be.revertedWith("Buyer is not a VIP staker");
+                        ).to.be.revertedWith("");
 
                     });
 
@@ -2312,9 +2425,9 @@ describe("AuctionHandler", function() {
                     grossSale = ethers.BigNumber.from(reserve);
                     royaltyAmount = grossSale.mul(royaltyPercentage).div("10000");
                     netAfterRoyalties = grossSale.sub(royaltyAmount);
-                    feeAmount = netAfterRoyalties.mul(secondaryFeePercentage).div("10000");
+                    feeAmount = grossSale.mul(secondaryFeePercentage).div("10000");
                     multisigAmount = feeAmount.div("2");
-                    stakingAmount = feeAmount.div("2");
+                    stakingAmount = feeAmount.sub(multisigAmount);
                     sellerAmount = netAfterRoyalties.sub(feeAmount);
 
                 });
