@@ -6,6 +6,7 @@ import "../../../interfaces/IEscrowTicketer.sol";
 import "../../../interfaces/ISeenHausNFT.sol";
 import "../../../util/StringUtils.sol";
 import "../MarketClientBase.sol";
+import "./LotsTicketerStorage.sol";
 
 /**
  * @title LotsTicketer
@@ -25,19 +26,7 @@ import "../MarketClientBase.sol";
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-contract LotsTicketer is IEscrowTicketer, MarketClientBase, StringUtils, ERC721Upgradeable {
-
-    // Ticket ID => Ticket
-    mapping (uint256 => EscrowTicket) internal tickets;
-
-    // Consignment ID => Ticket Claimable Count (does not change after ticket burns)
-    mapping (uint256 => uint256) internal consignmentIdToTicketClaimableCount;
-
-    /// @dev Next ticket number
-    uint256 internal nextTicket;
-
-    string public constant NAME = "Seen.Haus Escrowed Lot Ticket";
-    string public constant SYMBOL = "ESCROW_TICKET";
+contract LotsTicketer is LotsTicketerStorage, IEscrowTicketer, MarketClientBase, StringUtils, ERC721Upgradeable {
 
     /**
      * @notice Initializer
