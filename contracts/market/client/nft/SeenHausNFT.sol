@@ -5,6 +5,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol
 import "../../../interfaces/ISeenHausNFT.sol";
 import "../../../interfaces/IERC2981.sol";
 import "../MarketClientBase.sol";
+import "./SeenHausNFTStorage.sol";
 
 /**
  * @title SeenHausNFT
@@ -21,17 +22,9 @@ import "../MarketClientBase.sol";
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-contract SeenHausNFT is ISeenHausNFT, MarketClientBase, ERC1155Upgradeable {
-
-    address private _owner;
+contract SeenHausNFT is SeenHausNFTStorage, ISeenHausNFT, MarketClientBase, ERC1155Upgradeable {
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    /// @dev token id => Token struct
-    mapping (uint256 => Token) internal tokens;
-
-    // Next token number
-    uint256 internal nextToken;
 
     /**
      * @notice Initializer

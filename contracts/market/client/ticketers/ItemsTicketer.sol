@@ -6,6 +6,7 @@ import "../../../interfaces/IEscrowTicketer.sol";
 import "../../../interfaces/ISeenHausNFT.sol";
 import "../../../util/StringUtils.sol";
 import "../MarketClientBase.sol";
+import "./ItemsTicketerStorage.sol";
 
 /**
  * @title ItemsTicketer
@@ -27,16 +28,7 @@ import "../MarketClientBase.sol";
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClientBase, ERC1155Upgradeable {
-
-    // Ticket ID => Ticket
-    mapping (uint256 => EscrowTicket) internal tickets;
-    
-    // Consignment ID => Ticket Claimable Count (does not change after ticket burns)
-    mapping (uint256 => uint256) internal consignmentIdToTicketClaimableCount;
-
-    /// @dev Next ticket number
-    uint256 internal nextTicket;
+contract ItemsTicketer is ItemsTicketerStorage, StringUtils, IEscrowTicketer, MarketClientBase, ERC1155Upgradeable {
 
     /**
      * @notice Initializer
