@@ -19,12 +19,12 @@ module.exports = {
     },
     rinkeby: {
       url: environments.rinkeby.txNode,
-      accounts: {mnemonic: environments.rinkeby.mnemonic},
+      accounts:[`${environments.rinkeby.privateKey}`],
       gas: environments.gasLimit
     },
     mainnet: {
       url: environments.mainnet.txNode,
-      accounts: {mnemonic: environments.mainnet.mnemonic},
+      accounts: [`${environments.mainnet.privateKey}`],
       gas: environments.gasLimit
     }
   },

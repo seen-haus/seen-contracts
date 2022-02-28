@@ -78,7 +78,7 @@ async function main() {
     }
 
     // Set target max gas price
-    let maxAcceptableGasPrice = 100;
+    let maxAcceptableGasPrice = 40;
 
     // Compile everything (in case run by node)
     await hre.run('compile');

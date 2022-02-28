@@ -38,7 +38,7 @@ npm install
 Create a file called `environments.js` with 
 - The following info for each Ethereum network environment.
   * `txNode`: the endpoint for sending ethereum transactions
-  * `mnemonic`: a valid ethereum HD wallet seed phrase
+  * `privateKey`: a valid ethereum HD wallet private key
 
 - The following info for verifying code on Etherscan and running the gas reporter
   * `etherscan.apiKey`: your etherscan API key
@@ -56,12 +56,12 @@ module.exports = {
 
   "rinkeby": {
         "txNode": "https://rinkeby.infura.io/v3/<YOUR_INFURA_API_KEY>",
-        "mnemonic": "<YOUR_UNIQUE_TWELVE_WORD_WALLET_SEED_PHRASE>"
+        "privateKey": "<YOUR_WALLET_PRIVATE_KEY>"
   },
 
   "mainnet": {
         "txNode": "https://mainnet.infura.io/v3/<YOUR_INFURA_API_KEY>",
-        "mnemonic": "<YOUR_UNIQUE_TWELVE_WORD_WALLET_SEED_PHRASE>"
+        "privateKey": "<YOUR_WALLET_PRIVATE_KEY>"
     }
 
 };
