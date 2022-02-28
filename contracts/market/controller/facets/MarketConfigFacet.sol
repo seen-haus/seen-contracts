@@ -70,7 +70,7 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
     }
 
     /**
-     * @notice Sets the address of the xSEEN ERC-20 staking contract.
+     * @notice Sets the address of the SEEN NFT contract.
      *
      * Emits a NFTAddressChanged event.
      *
@@ -79,7 +79,7 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
     function setNft(address _nft)
     external
     override
-    onlyRole(ADMIN)
+    onlyRole(MULTISIG)
     {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         mcs.nft = _nft;
@@ -109,7 +109,7 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
     function setLotsTicketer(address _lotsTicketer)
     external
     override
-    onlyRole(ADMIN)
+    onlyRole(MULTISIG)
     {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         mcs.lotsTicketer = _lotsTicketer;
@@ -139,7 +139,7 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
     function setItemsTicketer(address _itemsTicketer)
     external
     override
-    onlyRole(ADMIN)
+    onlyRole(MULTISIG)
     {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         mcs.itemsTicketer = _itemsTicketer;
@@ -169,7 +169,7 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
     function setStaking(address payable _staking)
     external
     override
-    onlyRole(ADMIN)
+    onlyRole(MULTISIG)
     {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         mcs.staking = _staking;
@@ -199,7 +199,7 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
     function setMultisig(address payable _multisig)
     external
     override
-    onlyRole(ADMIN)
+    onlyRole(MULTISIG)
     {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         mcs.multisig = _multisig;
@@ -229,7 +229,7 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
     function setVipStakerAmount(uint256 _vipStakerAmount)
     external
     override
-    onlyRole(ADMIN)
+    onlyRole(MULTISIG)
     {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         mcs.vipStakerAmount = _vipStakerAmount;
@@ -261,7 +261,7 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
     function setPrimaryFeePercentage(uint16 _primaryFeePercentage)
     external
     override
-    onlyRole(ADMIN)
+    onlyRole(MULTISIG)
     {
         require(_primaryFeePercentage > 0 && _primaryFeePercentage <= 10000,
             "Percentage representation must be between 1 and 10000");
@@ -282,7 +282,7 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
     function setSecondaryFeePercentage(uint16 _secondaryFeePercentage)
     external
     override
-    onlyRole(ADMIN)
+    onlyRole(MULTISIG)
     {
         require(_secondaryFeePercentage > 0 && _secondaryFeePercentage <= 10000,
             "Percentage representation must be between 1 and 10000");
@@ -321,7 +321,7 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
     function setMaxRoyaltyPercentage(uint16 _maxRoyaltyPercentage)
     external
     override
-    onlyRole(ADMIN)
+    onlyRole(MULTISIG)
     {
         require(_maxRoyaltyPercentage > 0 && _maxRoyaltyPercentage <= 10000,
             "Percentage representation must be between 1 and 10000");

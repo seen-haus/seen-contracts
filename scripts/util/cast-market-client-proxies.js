@@ -18,7 +18,7 @@ const ethers = hre.ethers;
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-async function castMarketClientProxies(marketClientProxies, gasLimit) {
+async function castMarketClientProxies(marketClientProxies, gasLimit, awaitAcceptableGas, maxAcceptableGasPrice) {
 
     // Destructure the market client proxies
     [lotsTicketerProxy, itemsTicketerProxy, seenHausNFTProxy] = marketClientProxies;

@@ -72,7 +72,7 @@ contract EthCreditRecoveryFacet is IEthCreditRecovery, MarketHandlerBase {
     }
 
     /**
-     * @notice Enables admin recovery of any ETH credit for an account which has credits but can't recover the ETH via distributeEthCredits
+     * @notice Enables MULTISIG recovery of any ETH credit for an account which has credits but can't recover the ETH via distributeEthCredits
      *
      * In rare cases, `_originalRecipient` may be unable to start receiving ETH again
      * therefore any ETH credits would get stuck
@@ -88,7 +88,7 @@ contract EthCreditRecoveryFacet is IEthCreditRecovery, MarketHandlerBase {
     function fallbackRecoverEthCredit(address _originalRecipient)
     external
     override
-    onlyRole(ADMIN)
+    onlyRole(MULTISIG)
     {
         // Get Market Handler Storage slot
         MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();

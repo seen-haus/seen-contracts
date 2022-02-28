@@ -20,5 +20,6 @@ contract SeenConstants {
     bytes32 internal constant ESCROW_AGENT = keccak256("ESCROW_AGENT");     // Seen.Haus Physical Item Escrow Agent
     bytes32 internal constant MARKET_HANDLER = keccak256("MARKET_HANDLER"); // Market Handler contracts
     bytes32 internal constant UPGRADER = keccak256("UPGRADER");             // Performs contract upgrades
+    bytes32 internal constant MULTISIG = keccak256("MULTISIG");             // Admin role of MARKET_HANDLER & UPGRADER
 
 }

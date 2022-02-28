@@ -58,7 +58,7 @@ contract MarketConfigAdditionalFacet is IMarketConfigAdditional, MarketControlle
     function setAllowExternalTokensOnSecondary(bool _status)
     external
     override
-    onlyRole(ADMIN)
+    onlyRole(MULTISIG)
     {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         require(_status != mcs.allowExternalTokensOnSecondary, "Already set to requested status.");
@@ -109,7 +109,7 @@ contract MarketConfigAdditionalFacet is IMarketConfigAdditional, MarketControlle
     function setEscrowAgentFeeBasisPoints(address _escrowAgentAddress, uint16 _basisPoints)
     external
     override
-    onlyRole(ADMIN)
+    onlyRole(MULTISIG)
     {
         // Ensure the consignment exists, has not been released and that basis points don't exceed 5000 (50%)
         require(_basisPoints <= 5000, "_basisPoints over 5000");
