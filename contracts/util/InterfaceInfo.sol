@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradea
 import "../interfaces/IAuctionBuilder.sol";
 import "../interfaces/IAuctionHandler.sol";
 import "../interfaces/IAuctionRunner.sol";
+import "../interfaces/IAuctionEnder.sol";
 import "../interfaces/IDiamondCut.sol";
 import "../interfaces/IDiamondLoupe.sol";
 import "../interfaces/IERC2981.sol";
@@ -14,12 +15,15 @@ import "../interfaces/IEscrowTicketer.sol";
 import "../interfaces/IMarketClerk.sol";
 import "../interfaces/IMarketClientProxy.sol";
 import "../interfaces/IMarketConfig.sol";
+import "../interfaces/IMarketConfigAdditional.sol";
 import "../interfaces/IMarketController.sol";
 import "../interfaces/IMarketHandler.sol";
 import "../interfaces/ISaleBuilder.sol";
 import "../interfaces/ISaleHandler.sol";
 import "../interfaces/ISaleRunner.sol";
+import "../interfaces/ISaleEnder.sol";
 import "../interfaces/ISeenHausNFT.sol";
+import "../interfaces/IEthCreditRecovery.sol";
 
 /**
  * @title Interface Info
@@ -54,6 +58,18 @@ contract InterfaceInfo {
     public pure
     returns(bytes4 id) {
         id = type(IAuctionRunner).interfaceId;
+    }
+
+    function getIAuctionEnder()
+    public pure
+    returns(bytes4 id) {
+        id = type(IAuctionEnder).interfaceId;
+    }
+
+    function getIEthCreditRecovery()
+    public pure
+    returns(bytes4 id) {
+        id = type(IEthCreditRecovery).interfaceId;
     }
 
     function getIDiamondCut()
@@ -92,6 +108,12 @@ contract InterfaceInfo {
         id = type(IMarketConfig).interfaceId;
     }
 
+    function getIMarketConfigAdditional()
+    public pure
+    returns(bytes4 id) {
+        id = type(IMarketConfigAdditional).interfaceId;
+    }
+
     function getIMarketController()
     public pure
     returns(bytes4 id) {
@@ -114,6 +136,12 @@ contract InterfaceInfo {
     public pure
     returns(bytes4 id) {
         id = type(ISaleRunner).interfaceId;
+    }
+
+    function getISaleEnder()
+    public pure
+    returns(bytes4 id) {
+        id = type(ISaleEnder).interfaceId;
     }
 
     function getISeenHausNFT()

@@ -17,7 +17,7 @@ import "../MarketHandlerBase.sol";
 contract AuctionRunnerFacet is IAuctionRunner, MarketHandlerBase {
 
     // Threshold to auction extension window
-    uint256 constant extensionWindow = 15 minutes;
+    uint256 constant public extensionWindow = 15 minutes;
 
     /**
      * @dev Modifier to protect initializer function from being invoked twice.
@@ -113,23 +113,20 @@ contract AuctionRunnerFacet is IAuctionRunner, MarketHandlerBase {
         uint256 endTime = auction.start + auction.duration;
 
         // Make sure we can accept the caller's bid
-        require(!AddressUpgradeable.isContract(msg.sender), "Contracts may not bid");
         require(block.timestamp >= auction.start, "Auction hasn't started");
-        require(block.timestamp <= endTime, "Auction timer has elapsed");
+        if ((auction.state != State.Pending) || (auction.clock != Clock.Trigger)) {
+            require(block.timestamp <= endTime, "Auction timer has elapsed");
+        }
         require(msg.value >= auction.reserve, "Bid below reserve price");
 
-        // If a standing bid exists:
-        // - Be sure new bid outbids previous
-        // - Give back the previous bidder's money
-        if (auction.bid > 0) {
-            require(msg.value >= (auction.bid + getPercentageOf(auction.bid, getMarketController().getOutBidPercentage())), "Bid too small");
-            auction.buyer.transfer(auction.bid);
-            emit BidReturned(consignment.id, auction.buyer, auction.bid);
-        }
+        // Store current required refund values in memory
+        uint256 previousBid = auction.bid;
+        address payable previousBidder = payable(auction.buyer);
 
         // Record the new bid
         auction.bid = msg.value;
         auction.buyer = payable(msg.sender);
+        getMarketController().setConsignmentPendingPayout(consignment.id, msg.value);
 
         // If this was the first successful bid...
         if (auction.state == State.Pending) {
@@ -142,143 +139,37 @@ contract AuctionRunnerFacet is IAuctionRunner, MarketHandlerBase {
 
                 // Set start time
                 auction.start = block.timestamp;
-                endTime = auction.start + auction.duration;
 
             }
 
             // Notify listeners of state change
             emit AuctionStarted(consignment.id);
 
-        }
+        } else {
 
-        // For bids placed within the extension window, extend the duration by 15 minutes
-        if (block.timestamp + extensionWindow >= endTime) {
-            auction.duration += extensionWindow;
-            emit AuctionExtended(_consignmentId);
+            // Should not apply to first bid
+            // For bids placed within the extension window
+            // Extend the duration so that auction still lasts for the length of the extension window
+            if ((block.timestamp + extensionWindow) >= endTime) {
+                auction.duration += (extensionWindow - (endTime - block.timestamp));
+                emit AuctionExtended(_consignmentId);
+            }
+
         }
 
         mhs.auctions[_consignmentId] = auction;
 
+        // If a standing bid exists:
+        // - Be sure new bid outbids previous
+        // - Give back the previous bidder's money
+        if (previousBid > 0) {
+            require(msg.value >= (previousBid + getPercentageOf(previousBid, getMarketController().getOutBidPercentage())), "Bid too small");
+            sendValueOrCreditAccount(previousBidder, previousBid);
+            emit BidReturned(consignment.id, previousBidder, previousBid);
+        }
+
         // Announce the bid
         emit BidAccepted(_consignmentId, auction.buyer, auction.bid);
-
-    }
-
-    /**
-     * @notice Close out a successfully completed auction.
-     *
-     * Funds are disbursed as normal. See {MarketHandlerBase.disburseFunds}
-     *
-     * Reverts if:
-     *  - Auction doesn't exist
-     *  - Auction timer has not yet elapsed
-     *  - Auction has not yet started
-     *  - Auction has already been settled
-     *  - Bids have been placed
-     *
-     * Emits a AuctionEnded event on success.
-     *
-     * @param _consignmentId - the id of the consignment being sold
-     */
-    function closeAuction(uint256 _consignmentId)
-    external
-    override
-    {
-        // Get Market Handler Storage slot
-        MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
-
-        // Get the consignment (reverting if consignment doesn't exist)
-        Consignment memory consignment = getMarketController().getConsignment(_consignmentId);
-
-        // Make sure the auction exists
-        Auction storage auction = mhs.auctions[_consignmentId];
-        require(auction.start != 0, "Auction does not exist");
-
-        // Make sure timer has elapsed
-        uint256 endTime = auction.start + auction.duration;
-        require(block.timestamp > endTime, "Auction end time not yet reached");
-
-        // Make sure auction hasn't been settled
-        require(auction.outcome == Outcome.Pending, "Auction has already been settled");
-
-        // Make sure it there was at least one bid
-        require(auction.buyer != address(0), "No bids have been placed");
-
-        // Mark auction as settled
-        auction.state = State.Ended;
-        auction.outcome = Outcome.Closed;
-
-        // Distribute the funds (pay royalties, staking, multisig, and seller)
-        disburseFunds(_consignmentId, auction.bid);
-
-        // Determine if consignment is physical
-        address nft = getMarketController().getNft();
-        if (nft == consignment.tokenAddress && ISeenHausNFT(nft).isPhysical(consignment.tokenId)) {
-
-            // For physicals, issue an escrow ticket to the buyer
-            address escrowTicketer = getMarketController().getEscrowTicketer(_consignmentId);
-            IEscrowTicketer(escrowTicketer).issueTicket(_consignmentId, 1, auction.buyer);
-
-        } else {
-
-            // Release the purchased amount of the consigned token supply to buyer
-            getMarketController().releaseConsignment(_consignmentId, 1, auction.buyer);
-
-        }
-
-        // Notify listeners about state change
-        emit AuctionEnded(consignment.id, auction.outcome);
-
-    }    
-
-    /**
-     * @notice Cancel an auction
-     *
-     * If there is a standing bid, it is returned to the bidder.
-     * Consigned inventory will be transferred back to the seller.
-     *
-     * Reverts if:
-     *  - Caller does not have ADMIN role
-     *  - Auction doesn't exist
-     *  - Auction has already been settled
-     *
-     * Emits a AuctionEnded event on success.
-     *
-     * @param _consignmentId - the id of the consignment being sold
-     */
-    function cancelAuction(uint256 _consignmentId)
-    external
-    override
-    onlyRole(ADMIN)
-    {
-        // Get Market Handler Storage slot
-        MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
-
-        // Get the consignment (reverting if consignment doesn't exist)
-        Consignment memory consignment = getMarketController().getConsignment(_consignmentId);
-
-        // Make sure auction exists
-        Auction storage auction = mhs.auctions[_consignmentId];
-        require(auction.start != 0, "Auction does not exist");
-
-        // Make sure auction hasn't been settled
-        require(auction.state != State.Ended, "Auction has already been settled");
-
-        // Mark auction as settled
-        auction.state = State.Ended;
-        auction.outcome = Outcome.Canceled;
-
-        // Give back the previous bidder's money
-        if (auction.bid > 0) {
-            auction.buyer.transfer(auction.bid);
-            emit BidReturned(_consignmentId, auction.buyer, auction.bid);
-        }
-
-        // Release the consigned token supply to buyer
-        getMarketController().releaseConsignment(_consignmentId, 1, consignment.seller);
-
-        // Notify listeners about state change
-        emit AuctionEnded(_consignmentId, auction.outcome);
 
     }
 

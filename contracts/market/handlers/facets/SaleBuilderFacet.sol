@@ -68,7 +68,7 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
      * for the duration of the sale.
      *
      * Reverts if:
-     *  - Sale starts in the past
+     *  - Sale start is zero
      *  - Sale exists for consignment
      *  - Consignment has already been marketed
      *
@@ -92,6 +92,8 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
     onlyRole(SELLER)
     onlyConsignor(_consignmentId)
     {
+        require(_start > 0, "_start may not be zero");
+
         // Get Market Handler Storage slot
         MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
 
@@ -99,16 +101,13 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
         Consignment memory consignment = getMarketController().getConsignment(_consignmentId);
 
         // Make sure the consignment hasn't been marketed
-        require(consignment.marketed == false, "Consignment has already been marketed");
+        require(consignment.marketHandler == MarketHandler.Unhandled, "Consignment has already been marketed");
 
         // Get the storage location for the sale
         Sale storage sale = mhs.sales[consignment.id];
 
         // Make sure sale doesn't exist (start would always be non-zero on an actual sale)
         require(sale.start == 0, "Sale exists");
-
-        // Make sure start time isn't in the past
-        require (_start >= block.timestamp, "Time runs backward?");
 
         // Set up the sale
         setAudience(_consignmentId, _audience);
@@ -120,7 +119,7 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
         sale.outcome = Outcome.Pending;
 
         // Notify MarketController the consignment has been marketed
-        getMarketController().marketConsignment(consignment.id);
+        getMarketController().marketConsignment(consignment.id, MarketHandler.Sale);
 
         // Notify listeners of state change
         emit SalePending(msg.sender, consignment.seller, sale);
@@ -135,7 +134,7 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
      * for the duration of the sale.
      *
      * Reverts if:
-     *  - Sale starts in the past
+     *  - Sale start is zero
      *  - Supply is zero
      *  - Sale exists for consignment
      *  - This contract isn't approved to transfer seller's tokens
@@ -143,7 +142,7 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
      *
      * Emits a SalePending event.
      *
-     * @param _seller - the current owner of the consignment
+     * @param _seller - the address that procedes of the sale should go to
      * @param _tokenAddress - the contract address issuing the NFT behind the consignment
      * @param _tokenId - the id of the token being consigned
      * @param _start - the scheduled start time of the sale
@@ -164,30 +163,43 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
     )
     external
     override
-    onlyRole(SELLER)
     {
+        // Make sure sale start is not set to zero
+        require(_start > 0, "_start may not be zero");
+
         // Get Market Handler Storage slot
         MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
 
-        // Make sure start time isn't in the past
-        require (_start >= block.timestamp, "Time runs backward?");
+        // Get the MarketController
+        IMarketController marketController = getMarketController();
+
+        // Determine if consignment is physical
+        address nft = marketController.getNft();
+        if (nft == _tokenAddress && ISeenHausNFT(nft).isPhysical(_tokenId)) {
+            // Is physical NFT, require that msg.sender has ESCROW_AGENT role
+            require(checkHasRole(msg.sender, ESCROW_AGENT), "Physical NFT secondary listings require ESCROW_AGENT role");
+        } else if (nft != _tokenAddress) {
+            // Is external NFT, require that listing external NFTs is enabled
+            bool isEnabled = marketController.getAllowExternalTokensOnSecondary();
+            require(isEnabled, "Listing external tokens is not currently enabled");
+        }
 
         // Make sure supply is non-zero
         require (_supply > 0, "Supply must be non-zero");
 
         // Make sure this contract is approved to transfer the token
         // N.B. The following will work because isApprovedForAll has the same signature on both IERC721 and IERC1155
-        require(IERC1155Upgradeable(_tokenAddress).isApprovedForAll(_seller, address(this)), "Not approved to transfer seller's tokens");
+        require(IERC1155Upgradeable(_tokenAddress).isApprovedForAll(msg.sender, address(this)), "Not approved to transfer seller's tokens");
 
         // To register the consignment, tokens must first be in MarketController's possession
         if (IERC165Upgradeable(_tokenAddress).supportsInterface(type(IERC1155Upgradeable).interfaceId)) {
 
             // Ensure seller owns sufficient supply of token
-            require(IERC1155Upgradeable(_tokenAddress).balanceOf(_seller, _tokenId) >= _supply, "Seller has insufficient balance of token");
+            require(IERC1155Upgradeable(_tokenAddress).balanceOf(msg.sender, _tokenId) >= _supply, "Seller has insufficient balance of token");
 
             // Transfer supply to MarketController
             IERC1155Upgradeable(_tokenAddress).safeTransferFrom(
-                _seller,
+                msg.sender,
                 address(getMarketController()),
                 _tokenId,
                 _supply,
@@ -196,20 +208,24 @@ contract SaleBuilderFacet is ISaleBuilder, MarketHandlerBase {
 
         } else {
 
+            require(_supply == 1, "ERC721 listings must use a supply of 1");
+
             // Token must be a single token NFT
             require(IERC165Upgradeable(_tokenAddress).supportsInterface(type(IERC721Upgradeable).interfaceId), "Invalid token type");
 
             // Transfer tokenId to MarketController
             IERC721Upgradeable(_tokenAddress).safeTransferFrom(
-                _seller,
+                msg.sender,
                 address(getMarketController()),
                 _tokenId
             );
 
         }
 
-        // Register consignment (Secondaries are automatically marketed upon registration)
+        // Register consignment
         Consignment memory consignment = getMarketController().registerConsignment(Market.Secondary, msg.sender, _seller, _tokenAddress, _tokenId, _supply);
+        // Secondaries are marketed directly after registration
+        getMarketController().marketConsignment(consignment.id, MarketHandler.Sale);
 
         // Set up the sale
         setAudience(consignment.id, _audience);

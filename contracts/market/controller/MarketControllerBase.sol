@@ -38,7 +38,7 @@ abstract contract MarketControllerBase is SeenTypes, SeenConstants {
      */
     modifier onlyRole(bytes32 _role) {
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
-        require(ds.accessController.hasRole(_role, msg.sender), "Access denied, caller doesn't have role");
+        require(ds.accessController.hasRole(_role, msg.sender), "Caller doesn't have role");
         _;
     }
 

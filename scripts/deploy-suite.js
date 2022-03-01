@@ -1,4 +1,5 @@
 const environments = require('../environments');
+const BigNumber = require('bignumber.js');
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const network = hre.network.name;
@@ -25,22 +26,24 @@ function getConfig() {
 
     // Market configuration params
     const vipStakerAmount = "500";
-    const feePercentage = "20";
-    const maxRoyaltyPercentage = "50";
-    const outBidPercentage = "5";
+    const primaryFeePercentage = "500"; // 5%   = 500
+    const secondaryFeePercentage = "250"; // 2.5%   = 250
+    const maxRoyaltyPercentage = "1500"; // 25%   = 2500
+    const outBidPercentage = "500"; // 5%   = 500
     const defaultTicketerType = Ticketer.ITEMS;  // default escrow ticketer type
+    const allowExternalTokensOnSecondary = false;
 
     // Staking contract address
     const STAKING = {
-        'mainnet': '0x38747baf050d3c22315a761585868dba16abfd89',
-        'rinkeby': '0x0000000000000000000000000000000000000000',
+        'mainnet': '0x1c436a02ea4c17522e656f730537d68f71fab92c',
+        'rinkeby': '0xBFC6ab6E8C3C57e57d4D63Efb054E82b0bAFDE39',
         'hardhat': '0x0000000000000000000000000000000000000000'
     }
 
     // Multisig contract address
     const MULTISIG = {
         'mainnet': '0x4a25E18076DDcFd646ED14ABC07286c2A4c1256A',
-        'rinkeby': '0x0000000000000000000000000000000000000000',
+        'rinkeby': '0x61a07a05aade27c162e07400b6c201A9E9627604',
         'hardhat': '0x0000000000000000000000000000000000000000'
     }
 
@@ -48,14 +51,34 @@ function getConfig() {
             staking: STAKING[network],
             multisig: MULTISIG[network],
             vipStakerAmount,
-            feePercentage,
+            primaryFeePercentage,
+            secondaryFeePercentage,
             maxRoyaltyPercentage,
             outBidPercentage,
-            defaultTicketerType
+            defaultTicketerType,
+            allowExternalTokensOnSecondary
         };
 }
 
 async function main() {
+
+    const awaitAcceptableGas = async (maxAcceptableGasPrice, isFirstRun = true) => {
+        let pendingBlock = await hre.network.provider.send("eth_getBlockByNumber", ["pending", false]);
+        let baseFeePerGasInGwei = pendingBlock.baseFeePerGas
+        let gasInEther = ethers.utils.formatUnits(baseFeePerGasInGwei, "gwei");
+        let integerValue = Number(new BigNumber(gasInEther).integerValue(BigNumber.ROUND_CEIL));
+        if(integerValue && integerValue <= maxAcceptableGasPrice) {
+            console.log(`Gas price (${integerValue}) ${isFirstRun ? 'is' : 'has gone'} below maximum allowed gas price (${maxAcceptableGasPrice}), moving on with transactions...`);
+            return true;
+        } else {
+            console.log(`Gas price (${integerValue}) higher than maximum allowed gas price (${maxAcceptableGasPrice}), waiting...`);
+            await sleep(7000);
+            await awaitAcceptableGas(maxAcceptableGasPrice, false);
+        }
+    }
+
+    // Set target max gas price
+    let maxAcceptableGasPrice = 40;
 
     // Compile everything (in case run by node)
     await hre.run('compile');
@@ -80,8 +103,8 @@ async function main() {
     console.log(`💎 Deploying AccessController, MarketDiamond, and Diamond utility facets...`);
 
     // Deploy the Diamond
-    [marketDiamond, dlf, dcf, accessController, diamondArgs] = await deployMarketDiamond(gasLimit);
-    deploymentComplete('AccessController', accessController.address, [], contracts);
+    [marketDiamond, dlf, dcf, accessController, diamondArgs] = await deployMarketDiamond(config.multisig, gasLimit, awaitAcceptableGas, maxAcceptableGasPrice);
+    deploymentComplete('AccessController', accessController.address, [config.multisig], contracts);
     deploymentComplete('DiamondLoupeFacet', dlf.address, [], contracts);
     deploymentComplete('DiamondCutFacet', dcf.address, [], contracts);
     deploymentComplete('MarketDiamond', marketDiamond.address, diamondArgs, contracts);
@@ -89,6 +112,7 @@ async function main() {
     console.log(`\n💎 Deploying and initializing Marketplace facets...`);
 
     // Temporarily grant UPGRADER role to deployer account
+    await awaitAcceptableGas(maxAcceptableGasPrice);
     await accessController.grantRole(Role.UPGRADER, deployer);
 
     // Cut the MarketController facet into the Diamond
@@ -96,30 +120,38 @@ async function main() {
         config.staking,
         config.multisig,
         config.vipStakerAmount,
-        config.feePercentage,
+        config.primaryFeePercentage,
+        config.secondaryFeePercentage,
         config.maxRoyaltyPercentage,
         config.outBidPercentage,
         config.defaultTicketerType
     ];
-    [marketConfigFacet, marketClerkFacet] = await deployMarketControllerFacets(marketDiamond, marketConfig, gasLimit);
+    const marketConfigAdditional = [
+        config.allowExternalTokensOnSecondary,
+    ];
+    [marketConfigFacet, marketConfigAdditionalFacet, marketClerkFacet] = await deployMarketControllerFacets(marketDiamond, marketConfig, marketConfigAdditional, gasLimit, awaitAcceptableGas, maxAcceptableGasPrice);
     deploymentComplete('MarketConfigFacet', marketConfigFacet.address, [], contracts);
+    deploymentComplete('MarketConfigAdditionalFacet', marketConfigAdditionalFacet.address, [], contracts);
     deploymentComplete('MarketClerkFacet', marketClerkFacet.address, [], contracts);
 
     // Cast Diamond to the IMarketController interface for further interaction with it
     const marketController = await ethers.getContractAt('IMarketController', marketDiamond.address);
 
     // Cut the Market Handler facets into the Diamond
-    [auctionBuilderFacet, auctionRunnerFacet, saleBuilderFacet, saleRunnerFacet] = await deployMarketHandlerFacets(marketDiamond, gasLimit);
+    [auctionBuilderFacet, auctionRunnerFacet, auctionEnderFacet, saleBuilderFacet, saleRunnerFacet, saleEnderFacet, ethCreditRecoveryFacet] = await deployMarketHandlerFacets(marketDiamond, gasLimit, awaitAcceptableGas, maxAcceptableGasPrice);
     deploymentComplete('AuctionBuilderFacet', auctionBuilderFacet.address, [], contracts);
     deploymentComplete('AuctionRunnerFacet', auctionRunnerFacet.address, [], contracts);
+    deploymentComplete('AuctionEnderFacet', auctionEnderFacet.address, [], contracts);
     deploymentComplete('SaleBuilderFacet', saleBuilderFacet.address, [], contracts);
     deploymentComplete('SaleRunnerFacet', saleRunnerFacet.address, [], contracts);
+    deploymentComplete('SaleEnderFacet', saleEnderFacet.address, [], contracts);
+    deploymentComplete('EthCreditRecoveryFacet', ethCreditRecoveryFacet.address, [], contracts);
 
     console.log(`\n⧉ Deploying Market Client implementation/proxy pairs...`);
 
     // Deploy the Market Client implementation/proxy pairs
     const marketClientArgs = [accessController.address, marketController.address];
-    [impls, proxies, clients] = await deployMarketClients(marketClientArgs, gasLimit);
+    [impls, proxies, clients] = await deployMarketClients(marketClientArgs, gasLimit, awaitAcceptableGas, maxAcceptableGasPrice);
     [lotsTicketerImpl, itemsTicketerImpl, seenHausNFTImpl] = impls;
     [lotsTicketerProxy, itemsTicketerProxy, seenHausNFTProxy] = proxies;
     [lotsTicketer, itemsTicketer, seenHausNFT] = clients;
@@ -139,23 +171,59 @@ async function main() {
 
     console.log(`\n🌐️Configuring and granting roles...`);
 
-    // Renounce temporarily granted UPGRADER role for deployer account
-    await accessController.renounceRole(Role.UPGRADER, deployer);
-
     // Add Escrow Ticketer and NFT addresses to MarketController
+    await awaitAcceptableGas(maxAcceptableGasPrice);
     await marketController.setNft(seenHausNFT.address);
+    await awaitAcceptableGas(maxAcceptableGasPrice);
     await marketController.setLotsTicketer(lotsTicketer.address);
+    await awaitAcceptableGas(maxAcceptableGasPrice);
     await marketController.setItemsTicketer(itemsTicketer.address);
 
     console.log(`✅ MarketController updated with remaining post-initialization config.`);
 
+    // Grant ESCROW_AGENT / SELLER / MINTER role to deployer
+    await awaitAcceptableGas(maxAcceptableGasPrice);
+    await accessController.grantRole(Role.ESCROW_AGENT, deployer);
+    await awaitAcceptableGas(maxAcceptableGasPrice);
+    await accessController.grantRole(Role.SELLER, deployer);
+    await awaitAcceptableGas(maxAcceptableGasPrice);
+    await accessController.grantRole(Role.MINTER, deployer);
+
+    console.log(`✅ Granted ESCROW_AGENT / SELLER / MINTER role to deployer address.`);
+
+    // Grant ADMIN role to multisig
+    await awaitAcceptableGas(maxAcceptableGasPrice);
+    await accessController.grantRole(Role.ADMIN, config.multisig);
+
+    console.log(`✅ Granted ADMIN role to multisig address.`);
+
     // Add roles to contracts and addresses that need it
+    await awaitAcceptableGas(maxAcceptableGasPrice);
     await accessController.grantRole(Role.MARKET_HANDLER, marketDiamond.address); // Market handlers live behind MarketDiamond now
+    await awaitAcceptableGas(maxAcceptableGasPrice);
     await accessController.grantRole(Role.MARKET_HANDLER, itemsTicketer.address);
+    await awaitAcceptableGas(maxAcceptableGasPrice);
     await accessController.grantRole(Role.MARKET_HANDLER, lotsTicketer.address);
+    await awaitAcceptableGas(maxAcceptableGasPrice);
     await accessController.grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
 
     console.log(`✅ Granted roles to appropriate contract and addresses.`);
+
+    console.log(`\n🌐️Revoking no-longer-needed deployer roles...`);
+
+    // Transfer admin rights for UPGRADER role to multisig
+    await awaitAcceptableGas(maxAcceptableGasPrice);
+    await accessController.shiftRoleAdmin(Role.UPGRADER, Role.MULTISIG);
+
+    // Renounce temporarily granted UPGRADER role for deployer account
+    await awaitAcceptableGas(maxAcceptableGasPrice);
+    await accessController.renounceRole(Role.UPGRADER, deployer);
+
+    // Transfer admin rights for MARKET_HANDLER role to multisig
+    await awaitAcceptableGas(maxAcceptableGasPrice);
+    await accessController.shiftRoleAdmin(Role.MARKET_HANDLER, Role.MULTISIG);
+
+    console.log(`✅ Deployer address renounced UPGRADER role & shifted UPGRADER & MARKET_HANDLER role admin to multisig.`);
 
     // Bail now if deploying locally
     if (hre.network.name === 'hardhat') process.exit();

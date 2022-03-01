@@ -16,8 +16,10 @@ interface IMarketHandler {
 
     // Events
     event RoyaltyDisbursed(uint256 indexed consignmentId, address indexed recipient, uint256 amount);
+    event EscrowAgentFeeDisbursed(uint256 indexed consignmentId, address indexed recipient, uint256 amount);
     event FeeDisbursed(uint256 indexed consignmentId, address indexed recipient, uint256 amount);
     event PayoutDisbursed(uint256 indexed consignmentId, address indexed recipient, uint256 amount);
     event AudienceChanged(uint256 indexed consignmentId, SeenTypes.Audience indexed audience);
+    event EthCredited(address indexed recipient, uint256 amount);
 
 }

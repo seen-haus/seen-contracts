@@ -6,6 +6,7 @@ import "../../../interfaces/IEscrowTicketer.sol";
 import "../../../interfaces/ISeenHausNFT.sol";
 import "../../../util/StringUtils.sol";
 import "../MarketClientBase.sol";
+import "./LotsTicketerStorage.sol";
 
 /**
  * @title LotsTicketer
@@ -25,16 +26,7 @@ import "../MarketClientBase.sol";
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-contract LotsTicketer is IEscrowTicketer, MarketClientBase, StringUtils, ERC721Upgradeable {
-
-    // Ticket ID => Ticket
-    mapping (uint256 => EscrowTicket) internal tickets;
-
-    /// @dev Next ticket number
-    uint256 internal nextTicket;
-
-    string public constant NAME = "Seen.Haus Escrowed Lot Ticket";
-    string public constant SYMBOL = "ESCROW_TICKET";
+contract LotsTicketer is LotsTicketerStorage, IEscrowTicketer, MarketClientBase, StringUtils, ERC721Upgradeable {
 
     /**
      * @notice Initializer
@@ -67,6 +59,18 @@ contract LotsTicketer is IEscrowTicketer, MarketClientBase, StringUtils, ERC721U
     {
         require(_exists(ticketId), "Ticket does not exist");
         return tickets[ticketId];
+    }
+
+    /**
+     * @notice Get how many claims can be made using tickets (does not change after ticket burns)
+     */
+    function getTicketClaimableCount(uint256 _consignmentId)
+    external
+    view
+    override
+    returns (uint256)
+    {
+        return consignmentIdToTicketClaimableCount[_consignmentId];
     }
 
     /**
@@ -153,6 +157,11 @@ contract LotsTicketer is IEscrowTicketer, MarketClientBase, StringUtils, ERC721U
         // Make sure amount is non-zero
         require(_amount > 0, "Token amount cannot be zero.");
 
+        consignmentIdToTicketClaimableCount[_consignmentId] += _amount;
+
+        // Make sure that there can't be more tickets issued than the maximum possible consignment allocation
+        require(consignmentIdToTicketClaimableCount[_consignmentId] <= consignment.supply, "Can't issue more tickets than max possible allowed consignment");
+
         // Get the ticketed token
         Token memory token = ISeenHausNFT(consignment.tokenAddress).getTokenInfo(consignment.tokenId);
 
@@ -191,6 +200,7 @@ contract LotsTicketer is IEscrowTicketer, MarketClientBase, StringUtils, ERC721U
 
         // Burn the ticket
         _burn(_ticketId);
+        delete tickets[_ticketId];
 
         // Release the consignment to claimant
         marketController.releaseConsignment(ticket.consignmentId, ticket.amount, msg.sender);

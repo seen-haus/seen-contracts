@@ -1,6 +1,7 @@
 const { expect } = require("chai");
 const Consignment = require("../../scripts/domain/Consignment");
 const Market = require("../../scripts/domain/Market");
+const MarketHandler = require("../../scripts/domain/MarketHandler");
 
 /**
  *  Test the Consignment domain object
@@ -11,7 +12,7 @@ describe("Consignment", function() {
 
     // Suite-wide scope
     let accounts, consignment;
-    let market, seller, tokenAddress, tokenId, supply, id, multiToken, marketed, released;
+    let market, seller, tokenAddress, tokenId, supply, id, multiToken, released;
 
     before( async function () {
 
@@ -20,29 +21,34 @@ describe("Consignment", function() {
 
         // Required constructor params
         market = Market.PRIMARY;
+        marketHandler = MarketHandler.UNHANDLED;
         seller = accounts[0].address;
         tokenAddress = "0x7777788200B672A42421017F65EDE4Fc759564C8";
         tokenId = "100";
         supply = "50";
         id = "1";
         multiToken = true;
-        marketed = false;
         released = false;
-
+        releasedSupply = "0";
+        customFeePercentageBasisPoints = "0";
+        pendingPayout = "100";
     });
 
     context("Constructor", async function () {
 
         it("Should allow creation of valid, fully populated Consignment instance", async function () {
 
-            consignment = new Consignment(market, seller, tokenAddress, tokenId, supply, id,  multiToken, marketed, released);
+            consignment = new Consignment(market, marketHandler, seller, tokenAddress, tokenId, supply, id,  multiToken, released, releasedSupply, customFeePercentageBasisPoints, pendingPayout);
             expect(consignment.marketIsValid()).is.true;
+            expect(consignment.marketHandlerIsValid()).is.true;
             expect(consignment.sellerIsValid()).is.true;
             expect(consignment.tokenAddressIsValid()).is.true;
             expect(consignment.tokenIdIsValid()).is.true;
             expect(consignment.idIsValid()).is.true;
-            expect(consignment.marketedIsValid()).is.true;
             expect(consignment.multiTokenIsValid()).is.true;
+            expect(consignment.releasedSupplyIsValid()).is.true;
+            expect(consignment.customFeePercentageBasisPointsIsValid()).is.true;
+            expect(consignment.pendingPayoutIsValid()).is.true;
             expect(consignment.isValid()).is.true;
 
         });
@@ -54,7 +60,7 @@ describe("Consignment", function() {
         beforeEach( async function () {
 
             // Create a valid consignment, then set fields in tests directly
-            consignment = new Consignment(market, seller, tokenAddress, tokenId, supply, id,  multiToken, marketed, released);
+            consignment = new Consignment(market, marketHandler, seller, tokenAddress, tokenId, supply, id,  multiToken, released, releasedSupply, customFeePercentageBasisPoints, pendingPayout);
         });
 
         it("Always present, market must be equal to a Market enum value", async function() {
@@ -77,6 +83,30 @@ describe("Consignment", function() {
             // Valid field value
             consignment.market = 0;
             expect(consignment.marketIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+        });
+
+        it("Always present, market handler must be equal to a MarketHandler enum value", async function() {
+
+            // Invalid field value
+            consignment.marketHandler = 12;
+            expect(consignment.marketHandlerIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Invalid field value
+            consignment.marketHandler = "zedzdeadbaby";
+            expect(consignment.marketHandlerIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Valid field value
+            consignment.marketHandler = MarketHandler.UNHANDLED;
+            expect(consignment.marketHandlerIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+            // Valid field value
+            consignment.marketHandler = 0;
+            expect(consignment.marketHandlerIsValid()).is.true;
             expect(consignment.isValid()).is.true;
 
         });
@@ -220,25 +250,6 @@ describe("Consignment", function() {
 
         });
 
-        it("Always present, marketed must be a boolean", async function() {
-
-            // Invalid field value
-            consignment.marketed = 12;
-            expect(consignment.marketedIsValid()).is.false;
-            expect(consignment.isValid()).is.false;
-
-            // Invalid field value
-            consignment.marketed = "zedzdeadbaby";
-            expect(consignment.marketedIsValid()).is.false;
-            expect(consignment.isValid()).is.false;
-
-            // Valid field value
-            consignment.marketed = false;
-            expect(consignment.marketedIsValid()).is.true;
-            expect(consignment.isValid()).is.true;
-
-        });
-
         it("Always present, released must be a boolean", async function() {
 
             // Invalid field value
@@ -258,6 +269,88 @@ describe("Consignment", function() {
 
         });
 
+        it("Always present, releasedSupply must be the string representation of a BigNumber", async function() {
+
+            // Invalid field value
+            consignment.releasedSupply = 20;
+            expect(consignment.releasedSupplyIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Invalid field value
+            consignment.releasedSupply = "zedzdeadbaby";
+            expect(consignment.releasedSupplyIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Valid field value
+            consignment.releasedSupply = "0";
+            expect(consignment.releasedSupplyIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+            // Valid field value
+            consignment.releasedSupply = "500";
+            expect(consignment.releasedSupplyIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+        });
+
+        it("Always present, customFeePercentageBasisPoints must be the string representation of a BigNumber between 0 - 10000", async function() {
+
+            // Invalid field value
+            consignment.customFeePercentageBasisPoints = 20;
+            expect(consignment.customFeePercentageBasisPointsIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Invalid field value
+            consignment.customFeePercentageBasisPoints = "zedzdeadbaby";
+            expect(consignment.customFeePercentageBasisPointsIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Invalid field value
+            consignment.customFeePercentageBasisPoints = "10001";
+            expect(consignment.customFeePercentageBasisPointsIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Valid field value
+            consignment.customFeePercentageBasisPoints = "0";
+            expect(consignment.customFeePercentageBasisPointsIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+            // Valid field value
+            consignment.customFeePercentageBasisPoints = "10000";
+            expect(consignment.customFeePercentageBasisPointsIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+            // Valid field value
+            consignment.customFeePercentageBasisPoints = "5000";
+            expect(consignment.customFeePercentageBasisPointsIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+        });
+
+        it("Always present, pendingPayout must be the string representation of a BigNumber", async function() {
+
+            // Invalid field value
+            consignment.pendingPayout = 20;
+            expect(consignment.pendingPayoutIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Invalid field value
+            consignment.pendingPayout = "zedzdeadbaby";
+            expect(consignment.pendingPayoutIsValid()).is.false;
+            expect(consignment.isValid()).is.false;
+
+            // Valid field value
+            consignment.pendingPayout = "0";
+            expect(consignment.pendingPayoutIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+            // Valid field value
+            consignment.pendingPayout = "100";
+            expect(consignment.pendingPayoutIsValid()).is.true;
+            expect(consignment.isValid()).is.true;
+
+        });
+
     })
 
     context("Utility functions", async function () {
@@ -265,7 +358,7 @@ describe("Consignment", function() {
         beforeEach( async function () {
 
             // Create a valid Consignment instance, then operate on its methods in the tests
-            consignment = new Consignment(market, seller, tokenAddress, tokenId, supply, id,  multiToken, marketed, released);
+            consignment = new Consignment(market, marketHandler, seller, tokenAddress, tokenId, supply, id,  multiToken, released, releasedSupply, customFeePercentageBasisPoints, pendingPayout);
 
         })
 
@@ -273,7 +366,7 @@ describe("Consignment", function() {
 
             // Get plain object
             const object = {
-                market, seller, tokenAddress: tokenAddress, tokenId, supply, id,  multiToken, marketed, released
+                market, marketHandler, seller, tokenAddress: tokenAddress, tokenId, supply, id,  multiToken, released, releasedSupply, customFeePercentageBasisPoints, pendingPayout
             }
 
             // Promote to instance

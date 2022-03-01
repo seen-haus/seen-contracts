@@ -5,6 +5,7 @@ import "../domain/SeenTypes.sol";
 import "./IMarketHandler.sol";
 import "./IAuctionBuilder.sol";
 import "./IAuctionRunner.sol";
+import "./IAuctionEnder.sol";
 
 
 /**
@@ -12,10 +13,10 @@ import "./IAuctionRunner.sol";
  *
  * @notice Handles the creation, running, and disposition of Seen.Haus auctions.
  *
- * The ERC-165 identifier for this interface is: 0x1dc277f5
+ * The ERC-165 identifier for this interface is: 0xa8190853
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-interface IAuctionHandler is IAuctionBuilder, IAuctionRunner {
+interface IAuctionHandler is IAuctionBuilder, IAuctionRunner, IAuctionEnder {
 
 }

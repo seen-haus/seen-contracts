@@ -28,6 +28,9 @@ library MarketHandlerLib {
         // @dev map a consignment id to an auction
         mapping(uint256 => SeenTypes.Auction) auctions;
 
+        // map an address to ETH credit available to withdraw
+        mapping(address => uint256) addressToEthCredit;
+
     }
 
     struct MarketHandlerInitializers {
@@ -38,11 +41,20 @@ library MarketHandlerLib {
         // AuctionRunnerFacet initialization state
         bool auctionRunnerFacet;
 
+        // AuctionEnderFacet initialization state
+        bool auctionEnderFacet;
+
         // SaleBuilderFacet initialization state
         bool saleBuilderFacet;
 
         // SaleRunnerFacet initialization state
         bool saleRunnerFacet;
+
+        // SaleRunnerFacet initialization state
+        bool saleEnderFacet;
+
+        // EthCreditFacet initialization state
+        bool ethCreditRecoveryFacet;
 
     }
 

@@ -4,7 +4,9 @@ const { expect } = require("chai");
 const Role = require("../../scripts/domain/Role");
 const Token = require("../../scripts/domain/Token");
 const Market = require("../../scripts/domain/Market");
+const MarketHandler = require("../../scripts/domain/MarketHandler");
 const Ticketer = require("../../scripts/domain/Ticketer");
+const Consignment = require("../../scripts/domain/Consignment");
 const { InterfaceIds } = require('../../scripts/constants/supported-interfaces.js');
 const { deployMarketDiamond } = require('../../scripts/util/deploy-market-diamond.js');
 const { deployMarketClients } = require("../../scripts/util/deploy-market-clients.js");
@@ -21,7 +23,7 @@ describe("SeenHausNFT", function() {
     let accounts, deployer, admin, upgrader, escrowAgent, associate, minter, creator, recipient, owner;
     let accessController, marketController;
     let seenHausNFT, seenHausNFTProxy;
-    let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
+    let staking, multisig, vipStakerAmount, primaryFeePercentage, secondaryFeePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let counter, tokenURI, tokenId, supply, salePrice, royaltyAmount, expectedRoyalty, percentage, royaltyPercentage;
     let token, isPhysical, balance, uri, invalidRoyaltyPercentage, address, support, consignmentId;
     let replacementAddress = "0x2d36143CC2E0E74E007E7600F341dC9D37D81C07";
@@ -46,10 +48,12 @@ describe("SeenHausNFT", function() {
 
         // Market control values
         vipStakerAmount = "500";              // Amount of xSEEN to be l33t
-        feePercentage = "1500";               // 15%   = 1500
+        primaryFeePercentage = "500";         // 5%    = 500
+        secondaryFeePercentage = "250";       // 2.5%  = 250
         maxRoyaltyPercentage = "1500";        // 15%   = 1500
         outBidPercentage = "500";             // 5%    = 500
         defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
+        allowExternalTokensOnSecondary = false; // By default, don't allow external tokens to be sold via secondary market
 
         // Deploy the Diamond
         [marketDiamond, diamondLoupe, diamondCut, accessController] = await deployMarketDiamond();
@@ -59,17 +63,21 @@ describe("SeenHausNFT", function() {
             staking.address,
             multisig.address,
             vipStakerAmount,
-            feePercentage,
+            primaryFeePercentage,
+            secondaryFeePercentage,
             maxRoyaltyPercentage,
             outBidPercentage,
-            defaultTicketerType
+            defaultTicketerType,
+        ];
+        const marketConfigAdditional = [
+            allowExternalTokensOnSecondary,
         ];
 
         // Temporarily grant UPGRADER role to deployer account
         await accessController.grantRole(Role.UPGRADER, deployer.address);
 
         // Cut the MarketController facet into the Diamond
-        await deployMarketControllerFacets(marketDiamond, marketConfig);
+        await deployMarketControllerFacets(marketDiamond, marketConfig, marketConfigAdditional);
 
         // Cast Diamond to MarketController
         marketController = await ethers.getContractAt('IMarketController', marketDiamond.address);
@@ -190,7 +198,7 @@ describe("SeenHausNFT", function() {
                     // non-UPGRADER attempt
                     await expect(
                         seenHausNFTProxy.connect(associate).setImplementation(replacementAddress)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role");
 
                     // Get address
                     address = await seenHausNFTProxy.getImplementation();
@@ -220,7 +228,7 @@ describe("SeenHausNFT", function() {
                     // non-UPGRADER attempt
                     await expect(
                         seenHausNFTProxy.connect(associate).setAccessController(replacementAddress)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role");
 
                     // Get address
                     address = await seenHausNFTProxy.getAccessController();
@@ -250,7 +258,7 @@ describe("SeenHausNFT", function() {
                     // non-UPGRADER attempt
                     await expect(
                         seenHausNFTProxy.connect(associate).setMarketController(replacementAddress)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role");
 
                     // Get address
                     address = await seenHausNFTProxy.getMarketController();
@@ -284,7 +292,7 @@ describe("SeenHausNFT", function() {
                     // non-MINTER attempt
                     await expect(
                         seenHausNFT.connect(associate).mintDigital(supply, creator.address, tokenURI, royaltyPercentage)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role");
 
                     // Get counter
                     counter = await seenHausNFT.getNextToken();
@@ -314,7 +322,7 @@ describe("SeenHausNFT", function() {
                     // non-ESCROW_AGENT attempt
                     await expect(
                         seenHausNFT.connect(associate).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role");
 
                     // Get counter
                     counter = await seenHausNFT.getNextToken();
@@ -392,11 +400,17 @@ describe("SeenHausNFT", function() {
                             creator.address,    // seller
                             [ // Consignment
                                 Market.PRIMARY,
+                                MarketHandler.UNHANDLED,
                                 creator.address,
                                 seenHausNFT.address,
                                 tokenId,
                                 supply,
-                                consignmentId
+                                consignmentId,
+                                true,
+                                false,
+                                0,
+                                0,
+                                0
                             ]
                         )
 
@@ -460,11 +474,17 @@ describe("SeenHausNFT", function() {
                             creator.address,    // seller
                             [ // Consignment
                                 Market.PRIMARY,
+                                MarketHandler.UNHANDLED,
                                 creator.address,
                                 seenHausNFT.address,
                                 tokenId,
                                 supply,
-                                consignmentId
+                                consignmentId,
+                                true,
+                                false,
+                                0,
+                                0,
+                                0
                             ]
                         )
 
@@ -478,6 +498,120 @@ describe("SeenHausNFT", function() {
                     ).is.true;
 
                 });
+
+            });
+
+        });
+
+        context("Market Handler Assignment", async function () {
+
+            it("Assigns a marketHandler of Unhandled to a consignment immediately after mintDigital", async function () {
+
+                // Get the next consignment id
+                consignmentId = await marketController.getNextConsignment();
+
+                // Get next token id
+                tokenId = await seenHausNFT.getNextToken();
+
+                // Mint a digital NFT
+                await expect(
+                    seenHausNFT.connect(minter).mintDigital(supply, creator.address, tokenURI, royaltyPercentage)
+                ).emit(marketController, 'ConsignmentRegistered')
+                    .withArgs(
+                        minter.address,     // consignor
+                        creator.address,    // seller
+                        [ // Consignment
+                            Market.PRIMARY,
+                            MarketHandler.UNHANDLED,
+                            creator.address,
+                            seenHausNFT.address,
+                            tokenId,
+                            supply,
+                            consignmentId,
+                            true,
+                            false,
+                            0,
+                            0,
+                            0
+                        ]
+                    )
+
+                // Get the consignment
+                const response = await marketController.getConsignment(consignmentId);
+
+                // Convert to entity
+                let consignment = new Consignment(
+                    response.market,
+                    response.marketHandler,
+                    response.seller,
+                    response.tokenAddress,
+                    response.tokenId.toString(),
+                    response.supply.toString(),
+                    response.id.toString(),
+                    response.multiToken,
+                    response.released,
+                    response.releasedSupply.toString(),
+                    response.customFeePercentageBasisPoints.toString(),
+                    response.pendingPayout.toString(),
+                );
+
+                // Consignment should have a market handler of MarketHandler.Unhandled
+                expect(consignment.marketHandler === MarketHandler.UNHANDLED).is.true;
+
+            });
+
+            it("Assigns a marketHandler of Unhandled to a consignment immediately after mintPhysical", async function () {
+
+                // Get the next consignment id
+                consignmentId = await marketController.getNextConsignment();
+
+                // Get next token id
+                tokenId = await seenHausNFT.getNextToken();
+
+                // Mint a physical NFT
+                await expect(
+                    seenHausNFT.connect(escrowAgent).mintPhysical(supply, creator.address, tokenURI, royaltyPercentage)
+                ).emit(marketController, 'ConsignmentRegistered')
+                    .withArgs(
+                        escrowAgent.address,     // consignor
+                        creator.address,    // seller
+                        [ // Consignment
+                            Market.PRIMARY,
+                            MarketHandler.UNHANDLED,
+                            creator.address,
+                            seenHausNFT.address,
+                            tokenId,
+                            supply,
+                            consignmentId,
+                            true,
+                            false,
+                            0,
+                            0,
+                            0
+                        ]
+                    )
+
+                // Get the consignment
+                const response = await marketController.getConsignment(consignmentId);
+
+                // Convert to entity
+                let consignment = new Consignment(
+                    response.market,
+                    response.marketHandler,
+                    response.seller,
+                    response.tokenAddress,
+                    response.tokenId.toString(),
+                    response.supply.toString(),
+                    response.id.toString(),
+                    response.multiToken,
+                    response.released,
+                    response.releasedSupply.toString(),
+                    response.customFeePercentageBasisPoints.toString(),
+                    response.pendingPayout.toString(),
+                );
+
+                // Consignment should have a market handler of MarketHandler.Unhandled
+                expect(consignment.marketHandler === MarketHandler.UNHANDLED).is.true;
 
             });
 

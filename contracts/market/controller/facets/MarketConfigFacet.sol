@@ -34,7 +34,8 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
      * @param _staking - Seen.Haus staking contract
      * @param _multisig - Seen.Haus multi-sig wallet
      * @param _vipStakerAmount - the minimum amount of xSEEN ERC-20 a caller must hold to participate in VIP events
-     * @param _feePercentage - percentage that will be taken as a fee from the net of a Seen.Haus sale or auction (after royalties)
+     * @param _primaryFeePercentage - percentage that will be taken as a fee from the net of a Seen.Haus primary sale or auction
+     * @param _secondaryFeePercentage - percentage that will be taken as a fee from the net of a Seen.Haus secondary sale or auction (after royalties)
      * @param _maxRoyaltyPercentage - maximum percentage of a Seen.Haus sale or auction that will be paid as a royalty
      * @param _outBidPercentage - minimum percentage a Seen.Haus auction bid must be above the previous bid to prevail
      * @param _defaultTicketerType - which ticketer type to use if none has been specified for a given consignment
@@ -43,7 +44,8 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
         address payable _staking,
         address payable _multisig,
         uint256 _vipStakerAmount,
-        uint16 _feePercentage,
+        uint16 _primaryFeePercentage,
+        uint16 _secondaryFeePercentage,
         uint16 _maxRoyaltyPercentage,
         uint16 _outBidPercentage,
         Ticketer _defaultTicketerType
@@ -60,14 +62,15 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
         mcs.staking = _staking;
         mcs.multisig = _multisig;
         mcs.vipStakerAmount = _vipStakerAmount;
-        mcs.feePercentage = _feePercentage;
+        mcs.primaryFeePercentage = _primaryFeePercentage;
+        mcs.secondaryFeePercentage = _secondaryFeePercentage;
         mcs.maxRoyaltyPercentage = _maxRoyaltyPercentage;
         mcs.outBidPercentage = _outBidPercentage;
         mcs.defaultTicketerType = _defaultTicketerType;
     }
 
     /**
-     * @notice Sets the address of the xSEEN ERC-20 staking contract.
+     * @notice Sets the address of the SEEN NFT contract.
      *
      * Emits a NFTAddressChanged event.
      *
@@ -76,7 +79,7 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
     function setNft(address _nft)
     external
     override
-    onlyRole(ADMIN)
+    onlyRole(MULTISIG)
     {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         mcs.nft = _nft;
@@ -106,7 +109,7 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
     function setLotsTicketer(address _lotsTicketer)
     external
     override
-    onlyRole(ADMIN)
+    onlyRole(MULTISIG)
     {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         mcs.lotsTicketer = _lotsTicketer;
@@ -136,7 +139,7 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
     function setItemsTicketer(address _itemsTicketer)
     external
     override
-    onlyRole(ADMIN)
+    onlyRole(MULTISIG)
     {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         mcs.itemsTicketer = _itemsTicketer;
@@ -166,7 +169,7 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
     function setStaking(address payable _staking)
     external
     override
-    onlyRole(ADMIN)
+    onlyRole(MULTISIG)
     {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         mcs.staking = _staking;
@@ -196,7 +199,7 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
     function setMultisig(address payable _multisig)
     external
     override
-    onlyRole(ADMIN)
+    onlyRole(MULTISIG)
     {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         mcs.multisig = _multisig;
@@ -226,7 +229,7 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
     function setVipStakerAmount(uint256 _vipStakerAmount)
     external
     override
-    onlyRole(ADMIN)
+    onlyRole(MULTISIG)
     {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         mcs.vipStakerAmount = _vipStakerAmount;
@@ -248,36 +251,61 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
 
     /**
      * @notice Sets the marketplace fee percentage.
-     * Emits a FeePercentageChanged event.
+     * Emits a PrimaryFeePercentageChanged event.
      *
-     * @param _feePercentage - the percentage that will be taken as a fee from the net of a Seen.Haus sale or auction (after royalties)
+     * @param _primaryFeePercentage - the percentage that will be taken as a fee from the net of a Seen.Haus primary sale or auction
      *
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
      */
-    function setFeePercentage(uint16 _feePercentage)
+    function setPrimaryFeePercentage(uint16 _primaryFeePercentage)
     external
     override
-    onlyRole(ADMIN)
+    onlyRole(MULTISIG)
     {
-        require(_feePercentage > 0 && _feePercentage <= 10000,
+        require(_primaryFeePercentage > 0 && _primaryFeePercentage <= 10000,
             "Percentage representation must be between 1 and 10000");
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
-        mcs.feePercentage = _feePercentage;
-        emit FeePercentageChanged(mcs.feePercentage);
+        mcs.primaryFeePercentage = _primaryFeePercentage;
+        emit PrimaryFeePercentageChanged(mcs.primaryFeePercentage);
     }
 
     /**
-     * @notice The feePercentage getter
+     * @notice Sets the marketplace fee percentage.
+     * Emits a FeePercentageChanged event.
+     *
+     * @param _secondaryFeePercentage - the percentage that will be taken as a fee from the net of a Seen.Haus secondary sale or auction (after royalties)
+     *
+     * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
      */
-    function getFeePercentage()
+    function setSecondaryFeePercentage(uint16 _secondaryFeePercentage)
+    external
+    override
+    onlyRole(MULTISIG)
+    {
+        require(_secondaryFeePercentage > 0 && _secondaryFeePercentage <= 10000,
+            "Percentage representation must be between 1 and 10000");
+        MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
+        mcs.secondaryFeePercentage = _secondaryFeePercentage;
+        emit SecondaryFeePercentageChanged(mcs.secondaryFeePercentage);
+    }
+
+    /**
+     * @notice The primaryFeePercentage and secondaryFeePercentage getter
+     */
+    function getFeePercentage(Market _market)
     external
     override
     view
     returns (uint16)
     {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
-        return mcs.feePercentage;
+        if(_market == Market.Primary) {
+            return mcs.primaryFeePercentage;
+        } else {
+            return mcs.secondaryFeePercentage;
+        }
     }
 
     /**
@@ -293,7 +321,7 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
     function setMaxRoyaltyPercentage(uint16 _maxRoyaltyPercentage)
     external
     override
-    onlyRole(ADMIN)
+    onlyRole(MULTISIG)
     {
         require(_maxRoyaltyPercentage > 0 && _maxRoyaltyPercentage <= 10000,
             "Percentage representation must be between 1 and 10000");
@@ -408,5 +436,4 @@ contract MarketConfigFacet is IMarketConfig, MarketControllerBase {
         Ticketer ticketerType = (specified == Ticketer.Default) ? mcs.defaultTicketerType : specified;
         return (ticketerType == Ticketer.Lots) ? mcs.lotsTicketer : mcs.itemsTicketer;
     }
-
 }

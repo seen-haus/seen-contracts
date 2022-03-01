@@ -6,6 +6,7 @@ import "../../../interfaces/IEscrowTicketer.sol";
 import "../../../interfaces/ISeenHausNFT.sol";
 import "../../../util/StringUtils.sol";
 import "../MarketClientBase.sol";
+import "./ItemsTicketerStorage.sol";
 
 /**
  * @title ItemsTicketer
@@ -27,20 +28,14 @@ import "../MarketClientBase.sol";
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClientBase, ERC1155Upgradeable {
-
-    // Ticket ID => Ticket
-    mapping (uint256 => EscrowTicket) internal tickets;
-
-    /// @dev Next ticket number
-    uint256 internal nextTicket;
+contract ItemsTicketer is ItemsTicketerStorage, StringUtils, IEscrowTicketer, MarketClientBase, ERC1155Upgradeable {
 
     /**
      * @notice Initializer
      */
     function initialize()
     public {
-        __ERC1155_init_unchained(ESCROW_TICKET_URI);
+        __ERC1155_init(ESCROW_TICKET_URI);
     }
 
     /**
@@ -67,6 +62,18 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClientBase, ERC115
     {
         require(_ticketId < nextTicket, "Ticket does not exist");
         return tickets[_ticketId];
+    }
+
+    /**
+     * @notice Get how many claims can be made using tickets (does not change after ticket burns)
+     */
+    function getTicketClaimableCount(uint256 _consignmentId)
+    external
+    view
+    override
+    returns (uint256)
+    {
+        return consignmentIdToTicketClaimableCount[_consignmentId];
     }
 
     /**
@@ -134,6 +141,11 @@ contract ItemsTicketer is StringUtils, IEscrowTicketer, MarketClientBase, ERC115
 
         // Make sure amount is non-zero
         require(_amount > 0, "Token amount cannot be zero.");
+
+        consignmentIdToTicketClaimableCount[_consignmentId] += _amount;
+
+        // Make sure that there can't be more tickets issued than the maximum possible consignment allocation
+        require(consignmentIdToTicketClaimableCount[_consignmentId] <= consignment.supply, "Can't issue more tickets than max possible allowed for consignment");
 
         // Get the ticketed token
         Token memory token = ISeenHausNFT(consignment.tokenAddress).getTokenInfo(consignment.tokenId);

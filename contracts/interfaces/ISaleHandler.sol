@@ -3,14 +3,15 @@ pragma solidity ^0.8.0;
 
 import "../interfaces/ISaleBuilder.sol";
 import "../interfaces/ISaleRunner.sol";
+import "../interfaces/ISaleEnder.sol";
 
 /**
  * @title ISaleHandler
  *
  * @notice Handles the creation, running, and disposition of Seen.Haus sales.
  *
- * The ERC-165 identifier for this interface is: 0x6164b6a0
+ * The ERC-165 identifier for this interface is: 0xa9ae54df
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-interface ISaleHandler is ISaleBuilder, ISaleRunner {}
+interface ISaleHandler is ISaleBuilder, ISaleRunner, ISaleEnder {}

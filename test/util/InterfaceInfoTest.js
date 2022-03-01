@@ -46,6 +46,22 @@ describe("InterfaceInfo", function() {
 
         });
 
+        it("getIAuctionEnder() should return expected id", async function () {
+
+            const expected = InterfaceIds.IAuctionEnder;
+            const actual = await interfaceInfo.getIAuctionEnder();
+            assert.equal(actual, expected);
+
+        });
+
+        it("getIEthCreditRecovery() should return expected id", async function () {
+
+            const expected = InterfaceIds.IEthCreditRecovery;
+            const actual = await interfaceInfo.getIEthCreditRecovery();
+            assert.equal(actual, expected);
+
+        });
+
         it("getIDiamondCut() should return expected id", async function () {
 
             const expected = InterfaceIds.IDiamondCut;
@@ -94,6 +110,14 @@ describe("InterfaceInfo", function() {
 
         });
 
+        it("getIMarketConfigAdditional() should return expected id", async function () {
+
+            const expected = InterfaceIds.IMarketConfigAdditional;
+            const actual = await interfaceInfo.getIMarketConfigAdditional();
+            assert.equal(actual, expected);
+
+        });
+
         it("getIMarketController() should return expected id", async function () {
 
             const expected = InterfaceIds.IMarketController;
@@ -122,6 +146,14 @@ describe("InterfaceInfo", function() {
 
             const expected = InterfaceIds.ISaleRunner;
             const actual = await interfaceInfo.getISaleRunner();
+            assert.equal(actual, expected);
+
+        });
+
+        it("getISaleEnder() should return expected id", async function () {
+
+            const expected = InterfaceIds.ISaleEnder;
+            const actual = await interfaceInfo.getISaleEnder();
             assert.equal(actual, expected);
 
         });

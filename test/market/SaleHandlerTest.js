@@ -7,6 +7,7 @@ const Role = require("../../scripts/domain/Role");
 const Sale = require("../../scripts/domain/Sale");
 const State = require("../../scripts/domain/State");
 const Market = require("../../scripts/domain/Market");
+const MarketHandler = require("../../scripts/domain/MarketHandler");
 const Outcome = require("../../scripts/domain/Outcome");
 const Audience = require("../../scripts/domain/Audience");
 const Ticketer = require("../../scripts/domain/Ticketer");
@@ -31,10 +32,11 @@ describe("SaleHandler", function() {
     let Foreign721, foreign721;
     let Foreign1155, foreign1155;
     let SeenStaking, seenStaking;
-    let multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
+    let multisig, vipStakerAmount, primaryFeePercentage, secondaryFeePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let market, tokenAddress, tokenId, tokenURI, sale, physicalTokenId, physicalConsignmentId, consignmentId, nextConsignment, block, blockNumber;
     let royaltyPercentage, supply, start, quantity, price, perTxCap, audience, escrowTicketer;
     let royaltyAmount, sellerAmount, feeAmount, multisigAmount, stakingAmount, grossSale, netAfterRoyalties, consignment;
+    let royaltyAmountWithCustomFee, sellerAmountWithCustomFee, feeAmountWithCustomFee, multisigAmountWithCustomFee, stakingAmountWithCustomFee, grossSaleWithCustomFee;
     let sellerBalance, contractBalance, buyerBalance, ticketerBalance, newBalance, buyOutPrice, single, badStartTime, halfSupply, signer;
 
     beforeEach( async function () {
@@ -58,11 +60,14 @@ describe("SaleHandler", function() {
         multisig = accounts[9];               // We just need addresses for these, not functional contracts
 
         // Market control values
-        vipStakerAmount = "500";              // Amount of xSEEN to be VIP
-        feePercentage = "1500";               // 15%   = 1500
-        maxRoyaltyPercentage = "5000";        // 50%   = 5000
-        outBidPercentage = "500";             // 5%    = 500
-        defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
+        vipStakerAmount = "500";                // Amount of xSEEN to be VIP
+        customFeePercentageBasisPoints = "2000" // 20%   = 2000
+        primaryFeePercentage = "500";           // 5%    = 500
+        secondaryFeePercentage = "250";         // 2.5%  = 250
+        maxRoyaltyPercentage = "5000";          // 50%   = 5000
+        outBidPercentage = "500";               // 5%    = 500
+        defaultTicketerType = Ticketer.LOTS;    // default escrow ticketer type
+        allowExternalTokensOnSecondary = false; // By default, don't allow external tokens to be sold via secondary market
 
         // Deploy the Foreign721 mock contract
         Foreign721 = await ethers.getContractFactory("Foreign721");
@@ -87,23 +92,27 @@ describe("SaleHandler", function() {
             seenStaking.address,
             multisig.address,
             vipStakerAmount,
-            feePercentage,
+            primaryFeePercentage,
+            secondaryFeePercentage,
             maxRoyaltyPercentage,
             outBidPercentage,
-            defaultTicketerType
+            defaultTicketerType,
+        ];
+        const marketConfigAdditional = [
+            allowExternalTokensOnSecondary,
         ];
 
         // Temporarily grant UPGRADER role to deployer account
         await accessController.grantRole(Role.UPGRADER, deployer.address);
 
         // Cut the MarketController facet into the Diamond
-        await deployMarketControllerFacets(marketDiamond, marketConfig);
+        await deployMarketControllerFacets(marketDiamond, marketConfig, marketConfigAdditional);
 
         // Cast Diamond to MarketController
         marketController = await ethers.getContractAt('IMarketController', marketDiamond.address);
 
         // Cut the Market Handler facets into the Diamond
-        [auctionBuilderFacet, auctionRunnerFacet, saleBuilderFacet, saleRunnerFacet] = await deployMarketHandlerFacets(marketDiamond);
+        [auctionBuilderFacet, auctionRunnerFacet, auctionEnderFacet, saleBuilderFacet, saleRunnerFacet, saleEnderFacet] = await deployMarketHandlerFacets(marketDiamond);
 
         // Cast Diamond to IAuctionHandler
         saleHandler = await ethers.getContractAt('ISaleHandler', marketDiamond.address);
@@ -118,6 +127,7 @@ describe("SaleHandler", function() {
         await marketController.setNft(seenHausNFT.address);
         await marketController.setLotsTicketer(lotsTicketer.address);
         await marketController.setItemsTicketer(itemsTicketer.address);
+        await marketController.setAllowExternalTokensOnSecondary(true);
 
         // Renounce temporarily granted UPGRADER role for deployer account
         await accessController.renounceRole(Role.UPGRADER, deployer.address);
@@ -132,6 +142,7 @@ describe("SaleHandler", function() {
         // Grant MARKET_HANDLER to SeenHausNFT and SaleHandler
         await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
         await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, saleHandler.address);
+        await accessController.connect(admin).grantRole(Role.MARKET_HANDLER, lotsTicketer.address);
 
     });
 
@@ -191,6 +202,19 @@ describe("SaleHandler", function() {
 
             });
 
+            it("should indicate support for ISaleEnder interface", async function () {
+
+                // Current interfaceId for ISaleEnder
+                support = await marketController.supportsInterface(InterfaceIds.ISaleEnder);
+
+                // Test
+                await expect(
+                    support,
+                    "ISaleEnder interface not supported"
+                ).is.true;
+
+            });
+
         });
 
     });
@@ -213,6 +237,11 @@ describe("SaleHandler", function() {
             await foreign721.connect(seller).setApprovalForAll(saleHandler.address, true);
             await foreign1155.connect(seller).setApprovalForAll(saleHandler.address, true);
             await seenHausNFT.connect(seller).setApprovalForAll(saleHandler.address, true);
+
+            // Associate approves SaleHandler contract to transfer their tokens
+            await foreign721.connect(associate).setApprovalForAll(saleHandler.address, true);
+            await foreign1155.connect(associate).setApprovalForAll(saleHandler.address, true);
+            await seenHausNFT.connect(associate).setApprovalForAll(saleHandler.address, true);
 
             // Mint a balance of 50 of the token for sale
             tokenURI = "ipfs://QmXBB6qm5vopwJ6ddxb1mEr1Pp87AHd3BUgVbsipCf9hWU";
@@ -267,7 +296,7 @@ describe("SaleHandler", function() {
                                 perTxCap,
                                 audience
                             )
-                        ).to.be.revertedWith("Access denied, caller doesn't have role");
+                        ).to.be.revertedWith("Caller doesn't have role");
 
                         // Test
                         expect(
@@ -348,6 +377,158 @@ describe("SaleHandler", function() {
 
                 });
 
+                context("createSecondarySale()", async function () {
+
+                    it("should fail if external tokens are not allowed to be listed on secondary", async function () {
+
+                        // Get the next consignment id
+                        consignmentId = await marketController.getNextConsignment();
+
+                        // Creator transfers all their tokens to seller
+                        await foreign721.connect(creator).transferFrom(creator.address, seller.address, tokenId);
+
+                        await marketController.connect(admin).setAllowExternalTokensOnSecondary(false);
+
+                        // Seller sends tokens to associate address
+                        await foreign721.connect(seller).transferFrom(seller.address, associate.address, tokenId);
+
+                        await expect(
+                            saleHandler.connect(associate).createSecondarySale(
+                                seller.address,
+                                foreign721.address,
+                                tokenId,
+                                start,
+                                "1",
+                                price,
+                                perTxCap,
+                                audience
+                            )
+                        ).to.be.revertedWith("Listing external tokens is not currently enabled");
+
+                        await marketController.connect(admin).setAllowExternalTokensOnSecondary(true);
+
+                        // Make change, test event
+                        await expect(
+                            saleHandler.connect(associate).createSecondarySale(
+                                seller.address,
+                                foreign721.address,
+                                tokenId,
+                                start,
+                                "1",
+                                price,
+                                perTxCap,
+                                audience
+                            )
+                        ).to.emit(saleHandler, 'SalePending')
+                            .withArgs(
+                                associate.address, // consignor
+                                seller.address,    // seller
+                                [ // Sale
+                                    consignmentId,
+                                    start,
+                                    price,
+                                    perTxCap,
+                                    ethers.BigNumber.from(State.PENDING),
+                                    ethers.BigNumber.from(Outcome.PENDING)
+                                ]
+                            );
+
+
+
+                    });
+
+                    it("should require caller has ESCROW_AGENT role if listing a physical NFT", async function () {
+
+                        let buyerBalance = await seenHausNFT.balanceOf(buyer.address, physicalTokenId);
+                        expect(buyerBalance.eq(0));
+
+                        await saleHandler.connect(escrowAgent).createPrimarySale(
+                            physicalConsignmentId,
+                            start,
+                            price,
+                            perTxCap,
+                            audience
+                        );
+
+                        await time.increaseTo(start);
+
+                        let ticketId = await lotsTicketer.getNextTicket();
+
+                        await expect(
+                            await saleHandler.connect(buyer).buy(physicalConsignmentId, perTxCap, {value: ethers.BigNumber.from(price).mul(ethers.BigNumber.from(perTxCap)).toString()})
+                        ).to.emit(saleHandler, "Purchase")
+
+                        buyerBalance = await seenHausNFT.balanceOf(buyer.address, physicalTokenId);
+                        expect(buyerBalance.eq(0));
+
+                        // Buyer closes sale
+                        await expect(
+                            await saleHandler.connect(buyer).closeSale(physicalConsignmentId)
+                        ).to.emit(saleHandler, "SaleEnded")
+                            .withArgs(
+                                physicalConsignmentId,
+                                Outcome.CLOSED
+                            );
+                        
+                        await expect(
+                            lotsTicketer.connect(buyer).claim(ticketId)
+                        ).to.emit(marketController, 'ConsignmentReleased')
+                            .withArgs(
+                                physicalConsignmentId,
+                                supply,
+                                buyer.address
+                            );
+                        buyerBalance = await seenHausNFT.balanceOf(buyer.address, physicalTokenId);
+                        expect(buyerBalance.eq(perTxCap));
+
+                        // non-ESCROW_AGENT attempt
+                        await expect(
+                            saleHandler.connect(buyer).createSecondarySale(
+                                escrowAgent.address,
+                                tokenAddress,
+                                physicalTokenId,
+                                start,
+                                supply,
+                                price,
+                                perTxCap,
+                                audience
+                            )
+                        ).to.be.revertedWith("Physical NFT secondary listings require ESCROW_AGENT role");
+
+                        // Transfer physical tokens to escrow agent
+                        await seenHausNFT.connect(buyer).safeTransferFrom(
+                            buyer.address,
+                            escrowAgent.address,
+                            physicalTokenId,
+                            supply,
+                            0x0
+                        );
+
+                        let escrowAgentBalance = await seenHausNFT.balanceOf(escrowAgent.address, physicalTokenId);
+                        expect(escrowAgentBalance.eq(supply));
+
+                        await seenHausNFT.connect(escrowAgent).setApprovalForAll(saleHandler.address, true);
+
+                        let latestTime = await time.latest();
+                        start = ethers.BigNumber.from(latestTime.toString()).add('900').toString(); // 15 minutes from latest block
+
+                        // ESCROW_AGENT attempt
+                        await expect(
+                            saleHandler.connect(escrowAgent).createSecondarySale(
+                                escrowAgent.address,
+                                tokenAddress,
+                                physicalTokenId,
+                                start,
+                                supply,
+                                price,
+                                perTxCap,
+                                audience
+                            )
+                        ).to.emit(saleHandler, 'SalePending')
+                    });
+
+                });
+
             });
 
             context("Existing Sales", async function () {
@@ -373,7 +554,7 @@ describe("SaleHandler", function() {
                             consignmentId,
                             Audience.VIP_STAKER
                         )
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role");
 
                     // ADMIN attempt
                     await expect (
@@ -385,7 +566,7 @@ describe("SaleHandler", function() {
 
                 });
 
-                it("cancelSale() should require caller has ADMIN role", async function () {
+                it("cancelSale() should require caller has ADMIN role or is Consigner - Testing ADMIN", async function () {
 
                     // Wait until sale starts and buy
                     await time.increaseTo(start);
@@ -394,11 +575,29 @@ describe("SaleHandler", function() {
                     // non-ADMIN attempt
                     await expect(
                         saleHandler.connect(associate).cancelSale(consignmentId)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role or is not consignor");
 
                     // ADMIN attempt
                     await expect (
                         saleHandler.connect(admin).cancelSale(consignmentId)
+                    ).to.emit(saleHandler,"SaleEnded");
+
+                });
+
+                it("cancelSale() should require caller has ADMIN role or is Consigner - Testing Consignor", async function () {
+
+                    // Wait until sale starts and buy
+                    await time.increaseTo(start);
+                    await saleHandler.connect(buyer).buy(consignmentId, single, {value: price});
+
+                    // non-ADMIN attempt
+                    await expect(
+                        saleHandler.connect(associate).cancelSale(consignmentId)
+                    ).to.be.revertedWith("Caller doesn't have role or is not consignor");
+
+                    // ADMIN attempt
+                    await expect (
+                        saleHandler.connect(seller).cancelSale(consignmentId)
                     ).to.emit(saleHandler,"SaleEnded");
 
                 });
@@ -452,6 +651,9 @@ describe("SaleHandler", function() {
 
                             // Creator transfers all their tokens to seller
                             await foreign721.connect(creator).transferFrom(creator.address, seller.address, tokenId);
+
+                            // Seller transfers all their tokens to associate
+                            await foreign721.connect(seller).transferFrom(seller.address, associate.address, tokenId);
 
                             // Get the next consignment id
                             consignmentId = await marketController.getNextConsignment();
@@ -516,11 +718,17 @@ describe("SaleHandler", function() {
                                     seller.address,    // seller
                                     [ // Consignment
                                         Market.SECONDARY,
+                                        MarketHandler.UNHANDLED,
                                         seller.address,
                                         tokenAddress,
                                         tokenId,
                                         supply,
-                                        consignmentId
+                                        consignmentId,
+                                        false,
+                                        false,
+                                        0,
+                                        0,
+                                        0
                                     ]
                                 )
 
@@ -557,6 +765,9 @@ describe("SaleHandler", function() {
 
                             // Creator transfers all their tokens to seller
                             await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
+
+                            // Creator transfers all their tokens to seller
+                            await foreign1155.connect(seller).safeTransferFrom(seller.address, associate.address, tokenId, supply, []);
 
                             // Get the next consignment id
                             consignmentId = await marketController.getNextConsignment();
@@ -618,11 +829,17 @@ describe("SaleHandler", function() {
                                     seller.address,    // seller
                                     [ // Consignment
                                         Market.SECONDARY,
+                                        MarketHandler.UNHANDLED,
                                         seller.address,
                                         tokenAddress,
                                         tokenId,
                                         supply,
-                                        consignmentId
+                                        consignmentId,
+                                        true,
+                                        false,
+                                        0,
+                                        0,
+                                        0
                                     ]
                                 )
 
@@ -718,8 +935,26 @@ describe("SaleHandler", function() {
                         ).to.emit(saleHandler, "Purchase")
                             .withArgs(
                                 consignmentId,
+                                buyer.address,
                                 single,
-                                buyer.address
+                                price
+                            );
+
+                    });
+
+                    it("should emit a TokenHistoryTracker event", async function () {
+
+                        // Buy and test event
+                        await expect(
+                            await saleHandler.connect(buyer).buy(consignmentId, single, {value: price})
+                        ).to.emit(saleHandler, "TokenHistoryTracker")
+                            .withArgs(
+                                tokenAddress,
+                                tokenId,
+                                buyer.address,
+                                price,
+                                single,
+                                consignmentId,
                             );
 
                     });
@@ -806,6 +1041,101 @@ describe("SaleHandler", function() {
             });
 
         });
+
+        context("Market Handler Assignment", async function () {
+
+            context("Primary Market Sale", async function () {
+
+                it("Assigns a marketHandler of Sale to a consignment immediately after createPrimarySale", async function () {
+                    // Get the consignment id
+                    consignmentId = await marketController.getNextConsignment();
+
+                    // Mint new token on seenHausNFT contract
+                    tokenId = await seenHausNFT.getNextToken();
+                    await seenHausNFT.connect(seller).mintDigital(supply, seller.address, tokenURI, royaltyPercentage);
+
+                    // Seller creates sale
+                    await saleHandler.connect(seller).createPrimarySale(
+                        consignmentId,
+                        start,
+                        price,
+                        perTxCap,
+                        audience
+                    );
+                    
+                    // Get the consignment
+                    const response = await marketController.getConsignment(consignmentId);
+
+                    // Convert to entity
+                    let consignment = new Consignment(
+                        response.market,
+                        response.marketHandler,
+                        response.seller,
+                        response.tokenAddress,
+                        response.tokenId.toString(),
+                        response.supply.toString(),
+                        response.id.toString(),
+                        response.multiToken,
+                        response.released,
+                        response.releasedSupply.toString(),
+                        response.customFeePercentageBasisPoints.toString(),
+                        response.pendingPayout.toString(),
+                    );
+
+                    // Consignment should have a market handler of MarketHandler.Sale
+                    expect(consignment.marketHandler === MarketHandler.SALE).is.true;
+                })
+
+            })
+
+            context("Secondary Market Sale", async function () {
+                it("Assigns a marketHandler of Sale to a consignment immediately after createSecondarySale", async function () {
+                    // Token is on a foreign contract
+                    tokenAddress = foreign1155.address;
+
+                    // Creator transfers all their tokens to seller
+                    await foreign1155.connect(creator).safeTransferFrom(creator.address, seller.address, tokenId, supply, []);
+
+                    // Get the consignment id
+                    consignmentId = await marketController.getNextConsignment();
+
+                    // Seller creates auction
+                    await saleHandler.connect(seller).createSecondarySale(
+                        seller.address,
+                        tokenAddress,
+                        tokenId,
+                        start,
+                        quantity,
+                        price,
+                        perTxCap,
+                        audience
+                    );
+
+                    // Get the consignment
+                    const response = await marketController.getConsignment(consignmentId);
+
+                    // Convert to entity
+                    let consignment = new Consignment(
+                        response.market,
+                        response.marketHandler,
+                        response.seller,
+                        response.tokenAddress,
+                        response.tokenId.toString(),
+                        response.supply.toString(),
+                        response.id.toString(),
+                        response.multiToken,
+                        response.released,
+                        response.releasedSupply.toString(),
+                        response.customFeePercentageBasisPoints.toString(),
+                        response.pendingPayout.toString(),
+                    );
+
+                    // Consignment should have a market handler of MarketHandler.Auction
+                    expect(consignment.marketHandler === MarketHandler.SALE).is.true;
+                });
+            })
+
+        })
 
         context("Sale Behavior", async function () {
 
@@ -945,24 +1275,6 @@ describe("SaleHandler", function() {
 
                     });
 
-                    it("should revert if start time is in the past", async function () {
-
-                        // 15 minutes before latest block
-                        badStartTime = ethers.BigNumber.from(block.timestamp).sub('900').toString();
-
-                        // Create auction, expect revert
-                        await expect(
-                            saleHandler.connect(seller).createPrimarySale(
-                                consignmentId,
-                                badStartTime,
-                                price,
-                                perTxCap,
-                                audience
-                            )
-                        ).to.be.revertedWith('Time runs backward?');
-
-                    });
-
                 });
 
                 context("createSecondarySale()", async function () {
@@ -974,27 +1286,6 @@ describe("SaleHandler", function() {
 
                         // Token is on a foreign contract
                         tokenAddress = foreign1155.address;
-
-                    });
-
-                    it("should revert if start time is in the past", async function () {
-
-                        // 15 minutes before latest block
-                        badStartTime = ethers.BigNumber.from(block.timestamp).sub('900').toString();
-
-                        // Create sale, expect revert
-                        await expect(
-                            saleHandler.connect(seller).createSecondarySale(
-                                seller.address,
-                                tokenAddress,
-                                tokenId,
-                                badStartTime,
-                                quantity,
-                                price,
-                                perTxCap,
-                                audience
-                            )
-                        ).to.be.revertedWith('Time runs backward?');
 
                     });
 
@@ -1097,7 +1388,7 @@ describe("SaleHandler", function() {
                                 consignmentId,
                                 Audience.OPEN
                             )
-                        ).to.be.revertedWith("Sale does not exist");
+                        ).to.be.revertedWith("already settled or non-existent");
 
                     });
 
@@ -1115,7 +1406,7 @@ describe("SaleHandler", function() {
                                 consignmentId,
                                 Audience.VIP_STAKER
                             )
-                        ).to.be.revertedWith("Sale has already been settled");
+                        ).to.be.revertedWith("already settled or non-existent");
 
                     });
 
@@ -1152,17 +1443,7 @@ describe("SaleHandler", function() {
                         // ADMIN attempts to set cancel when sale doesn't exist
                         await expect(
                             saleHandler.connect(buyer).buy(consignmentId, single, {value: price})
-                        ).to.be.revertedWith("Sale does not exist");
-
-                    });
-
-                    it("should revert if buyer is a contract", async function () {
-
-                        // Try to buy with a contract
-                        signer = new ethers.VoidSigner(lotsTicketer.address, ethers.provider)
-                        await expect(
-                            saleHandler.connect(signer).callStatic.buy(consignmentId, single, {value: price})
-                        ).to.be.revertedWith("Contracts may not buy");
+                        ).to.be.revertedWith("Sale hasn't started or non-existent");
 
                     });
 
@@ -1177,7 +1458,7 @@ describe("SaleHandler", function() {
                         // Try to buy
                         await expect(
                             saleHandler.connect(buyer).buy(consignmentId, single, {value: price})
-                        ).to.be.revertedWith("Buyer is not a staker");
+                        ).to.be.revertedWith("");
 
                     });
 
@@ -1192,7 +1473,7 @@ describe("SaleHandler", function() {
                         // Try to buy
                         await expect(
                             saleHandler.connect(buyer).buy(consignmentId, single, {value: price})
-                        ).to.be.revertedWith("Buyer is not a VIP staker");
+                        ).to.be.revertedWith("");
 
                     });
 
@@ -1203,16 +1484,16 @@ describe("SaleHandler", function() {
                         // Try to buy entire supply when per tx cap is lower
                         await expect(
                             saleHandler.connect(buyer).buy(consignmentId, supply, {value: total})
-                        ).to.be.revertedWith("Per transaction limit for this sale exceeded");
+                        ).to.be.revertedWith("Per tx limit exceeded");
 
                     });
 
-                    it("should revert if payment does not cover order price", async function () {
+                    it("should revert if Value doesn't cover price", async function () {
 
                         // Try to buy two and pay for one
                         await expect(
                             saleHandler.connect(buyer).buy(consignmentId, "2", {value: price})
-                        ).to.be.revertedWith("Payment does not cover order price");
+                        ).to.be.revertedWith("Value doesn't cover price");
 
                     });
 
@@ -1261,7 +1542,7 @@ describe("SaleHandler", function() {
                         // ADMIN attempts to close a sale that has been settled
                         await expect(
                             saleHandler.connect(seller).closeSale(consignmentId)
-                        ).to.be.revertedWith("Sale has already been settled");
+                        ).to.be.revertedWith("Sale isn't currently running");
 
                     });
 
@@ -1270,7 +1551,7 @@ describe("SaleHandler", function() {
                         // ADMIN attempts to close a sale that hasn't even started
                         await expect(
                             saleHandler.connect(seller).closeSale(consignmentId)
-                        ).to.be.revertedWith("Sale hasn't started");
+                        ).to.be.revertedWith("Sale isn't currently running");
 
                     });
 
@@ -1331,7 +1612,7 @@ describe("SaleHandler", function() {
 
         context("Funds Distribution", async function () {
 
-            context("Primary Market", async function () {
+            context("Primary Market With Default Fee", async function () {
 
                 beforeEach(async function () {
 
@@ -1351,7 +1632,7 @@ describe("SaleHandler", function() {
 
                     // Calculate the expected distribution of funds
                     grossSale = ethers.BigNumber.from(buyOutPrice);
-                    feeAmount = grossSale.mul(feePercentage).div("10000");
+                    feeAmount = grossSale.mul(primaryFeePercentage).div("10000");
                     multisigAmount = feeAmount.div("2");
                     stakingAmount = feeAmount.div("2");
                     sellerAmount = grossSale.sub(feeAmount);
@@ -1390,9 +1671,78 @@ describe("SaleHandler", function() {
 
             });
 
+            context("Primary Market With Custom Fee", async function () {
+
+                beforeEach(async function () {
+
+                    // Seller creates digital token
+                    consignmentId = await marketController.getNextConsignment();
+                    await seenHausNFT.connect(seller).mintDigital(supply, seller.address, tokenURI, royaltyPercentage);
+
+                    // SELLER creates primary market sale
+                    market = Market.PRIMARY;
+                    await saleHandler.connect(seller).createPrimarySale(
+                        consignmentId,
+                        start,
+                        price,
+                        perTxCap,
+                        audience
+                    );
+
+                    // Set custom fee on consignment
+                    await marketController.connect(admin).setConsignmentCustomFee(
+                        consignmentId,
+                        customFeePercentageBasisPoints
+                    );
+
+                    // Wait until sale starts and bid
+                    await time.increaseTo(start);
+                    await saleHandler.connect(buyer).buy(consignmentId, supply, {value: buyOutPrice});
+
+                    // Calculate the expected distribution of funds
+                    grossSaleWithCustomFee = ethers.BigNumber.from(buyOutPrice);
+                    feeAmountWithCustomFee = grossSaleWithCustomFee.mul(customFeePercentageBasisPoints).div("10000");
+                    multisigAmountWithCustomFee = feeAmountWithCustomFee.div("2");
+                    stakingAmountWithCustomFee = feeAmountWithCustomFee.div("2");
+                    sellerAmountWithCustomFee = grossSaleWithCustomFee.sub(feeAmountWithCustomFee);
+
+                });
+
+                it("multisig contract should be sent half the marketplace fee based on gross", async function () {
+
+                    // Seller closes sale
+                    await expect(
+                        saleHandler.connect(seller).closeSale(consignmentId)
+                    ).to.emit(saleHandler, "FeeDisbursed")
+                        .withArgs(consignmentId, multisig.address, multisigAmountWithCustomFee);
+
+                });
+
+                it("staking contract should be sent half the marketplace fee based on gross", async function () {
+
+                    // Seller closes sale
+                    await expect(
+                        saleHandler.connect(seller).closeSale(consignmentId)
+                    ).to.emit(saleHandler, "FeeDisbursed")
+                        .withArgs(consignmentId, seenStaking.address, stakingAmountWithCustomFee);
+
+                });
+
+                it("seller should be sent remainder after marketplace fee", async function () {
+
+                    // Seller closes sale
+                    await expect(
+                        saleHandler.connect(seller).closeSale(consignmentId)
+                    ).to.emit(saleHandler, "PayoutDisbursed")
+                        .withArgs(consignmentId, seller.address, sellerAmountWithCustomFee);
+
+                });
+
+            });
+
             context("Secondary Market", async function () {
 
-                context("Foriegn ERC-721", async function () {
+                context("Foreign ERC-721", async function () {
 
                     beforeEach(async function () {
 
@@ -1428,10 +1778,10 @@ describe("SaleHandler", function() {
                         grossSale = ethers.BigNumber.from(price);
                         royaltyAmount = grossSale.mul(royaltyPercentage).div("10000");
                         netAfterRoyalties = grossSale.sub(royaltyAmount);
-                        feeAmount = netAfterRoyalties.mul(feePercentage).div("10000");
-                        multisigAmount = feeAmount.div("2");
+                        feeAmount = grossSale.mul(secondaryFeePercentage).div("10000");
                         stakingAmount = feeAmount.div("2");
-                        sellerAmount = netAfterRoyalties.sub(feeAmount);
+                        multisigAmount = feeAmount.sub(stakingAmount);
+                        sellerAmount = grossSale.sub(feeAmount).sub(royaltyAmount);
 
                     });
 
@@ -1477,7 +1827,7 @@ describe("SaleHandler", function() {
 
                 });
 
-                context("Foriegn ERC-1155", async function () {
+                context("Foreign ERC-1155", async function () {
 
                     beforeEach(async function () {
 
@@ -1510,10 +1860,10 @@ describe("SaleHandler", function() {
                         grossSale = ethers.BigNumber.from(buyOutPrice);
                         royaltyAmount = grossSale.mul(royaltyPercentage).div("10000");
                         netAfterRoyalties = grossSale.sub(royaltyAmount);
-                        feeAmount = netAfterRoyalties.mul(feePercentage).div("10000");
+                        feeAmount = grossSale.mul(secondaryFeePercentage).div("10000");
                         multisigAmount = feeAmount.div("2");
-                        stakingAmount = feeAmount.div("2");
-                        sellerAmount = netAfterRoyalties.sub(feeAmount);
+                        stakingAmount = feeAmount.sub(multisigAmount);
+                        sellerAmount = grossSale.sub(feeAmount).sub(royaltyAmount);
 
                     });
 
@@ -1631,13 +1981,13 @@ describe("SaleHandler", function() {
                     it("should transfer consigned balance of token to buyer if digital", async function () {
 
                         // Get contract balance of token
-                        contractBalance = await marketController.getSupply(tokenId);
+                        contractBalance = await marketController.getUnreleasedSupply(tokenId);
 
                         // Seller closes sale
                         await saleHandler.connect(seller).closeSale(consignmentId);
 
                         // Get contract's new balance of token
-                        newBalance = await marketController.getSupply(tokenId);
+                        newBalance = await marketController.getUnreleasedSupply(tokenId);
                         expect(contractBalance.sub(supply).eq(newBalance));
 
                         // Get buyer's new balance of token
@@ -1706,7 +2056,7 @@ describe("SaleHandler", function() {
                         await saleHandler.connect(admin).cancelSale(consignmentId);
 
                         // Get contract's new balance of token
-                        newBalance = await marketController.getSupply(tokenId);
+                        newBalance = await marketController.getUnreleasedSupply(tokenId);
                         expect(contractBalance.sub(supply).eq(newBalance));
 
                         // Get seller's new balance of token
@@ -1721,11 +2071,11 @@ describe("SaleHandler", function() {
                         await saleHandler.connect(admin).cancelSale(physicalConsignmentId);
 
                         // Get contract's new balance of token
-                        newBalance = await marketController.getSupply(physicalTokenId);
+                        newBalance = await marketController.getUnreleasedSupply(physicalTokenId);
                         expect(contractBalance.sub(supply).eq(newBalance));
 
                         // Get seller's new balance of token
-                        sellerBalance = await marketController.getSupply(physicalTokenId);
+                        sellerBalance = await marketController.getUnreleasedSupply(physicalTokenId);
                         expect(buyerBalance.eq(contractBalance));
 
                     });
@@ -1775,11 +2125,8 @@ describe("SaleHandler", function() {
 
             it("supply() should return the remaining supply of a consignment on sale", async function () {
 
-                // Create consignment
-                consignment = new Consignment(market, seller.address, tokenAddress, tokenId, consignmentId);
-
                 // Get the supply from the MarketController
-                let result = await marketController.getSupply(consignmentId);
+                let result = await marketController.getUnreleasedSupply(consignmentId);
 
                 // Test result
                 expect(
@@ -1794,7 +2141,7 @@ describe("SaleHandler", function() {
                 await saleHandler.connect(buyer).buy(consignmentId, single, {value: price})
 
                 // Check supply again
-                result = await marketController.getSupply(consignmentId);
+                result = await marketController.getUnreleasedSupply(consignmentId);
 
                 // Test result
                 expect(

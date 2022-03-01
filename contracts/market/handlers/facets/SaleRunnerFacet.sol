@@ -25,7 +25,7 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
     modifier onlyUnInitialized()
     {
         MarketHandlerLib.MarketHandlerInitializers storage mhi = MarketHandlerLib.marketHandlerInitializers();
-        require(!mhi.saleRunnerFacet, "Initializer: contract is already initialized");
+        require(!mhi.saleRunnerFacet, "already initialized");
         mhi.saleRunnerFacet = true;
         _;
     }
@@ -65,8 +65,7 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
 
         // Make sure the sale exists and hasn't been settled
         Sale storage sale = mhs.sales[consignment.id];
-        require(sale.start != 0, "Sale does not exist");
-        require(sale.state != State.Ended, "Sale has already been settled");
+        require((sale.state != State.Ended) && (sale.start != 0), "already settled or non-existent");
 
         // Set the new audience for the consignment
         setAudience(_consignmentId, _audience);
@@ -104,15 +103,11 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
         // Get the consignment
         Consignment memory consignment = getMarketController().getConsignment(_consignmentId);
 
-        // Make sure the sale exists
+        // Make sure we can accept the buy order & that the sale exists
         Sale storage sale = mhs.sales[_consignmentId];
-        require(sale.start != 0, "Sale does not exist");
-
-        // Make sure we can accept the buy order
-        require(block.timestamp >= sale.start, "Sale hasn't started");
-        require(!AddressUpgradeable.isContract(msg.sender), "Contracts may not buy");
-        require(_amount <= sale.perTxCap, "Per transaction limit for this sale exceeded");
-        require(msg.value == sale.price * _amount, "Payment does not cover order price");
+        require((block.timestamp >= sale.start) && (sale.start != 0), "Sale hasn't started or non-existent");
+        require(_amount <= sale.perTxCap, "Per tx limit exceeded");
+        require(msg.value == sale.price * _amount, "Value doesn't cover price");
 
         // If this was the first successful purchase...
         if (sale.state == State.Pending) {
@@ -124,6 +119,9 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
             emit SaleStarted(_consignmentId);
 
         }
+
+        uint256 pendingPayoutValue = consignment.pendingPayout + msg.value;
+        getMarketController().setConsignmentPendingPayout(consignment.id, pendingPayoutValue);
 
         // Determine if consignment is physical
         address nft = getMarketController().getNft();
@@ -141,23 +139,28 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
         }
 
         // Announce the purchase
-        emit Purchase(consignment.id, _amount, msg.sender);
+        emit Purchase(consignment.id, msg.sender, _amount, msg.value);
+
+        // Track the sale info against the token itself
+        emit TokenHistoryTracker(consignment.tokenAddress, consignment.tokenId, msg.sender, msg.value, _amount, consignment.id);
     }
 
     /**
-     * @notice Close out a successfully completed sale.
+     * @notice Claim a pending payout on an ongoing sale without closing/cancelling
      *
      * Funds are disbursed as normal. See: {MarketHandlerBase.disburseFunds}
      *
      * Reverts if:
      * - Sale doesn't exist or hasn't started
-     * - There is remaining inventory
+     * - There is no pending payout
+     * - Called by any address other than seller
+     * - The sale is sold out (in which case closeSale should be called)
      *
-     * Emits a SaleEnded event.
+     * Does not emit its own event, but disburseFunds emits an event
      *
      * @param _consignmentId - id of the consignment being sold
      */
-    function closeSale(uint256 _consignmentId)
+    function claimPendingPayout(uint256 _consignmentId)
     external
     override
     {
@@ -167,77 +170,19 @@ contract SaleRunnerFacet is ISaleRunner, MarketHandlerBase {
         // Get consignment
         Consignment memory consignment = getMarketController().getConsignment(_consignmentId);
 
-        // Make sure the sale exists and can be closed normally
-        Sale storage sale = mhs.sales[_consignmentId];
-        require(sale.start != 0, "Sale does not exist");
-        require(sale.state != State.Ended, "Sale has already been settled");
-        require(sale.state == State.Running, "Sale hasn't started");
+        // Ensure that there is a pending payout & that caller is the seller
+        require((consignment.pendingPayout > 0) && (consignment.seller == msg.sender));
 
-        // Mark sale as settled
-        sale.state = State.Ended;
-        sale.outcome = Outcome.Closed;
+        // Ensure that the sale has not yet sold out
+        require((consignment.supply - consignment.releasedSupply) > 0, "sold out - use closeSale");
+
+        // Make sure the sale exists and is running
+        Sale storage sale = mhs.sales[_consignmentId];
+        require((sale.state == State.Running) && (sale.start != 0), "Sale hasn't started or non-existent");
 
         // Distribute the funds (handles royalties, staking, multisig, and seller)
-        disburseFunds(_consignmentId, consignment.supply * sale.price);
-
-        // Notify listeners about state change
-        emit SaleEnded(_consignmentId, sale.outcome);
-
-    }
-
-    /**
-     * @notice Cancel a sale that has remaining inventory.
-     *
-     * Remaining tokens are returned to seller. If there have been any purchases,
-     * the funds are distributed normally.
-     *
-     * Reverts if:
-     * - Caller doesn't have ADMIN role
-     * - Sale doesn't exist or has already been settled
-     *
-     * Emits a SaleEnded event
-     *
-     * @param _consignmentId - id of the consignment being sold
-     */
-    function cancelSale(uint256 _consignmentId)
-    external
-    override
-    onlyRole(ADMIN)
-    {
-        // Get Market Handler Storage slot
-        MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
-
-        // Get the consignment
-        Consignment memory consignment = getMarketController().getConsignment(_consignmentId);
-
-        // Make sure the sale exists and can canceled
-        Sale storage sale = mhs.sales[_consignmentId];
-        require(sale.start != 0, "Sale does not exist");
-        require(sale.state != State.Ended, "Sale has already been settled");
-
-        // Mark sale as settled
-        sale.state = State.Ended;
-        sale.outcome = Outcome.Canceled;
-
-        // Determine the amount sold and remaining
-        uint256 remaining = getMarketController().getSupply(_consignmentId);
-        uint256 sold = consignment.supply - remaining;
-
-        // Disburse the funds for the sold items
-        if (sold > 0) {
-            uint256 salesTotal = sold * sale.price;
-            disburseFunds(_consignmentId, salesTotal);
-        }
-
-        if (remaining > 0) {
-
-            // Transfer the remaining supply back to the seller
-            getMarketController().releaseConsignment(_consignmentId, remaining, consignment.seller);
-
-        }
-
-        // Notify listeners about state change
-        emit SaleEnded(_consignmentId, sale.outcome);
+        getMarketController().setConsignmentPendingPayout(consignment.id, 0);
+        disburseFunds(_consignmentId, consignment.pendingPayout);
 
     }
 

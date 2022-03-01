@@ -14,15 +14,23 @@ const ethers = hre.ethers;
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-async function deployMarketControllerFacets(diamond, marketConfig, gasLimit) {
+async function deployMarketControllerFacets(diamond, marketConfig, marketConfigAdditional, gasLimit, awaitAcceptableGas, maxAcceptableGasPrice) {
 
     // Deploy the MarketConfig Facet
     const MarketConfigFacet = await ethers.getContractFactory("MarketConfigFacet");
+    await awaitAcceptableGas(maxAcceptableGasPrice);
     const marketConfigFacet = await MarketConfigFacet.deploy({gasLimit});
     await marketConfigFacet.deployed();
 
-    // sDeploy the MarketClerkFacet Facet
+    // Deploy the MarketConfigAdditional Facet (needed due to contract size of MarketConfig)
+    const MarketConfigAdditionalFacet = await ethers.getContractFactory("MarketConfigAdditionalFacet");
+    await awaitAcceptableGas(maxAcceptableGasPrice);
+    const marketConfigAdditionalFacet = await MarketConfigAdditionalFacet.deploy({gasLimit});
+    await marketConfigAdditionalFacet.deployed();
+
+    // Deploy the MarketClerkFacet Facet
     const MarketClerkFacet = await ethers.getContractFactory("MarketClerkFacet");
+    await awaitAcceptableGas(maxAcceptableGasPrice);
     const marketClerkFacet = await MarketClerkFacet.deploy({gasLimit});
     await marketClerkFacet.deployed();
 
@@ -30,20 +38,30 @@ async function deployMarketControllerFacets(diamond, marketConfig, gasLimit) {
     const cutFacet = await ethers.getContractAt('DiamondCutFacet', diamond.address);
 
     // Cut MarketConfig facet, initializing
-    let configInitFunction = "initialize(address payable _staking, address payable _multisig, uint256 _vipStakerAmount, uint16 _feePercentage, uint16 _maxRoyaltyPercentage, uint16 _outBidPercentage, uint8 _defaultTicketerType)";
+    let configInitFunction = "initialize(address payable _staking, address payable _multisig, uint256 _vipStakerAmount, uint16 _primaryFeePercentage, uint16 _secondaryFeePercentage, uint16 _maxRoyaltyPercentage, uint16 _outBidPercentage, uint8 _defaultTicketerType)";
     const configInterface = new ethers.utils.Interface([`function ${configInitFunction}`]);
     const configCallData = configInterface.encodeFunctionData("initialize", marketConfig);
     const marketConfigCut = getFacetAddCut(marketConfigFacet, [configInitFunction]);
+    await awaitAcceptableGas(maxAcceptableGasPrice);
     await cutFacet.diamondCut([marketConfigCut], marketConfigFacet.address, configCallData, {gasLimit});
+
+    // Cut MarketConfigAdditional facet, initializing
+    let configAdditionalInitFunction = "initialize(bool _allowExternalTokensOnSecondary)";
+    const configAdditionalInterface = new ethers.utils.Interface([`function ${configAdditionalInitFunction}`]);
+    const configAdditionalCallData = configAdditionalInterface.encodeFunctionData("initialize", marketConfigAdditional);
+    const marketConfigAdditionalCut = getFacetAddCut(marketConfigAdditionalFacet, [configAdditionalInitFunction]);
+    await awaitAcceptableGas(maxAcceptableGasPrice);
+    await cutFacet.diamondCut([marketConfigAdditionalCut], marketConfigAdditionalFacet.address, configAdditionalCallData, {gasLimit});
 
     // Cut MarketClerk facet, initializing
     let clerkInitFunction = "initialize()";
     const clerkInterface = new ethers.utils.Interface([`function ${clerkInitFunction}`]);
     const clerkCallData = clerkInterface.encodeFunctionData("initialize");
     const marketClerkCut = getFacetAddCut(marketClerkFacet, ['supportsInterface(bytes4)', clerkInitFunction]);
+    await awaitAcceptableGas(maxAcceptableGasPrice);
     await cutFacet.diamondCut([marketClerkCut], marketClerkFacet.address, clerkCallData, {gasLimit});
 
-    return [marketConfigFacet, marketClerkFacet];
+    return [marketConfigFacet, marketConfigAdditionalFacet, marketClerkFacet];
 }
 
 if (require.main === module) {

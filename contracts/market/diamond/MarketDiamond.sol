@@ -37,7 +37,7 @@ contract MarketDiamond {
         IAccessControlUpgradeable _accessController,
         IDiamondCut.FacetCut[] memory _facetCuts,
         bytes4[] memory _interfaceIds
-    ) payable {
+    ) {
 
         // Get the DiamondStorage struct
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();

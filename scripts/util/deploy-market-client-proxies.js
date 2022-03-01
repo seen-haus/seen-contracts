@@ -1,5 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
+const { nftOwner } = require('../constants/role-assignments');
 
 /**
  * Deploy the Market Client Proxy contracts
@@ -21,25 +22,43 @@ const ethers = hre.ethers;
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-async function deployMarketClientProxies(marketClients, marketClientArgs, gasLimit) {
+async function deployMarketClientProxies(marketClients, marketClientArgs, gasLimit, awaitAcceptableGas, maxAcceptableGasPrice) {
 
     // Destructure the market client implementations
     [lotsTicketerImpl, itemsTicketerImpl, seenHausNFTImpl] = marketClients;
 
     // Deploy the LotsTicketer Proxy
     const LotsTicketerProxy = await ethers.getContractFactory("MarketClientProxy");
+    await awaitAcceptableGas(maxAcceptableGasPrice);
     const lotsTicketerProxy = await LotsTicketerProxy.deploy(...marketClientArgs, lotsTicketerImpl.address, {gasLimit});
     await lotsTicketerProxy.deployed();
 
+    const LotsTicketerImpl = await ethers.getContractFactory("LotsTicketer");
+    await awaitAcceptableGas(maxAcceptableGasPrice);
+    const lotsTicketerImplAttached = await LotsTicketerImpl.attach(lotsTicketerProxy.address);
+    await lotsTicketerImplAttached.initialize();
+
     // Deploy the ItemsTicketer proxy
     const ItemsTicketerProxy = await ethers.getContractFactory("MarketClientProxy");
+    await awaitAcceptableGas(maxAcceptableGasPrice);
     const itemsTicketerProxy = await ItemsTicketerProxy.deploy(...marketClientArgs, itemsTicketerImpl.address, {gasLimit});
     await itemsTicketerProxy.deployed();
 
+    const ItemsTicketerImpl = await ethers.getContractFactory("ItemsTicketer");
+    const ItemsTicketerImplAttached = await ItemsTicketerImpl.attach(itemsTicketerProxy.address);
+    await awaitAcceptableGas(maxAcceptableGasPrice);
+    await ItemsTicketerImplAttached.initialize();
+
     // Deploy the SeenHausNFT proxy
     const SeenHausNFTProxy = await ethers.getContractFactory("MarketClientProxy");
+    await awaitAcceptableGas(maxAcceptableGasPrice);
     const seenHausNFTProxy = await SeenHausNFTProxy.deploy(...marketClientArgs, seenHausNFTImpl.address, {gasLimit});
     await seenHausNFTProxy.deployed();
+
+    const SeenHausNFTImpl = await ethers.getContractFactory("SeenHausNFT");
+    const SeenHausNFTImplAttached = await SeenHausNFTImpl.attach(seenHausNFTProxy.address);
+    await awaitAcceptableGas(maxAcceptableGasPrice);
+    await SeenHausNFTImplAttached.initialize(nftOwner);
 
     return [lotsTicketerProxy, itemsTicketerProxy, seenHausNFTProxy];
 

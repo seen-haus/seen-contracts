@@ -1,6 +1,7 @@
 const NODE = (typeof module !== 'undefined' && typeof module.exports !== 'undefined');
 const ethers = require("ethers");
 const Market = require("./Market");
+const MarketHandler = require("./MarketHandler");
 const eip55 = require("eip55");
 
 /**
@@ -12,16 +13,19 @@ const eip55 = require("eip55");
  */
 class Consignment {
 
-    constructor (market, seller, tokenAddress, tokenId, supply, id, multiToken, marketed, released) {
+    constructor (market, marketHandler, seller, tokenAddress, tokenId, supply, id, multiToken, released, releasedSupply, customFeePercentageBasisPoints, pendingPayout) {
         this.market = market;
+        this.marketHandler = marketHandler;
         this.seller = seller;
         this.tokenAddress = tokenAddress;
         this.tokenId = tokenId;
         this.supply = supply;
         this.id = id;
         this.multiToken = multiToken;
-        this.marketed = marketed;
         this.released = released;
+        this.releasedSupply = releasedSupply;
+        this.customFeePercentageBasisPoints = customFeePercentageBasisPoints;
+        this.pendingPayout = pendingPayout;
     }
 
     /**
@@ -30,8 +34,8 @@ class Consignment {
      * @returns {Consignment}
      */
     static fromObject(o) {
-        const {market, seller, tokenAddress, tokenId, supply, id, multiToken, marketed, released} = o;
-        return new Consignment(market, seller, tokenAddress, tokenId, supply, id, multiToken, marketed, released);
+        const {market, marketHandler, seller, tokenAddress, tokenId, supply, id, multiToken, released, releasedSupply, customFeePercentageBasisPoints, pendingPayout} = o;
+        return new Consignment(market, marketHandler, seller, tokenAddress, tokenId, supply, id, multiToken, released, releasedSupply, customFeePercentageBasisPoints, pendingPayout);
     }
 
     /**
@@ -68,6 +72,21 @@ class Consignment {
         try {
             valid = (
                 Market.Markets.includes(market)
+            );
+        } catch (e) {}
+        return valid;
+    }
+
+    /**
+     * Is this Consignment instance's marketHandler field valid?
+     * @returns {boolean}
+     */
+     marketHandlerIsValid() {
+        let valid = false;
+        let {marketHandler} = this;
+        try {
+            valid = (
+                MarketHandler.MarketHandlers.includes(marketHandler)
             );
         } catch (e) {}
         return valid;
@@ -172,21 +191,6 @@ class Consignment {
     }
 
     /**
-     * Is this Consignment instance's marketed field valid?
-     * @returns {boolean}
-     */
-    marketedIsValid() {
-        let valid = false;
-        let {marketed} = this;
-        try {
-            valid = (
-                typeof marketed === "boolean"
-            );
-        } catch (e) {}
-        return valid;
-    }
-
-    /**
      * Is this Consignment instance's released field valid?
      * @returns {boolean}
      */
@@ -201,6 +205,62 @@ class Consignment {
         return valid;
     }
 
+    /**
+     * Is this Consignment instance's releasedSupply field valid?
+     * Must be a string that converts to a valid BigNumber
+     * @returns {boolean}
+     */
+    releasedSupplyIsValid() {
+        let { releasedSupply } = this;
+        let valid = false;
+        try {
+            valid = (
+                typeof releasedSupply === "string" &&
+                ethers.BigNumber.from(releasedSupply).gte("0")
+            )
+        } catch(e){}
+        return valid;
+    }
+
+    /**
+     * Is this Token instance's royaltyPercentage field valid?
+     * Must be a string that converts to a positive BigNumber
+     * Must represent between 1% and 100%
+     *
+     * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
+     *
+     * @returns {boolean}
+     */
+    customFeePercentageBasisPointsIsValid() {
+        let { customFeePercentageBasisPoints } = this;
+        let valid = false;
+        try {
+            valid = (
+                typeof customFeePercentageBasisPoints === "string" &&
+                ethers.BigNumber.from(customFeePercentageBasisPoints).gte("0") &&
+                ethers.BigNumber.from(customFeePercentageBasisPoints).lte("10000")
+            )
+        } catch(e){}
+        return valid;
+    }
+
+    /**
+     * Is this Consignment instance's pendingPayout field valid?
+     * Must be a string that converts to a valid BigNumber
+     * @returns {boolean}
+     */
+    pendingPayoutIsValid() {
+        let { pendingPayout } = this;
+        let valid = false;
+        try {
+            valid = (
+                typeof pendingPayout === "string" &&
+                ethers.BigNumber.from(pendingPayout).gte("0")
+            )
+        } catch(e){}
+        return valid;
+    }
 
     /**
      * Is this Consignment instance valid?
@@ -209,14 +269,17 @@ class Consignment {
     isValid() {
         return (
             this.marketIsValid() &&
+            this.marketHandlerIsValid() &&
             this.sellerIsValid() &&
             this.tokenAddressIsValid() &&
             this.tokenIdIsValid() &&
             this.supplyIsValid() &&
             this.idIsValid() &&
             this.multiTokenIsValid() &&
-            this.marketedIsValid() &&
-            this.releasedIsValid()
+            this.releasedIsValid() &&
+            this.releasedSupplyIsValid() &&
+            this.customFeePercentageBasisPointsIsValid() &&
+            this.pendingPayoutIsValid()
         );
     };
 

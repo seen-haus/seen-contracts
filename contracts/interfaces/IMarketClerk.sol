@@ -10,14 +10,16 @@ import "../domain/SeenTypes.sol";
  *
  * @notice Manages consignments for the Seen.Haus contract suite.
  *
- * The ERC-165 identifier for this interface is: 0xab572e9c
+ * The ERC-165 identifier for this interface is: 0xec74481a
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 interface IMarketClerk is IERC1155ReceiverUpgradeable, IERC721ReceiverUpgradeable {
 
     /// Events
-    event ConsignmentTicketerChanged(uint256 consignmentId, SeenTypes.Ticketer indexed ticketerType);
+    event ConsignmentTicketerChanged(uint256 indexed consignmentId, SeenTypes.Ticketer indexed ticketerType);
+    event ConsignmentFeeChanged(uint256 indexed consignmentId, uint16 customConsignmentFee);
+    event ConsignmentPendingPayoutSet(uint256 indexed consignmentId, uint256 amount);
     event ConsignmentRegistered(address indexed consignor, address indexed seller, SeenTypes.Consignment consignment);
     event ConsignmentMarketed(address indexed consignor, address indexed seller, uint256 indexed consignmentId);
     event ConsignmentReleased(uint256 indexed consignmentId, uint256 amount, address releasedTo);
@@ -38,16 +40,15 @@ interface IMarketClerk is IERC1155ReceiverUpgradeable, IERC721ReceiverUpgradeabl
      * @param _consignmentId - the id of the consignment
      * @return uint256 - the remaining supply held by the MarketController
      */
-    function getSupply(uint256 _consignmentId) external view returns(uint256);
+    function getUnreleasedSupply(uint256 _consignmentId) external view returns(uint256);
 
     /**
-     * @notice Is the caller the consignor of the given consignment?
+     * @notice Get the consignor of the given consignment
      *
-     * @param _account - the _account to check
      * @param _consignmentId - the id of the consignment
-     * @return  bool - true if caller is consignor
+     * @return  address - consigner's address
      */
-    function isConsignor(uint256 _consignmentId, address _account) external view returns(bool);
+    function getConsignor(uint256 _consignmentId) external view returns(address);
 
     /**
      * @notice Registers a new consignment for sale or auction.
@@ -80,10 +81,11 @@ interface IMarketClerk is IERC1155ReceiverUpgradeable, IERC721ReceiverUpgradeabl
       * Emits a ConsignmentMarketed event.
       *
       * Reverts if consignment has already been marketed.
+      * A consignment is considered as marketed if it has a marketHandler other than Unhandled. See: {SeenTypes.MarketHandler}
       *
       * @param _consignmentId - the id of the consignment
       */
-    function marketConsignment(uint256 _consignmentId) external;
+    function marketConsignment(uint256 _consignmentId, SeenTypes.MarketHandler _marketHandler) external;
 
     /**
      * @notice Release the consigned item to a given address
@@ -99,6 +101,20 @@ interface IMarketClerk is IERC1155ReceiverUpgradeable, IERC721ReceiverUpgradeabl
     function releaseConsignment(uint256 _consignmentId, uint256 _amount, address _releaseTo) external;
 
     /**
+     * @notice Clears the pending payout value of a consignment
+     *
+     * Emits a ConsignmentPayoutSet event.
+     *
+     * Reverts if:
+     *  - caller is does not have MARKET_HANDLER role.
+     *  - consignment doesn't exist
+     *
+     * @param _consignmentId - the id of the consignment
+     * @param _amount - the amount of that the consignment's pendingPayout must be set to
+     */
+    function setConsignmentPendingPayout(uint256 _consignmentId, uint256 _amount) external;
+
+    /**
      * @notice Set the type of Escrow Ticketer to be used for a consignment
      *
      * Default escrow ticketer is Ticketer.Lots. This only needs to be called
@@ -111,5 +127,23 @@ interface IMarketClerk is IERC1155ReceiverUpgradeable, IERC721ReceiverUpgradeabl
      * @param _ticketerType - the type of ticketer to use. See: {SeenTypes.Ticketer}
      */
     function setConsignmentTicketer(uint256 _consignmentId, SeenTypes.Ticketer _ticketerType) external;
+
+    /**
+     * @notice Set a custom fee percentage on a consignment (e.g. for "official" SEEN x Artist drops)
+     *
+     * Default escrow ticketer is Ticketer.Lots. This only needs to be called
+     * if overriding to Ticketer.Items for a given consignment.
+     *
+     * Emits a ConsignmentFeeChanged event.
+     *
+     * Reverts if consignment doesn't exist     *
+     *
+     * @param _consignmentId - the id of the consignment
+     * @param _customFeePercentageBasisPoints - the custom fee percentage basis points to use
+     *
+     * N.B. _customFeePercentageBasisPoints percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
+     */
+    function setConsignmentCustomFee(uint256 _consignmentId, uint16 _customFeePercentageBasisPoints) external;
 
 }

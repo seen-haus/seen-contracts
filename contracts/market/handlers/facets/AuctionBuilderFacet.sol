@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol"
 import "../../../interfaces/IAuctionHandler.sol";
 import "../../../interfaces/IAuctionBuilder.sol";
 import "../../../interfaces/IAuctionRunner.sol";
+import "../../../interfaces/ISeenHausNFT.sol";
 import "../MarketHandlerBase.sol";
 
 /**
@@ -16,6 +17,9 @@ import "../MarketHandlerBase.sol";
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
+
+    // Threshold to auction extension window
+    uint256 constant extensionWindow = 15 minutes;
 
     /**
      * @dev Modifier to protect initializer function from being invoked twice.
@@ -66,8 +70,9 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
      * Reverts if:
      *  - Consignment doesn't exist
      *  - Consignment has already been marketed
+     *  - Consignment has a supply other than 1
      *  - Auction already exists for consignment
-     *  - Start time is in the past
+     *  - Duration is less than 15 minutes
      *
      * @param _consignmentId - the id of the consignment being sold
      * @param _start - the scheduled start time of the auction
@@ -89,14 +94,19 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
     onlyRole(SELLER)
     onlyConsignor(_consignmentId)
     {
+        require(_duration >= extensionWindow, "Duration must be equal to or longer than 15 minutes");
+
         // Get Market Handler Storage struct
         MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
 
         // Get the consignment (reverting if consignment doesn't exist)
         Consignment memory consignment = getMarketController().getConsignment(_consignmentId);
 
+        // For auctions, ensure that the consignment supply is 1 (we don't facilitate a single auction for multiple tokens)
+        require(consignment.supply == 1, "Auctions can only be made with consignments that have a supply of 1");
+
         // Make sure the consignment hasn't been marketed
-        require(consignment.marketed == false, "Consignment has already been marketed");
+        require(consignment.marketHandler == MarketHandler.Unhandled, "Consignment has already been marketed");
 
         // Get the storage location for the auction
         Auction storage auction = mhs.auctions[consignment.id];
@@ -104,8 +114,14 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
         // Make sure auction doesn't exist (start would always be non-zero on an actual auction)
         require(auction.start == 0, "Auction exists");
 
-        // Make sure start time isn't in the past
-        require(_start >= block.timestamp, "Time runs backward?");
+        // Make sure start time isn't in the past if the clock type is not trigger type
+        // It doesn't matter if the start is in the past if clock type is trigger type
+        // Because when the first bid comes in, that gets set to the start time anyway
+        if(_clock != Clock.Trigger) {
+            require(_start >= block.timestamp, "Non-trigger clock type requires start time in future");
+        } else {
+            require(_start > 0, "Start time must be more than zero");
+        }
 
         // Set up the auction
         setAudience(_consignmentId, _audience);
@@ -118,7 +134,7 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
         auction.outcome = Outcome.Pending;
 
         // Notify MarketController the consignment has been marketed
-        getMarketController().marketConsignment(consignment.id);
+        getMarketController().marketConsignment(consignment.id, MarketHandler.Auction);
 
         // Notify listeners of state change
         emit AuctionPending(msg.sender, consignment.seller, auction);
@@ -130,12 +146,12 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
      * Emits an AuctionPending event.
      *
      * Reverts if:
-     *  - Start time is in the past
      *  - This contract not approved to transfer seller's tokens
      *  - Seller doesn't own the asset(s) to be auctioned
      *  - Token contract does not implement either IERC1155 or IERC721
+     *  - Duration is less than 15 minutes
      *
-     * @param _seller - the current owner of the consignment
+     * @param _seller - the address that proceeds of the auction should go to
      * @param _tokenAddress - the contract address issuing the NFT behind the consignment
      * @param _tokenId - the id of the token being consigned
      * @param _start - the scheduled start time of the auction
@@ -156,27 +172,47 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
     )
     external
     override
-    onlyRole(SELLER)
     {
+        require(_duration >= extensionWindow, "Duration must be equal to or longer than 15 minutes");
+
         // Get Market Handler Storage struct
         MarketHandlerLib.MarketHandlerStorage storage mhs = MarketHandlerLib.marketHandlerStorage();
 
-        // Make sure start time isn't in the past
-        require (_start >= block.timestamp, "Time runs backward?");
+        // Get the MarketController
+        IMarketController marketController = getMarketController();
+
+        // Determine if consignment is physical
+        address nft = marketController.getNft();
+        if (nft == _tokenAddress && ISeenHausNFT(nft).isPhysical(_tokenId)) {
+            // Is physical NFT, require that msg.sender has ESCROW_AGENT role
+            require(checkHasRole(msg.sender, ESCROW_AGENT), "Physical NFT secondary listings require ESCROW_AGENT role");
+        } else if (nft != _tokenAddress) {
+            // Is external NFT, require that listing external NFTs is enabled
+            require(marketController.getAllowExternalTokensOnSecondary(), "Listing external tokens is not currently enabled");
+        }
+
+        // Make sure start time isn't in the past if the clock type is not trigger type
+        // It doesn't matter if the start is in the past if clock type is trigger type
+        // Because when the first bid comes in, that gets set to the start time anyway
+        if(_clock != Clock.Trigger) {
+            require(_start >= block.timestamp, "Non-trigger clock type requires start time in future");
+        } else {
+            require(_start > 0, "Start time must be more than zero");
+        }
 
         // Make sure this contract is approved to transfer the token
         // N.B. The following will work because isApprovedForAll has the same signature on both IERC721 and IERC1155
-        require(IERC1155Upgradeable(_tokenAddress).isApprovedForAll(_seller, address(this)), "Not approved to transfer seller's tokens");
+        require(IERC1155Upgradeable(_tokenAddress).isApprovedForAll(msg.sender, address(this)), "Not approved to transfer seller's tokens");
 
         // To register the consignment, tokens must first be in MarketController's possession
         if (IERC165Upgradeable(_tokenAddress).supportsInterface(type(IERC1155Upgradeable).interfaceId)) {
 
             // Ensure seller a positive number of tokens
-            require(IERC1155Upgradeable(_tokenAddress).balanceOf(_seller, _tokenId) > 0, "Seller has zero balance of consigned token");
+            require(IERC1155Upgradeable(_tokenAddress).balanceOf(msg.sender, _tokenId) > 0, "Seller has zero balance of consigned token");
 
             // Transfer supply to MarketController
             IERC1155Upgradeable(_tokenAddress).safeTransferFrom(
-                _seller,
+                msg.sender,
                 address(getMarketController()),
                 _tokenId,
                 1, // Supply is always 1 for auction
@@ -190,15 +226,17 @@ contract AuctionBuilderFacet is IAuctionBuilder, MarketHandlerBase {
 
             // Transfer tokenId to MarketController
             IERC721Upgradeable(_tokenAddress).safeTransferFrom(
-                _seller,
+                msg.sender,
                 address(getMarketController()),
                 _tokenId
             );
 
         }
 
-        // Register consignment (Secondaries are automatically marketed upon registration)
+        // Register consignment
         Consignment memory consignment = getMarketController().registerConsignment(Market.Secondary, msg.sender, _seller, _tokenAddress, _tokenId, 1);
+        // Secondaries are marketed directly after registration
+        getMarketController().marketConsignment(consignment.id, MarketHandler.Auction);
 
         // Set up the auction
         setAudience(consignment.id, _audience);

@@ -84,7 +84,7 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUp
      * @param _consignmentId - the id of the consignment
      * @return  uint256 - the remaining supply held by the MarketController
      */
-    function getSupply(uint256 _consignmentId)
+    function getUnreleasedSupply(uint256 _consignmentId)
     public
     override
     view
@@ -93,30 +93,26 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUp
     {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
         Consignment storage consignment = mcs.consignments[_consignmentId];
-        return consignment.multiToken
-            ? IERC1155Upgradeable(consignment.tokenAddress).balanceOf(address(this), consignment.tokenId)
-            : consignment.released ? 0 : 1;
-
+        return consignment.supply - consignment.releasedSupply;
     }
 
     /**
-     * @notice Is the caller the consignor of the given consignment?
+     * @notice Get the consignor of the given consignment
      *
      * Reverts if consignment doesn't exist
      *
-     * @param _account - the _account to check
      * @param _consignmentId - the id of the consignment
-     * @return  bool - true if caller is consignor
+     * @return  address - the consignor's address
      */
-    function isConsignor(uint256 _consignmentId, address _account)
+    function getConsignor(uint256 _consignmentId)
     public
     override
     view
     consignmentExists(_consignmentId)
-    returns(bool)
+    returns(address)
     {
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
-        return mcs.consignors[_consignmentId] == _account;
+        return mcs.consignors[_consignmentId];
     }
 
     /**
@@ -160,40 +156,40 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUp
         // Ensure consigned asset has been transferred to this this contract
         if (multiToken)  {
 
-            // Ensure the consigned token supply has been transferred to this contract
-            require( IERC1155Upgradeable(_tokenAddress).balanceOf(address(this), _tokenId) == _supply, "MarketController must own token" );
+            // Ensure this contract has a balance of this token which is at least the value of the supply of the consignment
+            // WARNING: In the case of a multiToken, do not rely on this as being a guarantee that the creator of this consignment has transferred a _supply of this token to this contract
+            // This is not guaranteed, as in the context of a secondary market, somebody else might have transferred a value equal or greater than _supply to this contract
+            // THEREFORE: ALWAYS MAKE SURE THAT THE SUPPLY OF CONSIGNMENT REGISTRATION IS TRANSFERRED TO THIS CONTRACT BEFORE CALLING registerConsignment
+            require( IERC1155Upgradeable(_tokenAddress).balanceOf(address(this), _tokenId) >= _supply, "MarketController must own token" );
 
         } else {
 
             // Token must be a single token NFT
             require(IERC165Upgradeable(_tokenAddress).supportsInterface(type(IERC721Upgradeable).interfaceId), "Invalid token type");
 
-            // Ensure the consigned token has been transferred to this contract
-            require(IERC721Upgradeable(_tokenAddress).ownerOf(_tokenId) == (address(this)), "MarketController must own token");
-
-            // Ensure the supply is set to 1
-            require(_supply == 1, "Invalid supply for token");
+            // Ensure the consigned token has been transferred to this contract & that supply = 1
+            // Rolled into a single require due to contract size
+            require((IERC721Upgradeable(_tokenAddress).ownerOf(_tokenId) == (address(this))) && (_supply == 1), "MarketController must own token & supply must be 1");
 
         }
 
         // Get the id for the new consignment and increment counter
         uint256 id = mcs.nextConsignment++;
 
-        // Primary market NFTs (minted here) are not automatically marketed.
-        // Secondary market NFTs are automatically marketed (sale or auction).
-        bool marketed = (_market == Market.Secondary);
-
         // Create and store the consignment
         consignment = Consignment(
             _market,
+            MarketHandler.Unhandled,
             _seller,
             _tokenAddress,
             _tokenId,
             _supply,
             id,
             multiToken,
-            marketed,
-            false
+            false,
+            0,
+            0,
+            0
         );
         mcs.consignments[id] = consignment;
 
@@ -201,10 +197,7 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUp
         mcs.consignors[id] = _consignor;
 
         // Notify listeners of state change
-        emit ConsignmentRegistered(_consignor, _seller , consignment);
-        if (marketed) {
-            emit ConsignmentMarketed(_consignor, consignment.seller, consignment.id);
-        }
+        emit ConsignmentRegistered(_consignor, _seller, consignment);
     }
 
     /**
@@ -213,26 +206,29 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUp
      * Emits a ConsignmentMarketed event.
      *
      * Reverts if:
-     *  - consignment has already been marketed.
+     *  - _marketHandler of value Unhandled is passed into this function. See {SeenTypes.MarketHandler}.
+     *  - consignment has already been marketed (has a marketHandler other than Unhandled). See {SeenTypes.MarketHandler}.
      *
      * @param _consignmentId - the id of the consignment
      */
-    function marketConsignment(uint256 _consignmentId)
+    function marketConsignment(uint256 _consignmentId, MarketHandler _marketHandler)
     external
     override
     onlyRole(MARKET_HANDLER)
     consignmentExists(_consignmentId)
     {
+        require(_marketHandler != MarketHandler.Unhandled, "requires valid handler");
+
         MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
 
         // Get the consignment into memory
         Consignment storage consignment = mcs.consignments[_consignmentId];
 
-        // A consignment can only be marketed once
-        require(consignment.marketed == false, "Consignment has already been marketed");
+        // A consignment can only be marketed once, should currently be Unhandled
+        require(consignment.marketHandler == MarketHandler.Unhandled, "Consignment already marketed");
 
         // Update the consignment
-        consignment.marketed = true;
+        consignment.marketHandler = _marketHandler;
 
         // Consignor address
         address consignor = mcs.consignors[_consignmentId];
@@ -268,19 +264,20 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUp
         Consignment storage consignment = mcs.consignments[_consignmentId];
 
         // Ensure the consignment has not been released
-        require(!consignment.released, "Consigned token has already been released");
+        require(!consignment.released, "Consigned token already released");
 
         // Handle transfer, marking of consignment
         if (consignment.multiToken) {
 
-            // Get the current supply
-            uint256 supply = IERC1155Upgradeable(consignment.tokenAddress).balanceOf(address(this), consignment.tokenId);
+            // Get the current remaining consignment supply
+            uint256 remainingSupply = consignment.supply - consignment.releasedSupply;
 
-            // Ensure this contract holds enough supply
-            require(supply >= _amount, "Consigned token supply less than amount");
+            // Safety check
+            require(_amount <= remainingSupply, "Attempting to release more than is available to consignment");
 
-            // Mark the consignment when the entire supply has been released
-            if (supply == _amount) consignment.released = true;
+            // Mark the consignment when the entire consignment supply has been released
+            if (remainingSupply == _amount) consignment.released = true;
+            consignment.releasedSupply = consignment.releasedSupply + _amount;
 
             // Transfer a balance of the token from the MarketController to the recipient
             IERC1155Upgradeable(consignment.tokenAddress).safeTransferFrom(
@@ -295,6 +292,7 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUp
 
             // Mark the single-token consignment released
             consignment.released = true;
+            consignment.releasedSupply = consignment.releasedSupply + _amount;
 
             // Transfer the token from the MarketController to the recipient
             IERC721Upgradeable(consignment.tokenAddress).safeTransferFrom(
@@ -307,6 +305,37 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUp
 
         // Notify watchers about state change
         emit ConsignmentReleased(consignment.id, _amount, _releaseTo);
+
+    }
+
+    /**
+     * @notice Clears the pending payout value of a consignment
+     *
+     * Emits a ConsignmentPayoutSet event.
+     *
+     * Reverts if:
+     *  - caller is does not have MARKET_HANDLER role.
+     *  - consignment doesn't exist
+     *
+     * @param _consignmentId - the id of the consignment
+     * @param _amount - the amount of that the consignment's pendingPayout must be set to
+     */
+    function setConsignmentPendingPayout(uint256 _consignmentId, uint256 _amount)
+    external
+    override
+    onlyRole(MARKET_HANDLER)
+    consignmentExists(_consignmentId)
+    {
+        MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
+
+        // Get the consignment into memory
+        Consignment storage consignment = mcs.consignments[_consignmentId];
+
+        // Update pending payout
+        consignment.pendingPayout = _amount;
+
+        // Notify watchers about state change
+        emit ConsignmentPendingPayoutSet(consignment.id, _amount);
 
     }
 
@@ -341,6 +370,44 @@ contract MarketClerkFacet is IMarketClerk, MarketControllerBase, ERC1155HolderUp
             emit ConsignmentTicketerChanged(_consignmentId, _ticketerType);
 
         }
+    }
+
+    /**
+     * @notice Set a custom fee percentage on a consignment (e.g. for "official" SEEN x Artist drops)
+     *
+     * Default escrow ticketer is Ticketer.Lots. This only needs to be called
+     * if overriding to Ticketer.Items for a given consignment.
+     *
+     * Emits a ConsignmentFeeChanged event.
+     *
+     * Reverts if:
+     * - consignment doesn't exist
+     * - _customFeePercentageBasisPoints is more than 10000
+     *
+     * @param _consignmentId - the id of the consignment
+     * @param _customFeePercentageBasisPoints - the custom fee percentage basis points to use
+     *
+     * N.B. _customFeePercentageBasisPoints percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
+     */
+    function setConsignmentCustomFee(uint256 _consignmentId, uint16 _customFeePercentageBasisPoints)
+    external
+    override
+    onlyRole(ADMIN)
+    {
+
+        MarketControllerLib.MarketControllerStorage storage mcs = MarketControllerLib.marketControllerStorage();
+
+        // Get the consignment into memory
+        Consignment storage consignment = mcs.consignments[_consignmentId];
+
+        // Ensure the consignment exists, has not been released and that basis points don't exceed 10000
+        // Rolled into one require due to contract size being near max
+        require(!consignment.released && (_customFeePercentageBasisPoints <= 10000) && (_consignmentId < mcs.nextConsignment), "Consignment released or nonexistent, or basisPoints over 10000");
+
+        consignment.customFeePercentageBasisPoints = _customFeePercentageBasisPoints;
+
+        emit ConsignmentFeeChanged(consignment.id, _customFeePercentageBasisPoints);
     }
 
 }

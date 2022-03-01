@@ -8,7 +8,7 @@ import "../domain/SeenTypes.sol";
  *
  * @notice Manages the issue and claim of escrow tickets.
  *
- * The ERC-165 identifier for this interface is: 0x84200a73
+ * The ERC-165 identifier for this interface is: 0x73811679
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
@@ -26,6 +26,11 @@ interface IEscrowTicketer {
      * @notice Get info about the ticket
      */
     function getTicket(uint256 _ticketId) external view returns (SeenTypes.EscrowTicket memory);
+
+    /**
+     * @notice Get how many claims can be made using tickets (does not change after ticket burns)
+     */
+    function getTicketClaimableCount(uint256 _consignmentId) external view returns (uint256);
 
     /**
      * @notice Gets the URI for the ticket metadata

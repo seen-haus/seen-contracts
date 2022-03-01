@@ -9,7 +9,7 @@ import "./IMarketHandler.sol";
  *
  * @notice Handles the operation of Seen.Haus auctions.
  *
- * The ERC-165 identifier for this interface is: 0xac85defe
+ * The ERC-165 identifier for this interface is: 0x195ea158
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
@@ -18,9 +18,8 @@ interface IAuctionRunner is IMarketHandler {
     // Events
     event AuctionStarted(uint256 indexed consignmentId);
     event AuctionExtended(uint256 indexed consignmentId);
-    event AuctionEnded(uint256 indexed consignmentId, SeenTypes.Outcome indexed outcome);
-    event BidAccepted(uint256 indexed consignmentId, address indexed buyer, uint256 indexed bid);
-    event BidReturned(uint256 indexed consignmentId, address indexed buyer, uint256 indexed bid);
+    event BidAccepted(uint256 indexed consignmentId, address indexed buyer, uint256 bid);
+    event BidReturned(uint256 indexed consignmentId, address indexed buyer, uint256 bid);
 
     /**
      * @notice Change the audience for a auction.
@@ -54,40 +53,5 @@ interface IAuctionRunner is IMarketHandler {
      * @param _consignmentId - the id of the consignment being sold
      */
     function bid(uint256 _consignmentId) external payable;
-
-    /**
-     * @notice Close out a successfully completed auction.
-     *
-     * Funds are disbursed as normal. See {MarketHandlerBase.disburseFunds}
-     *
-     * Reverts if:
-     *  - Auction doesn't exist
-     *  - Auction timer has not yet elapsed
-     *  - Auction has not yet started
-     *  - Auction has already been settled
-     *  - Bids have been placed
-     *
-     * Emits a AuctionEnded event on success.
-     *
-     * @param _consignmentId - the id of the consignment being sold
-     */
-    function closeAuction(uint256 _consignmentId) external;
-
-    /**
-     * @notice Cancel an auction that hasn't ended yet.
-     *
-     * If there is a standing bid, it is returned to the bidder.
-     * Consigned inventory will be transferred back to the seller.
-     *
-     * Reverts if:
-     *  - Caller does not have ADMIN role
-     *  - Auction doesn't exist
-     *  - Auction has already been settled
-     *
-     * Emits a AuctionEnded event on success.
-     *
-     * @param _consignmentId - the id of the consignment being sold
-     */
-    function cancelAuction(uint256 _consignmentId) external;
 
 }

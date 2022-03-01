@@ -13,7 +13,7 @@ const ethers = hre.ethers;
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-async function deployMarketDiamond (gasLimit) {
+async function deployMarketDiamond (multisigAddress, gasLimit, awaitAcceptableGas, maxAcceptableGasPrice) {
 
   // Core interfaces that will be supported at the Diamond address
   const interfaces = [
@@ -24,16 +24,19 @@ async function deployMarketDiamond (gasLimit) {
 
   // Deploy the AccessController contract
   const AccessController = await ethers.getContractFactory("AccessController");
-  const accessController = await AccessController.deploy({gasLimit});
+  await awaitAcceptableGas(maxAcceptableGasPrice);
+  const accessController = await AccessController.deploy(multisigAddress, {gasLimit});
   await accessController.deployed();
 
   // Diamond Loupe Facet
   const DiamondLoupeFacet = await ethers.getContractFactory("DiamondLoupeFacet");
+  await awaitAcceptableGas(maxAcceptableGasPrice);
   const dlf = await DiamondLoupeFacet.deploy({gasLimit});
   await dlf.deployed();
 
   // Diamond Cut Facet
   const DiamondCutFacet = await ethers.getContractFactory("DiamondCutFacet");
+  await awaitAcceptableGas(maxAcceptableGasPrice);
   const dcf = await DiamondCutFacet.deploy({gasLimit});
   await dcf.deployed();
 
@@ -45,6 +48,7 @@ async function deployMarketDiamond (gasLimit) {
 
   // Deploy Market Diamond
   const MarketDiamond = await ethers.getContractFactory('MarketDiamond');
+  await awaitAcceptableGas(maxAcceptableGasPrice);
   const marketDiamond = await MarketDiamond.deploy(...diamondArgs,{gasLimit});
   await marketDiamond.deployed()
 

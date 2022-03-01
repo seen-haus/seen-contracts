@@ -9,7 +9,7 @@ import "./IMarketHandler.sol";
  *
  * @notice Handles the operation of Seen.Haus sales.
  *
- * The ERC-165 identifier for this interface is: 0x6164b6a0
+ * The ERC-165 identifier for this interface is: 0xe1bf15c5
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
@@ -17,8 +17,8 @@ interface ISaleRunner is IMarketHandler {
 
     // Events
     event SaleStarted(uint256 indexed consignmentId);
-    event SaleEnded(uint256 indexed consignmentId, SeenTypes.Outcome indexed outcome);
-    event Purchase(uint256 indexed consignmentId,  uint256 indexed amount, address indexed buyer);
+    event Purchase(uint256 indexed consignmentId, address indexed buyer, uint256 amount, uint256 value);
+    event TokenHistoryTracker(address indexed tokenAddress, uint256 indexed tokenId, address indexed buyer, uint256 value, uint256 amount, uint256 consignmentId);
 
     /**
      * @notice Change the audience for a sale.
@@ -54,34 +54,20 @@ interface ISaleRunner is IMarketHandler {
     function buy(uint256 _consignmentId, uint256 _amount) external payable;
 
     /**
-     * @notice Close out a successfully completed sale.
+     * @notice Claim a pending payout on an ongoing sale without closing/cancelling
      *
      * Funds are disbursed as normal. See: {MarketHandlerBase.disburseFunds}
      *
      * Reverts if:
      * - Sale doesn't exist or hasn't started
-     * - There is remaining inventory
+     * - There is no pending payout
+     * - Called by any address other than seller
+     * - The sale is sold out (in which case closeSale should be called)
      *
-     * Emits a SaleEnded event.
-     *
-     * @param _consignmentId - id of the consignment being sold
-     */
-    function closeSale(uint256 _consignmentId) external;
-
-    /**
-     * @notice Cancel a sale that has remaining inventory.
-     *
-     * Remaining tokens are returned to seller. If there have been any purchases,
-     * the funds are distributed normally.
-     *
-     * Reverts if:
-     * - Caller doesn't have ADMIN role
-     * - Sale doesn't exist or has already been settled
-     *
-     * Emits a SaleEnded event
+     * Does not emit its own event, but disburseFunds emits an event
      *
      * @param _consignmentId - id of the consignment being sold
      */
-    function cancelSale(uint256 _consignmentId) external;
+    function claimPendingPayout(uint256 _consignmentId) external;
 
 }

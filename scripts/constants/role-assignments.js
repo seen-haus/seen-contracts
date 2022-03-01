@@ -20,99 +20,112 @@ exports.RoleAssignments = {
 
     "rinkeby": {
 
-        "Cliff's admin address": // For initial deployment and role management
+        "SEEN's minter / escrow agent / seller address": // For mint+market of physical NFTs
             {
-                address: "0xBbf9f5e693fc694519604d9Cf73F2C98742b93c9",
-                roles: [Role.ADMIN, Role.ESCROW_AGENT]
+                address: "0x15884D7a5567725E0306A90262ee120aD8452d58",
+                roles: [Role.ESCROW_AGENT, Role.SELLER, Role.MINTER]
             },
 
-        "Jay's admin address": // For admin tasks
+        "Test1 admin address": // For admin tasks
             {
                 address: "0xDE7e3ec4442Ba87247797BEA433985449EDEA893",
                 roles: [Role.ADMIN]
             },
 
-        "Jay's escrow agent / seller address": // For mint+market of physical NFTs
-            {
-                address: "0xD2a3F28cD3f3825567e53773C341688E6afa12EC",
-                roles: [Role.ESCROW_AGENT, Role.SELLER]
-            },
-
-        "Jay's minter / seller address": // For mint+market of digital NFTs
+        "Test1 mint / escrow agent / seller address": // For mint+market of physical NFTs
             {
                 address: "0x06d95AD7d2F4c868f96203c55Fb0ec7A4ce17026",
-                roles: [Role.MINTER, Role.SELLER]
+                roles: [Role.ESCROW_AGENT, Role.SELLER, Role.MINTER]
             },
 
-        "MarketDiamond contract": // For Market Handler facets
+        "Test2 mint / escrow agent / seller address": // For mint+market of physical NFTs
             {
-                address: ContractAddresses.rinkeby.MarketDiamond,
-                roles: [Role.MARKET_HANDLER]
+                address: "0x30651410055c12613c68D60bFf220F6D78DF7Acb",
+                roles: [Role.ESCROW_AGENT, Role.SELLER, Role.MINTER]
             },
 
-        "ItemsTicketer contract":
+        "Test3 mint / escrow agent / seller address": // For mint+market of physical NFTs
             {
-                address: ContractAddresses.rinkeby.ItemsTicketer,
-                roles: [Role.MARKET_HANDLER]
+                address: "0xc5504278f3c965F41fd84b9dE266604764Cb0f79",
+                roles: [Role.ESCROW_AGENT, Role.SELLER, Role.MINTER]
             },
 
-        "LotsTicketer contract":
+        "Test4 mint / escrow agent / seller address": // For mint+market of physical NFTs
             {
-                address: ContractAddresses.rinkeby.LotsTicketer,
-                roles: [Role.MARKET_HANDLER]
+                address: "0xe4572141a6A56CA13529426896423D17cc13fD69",
+                roles: [Role.ESCROW_AGENT, Role.SELLER, Role.MINTER]
             },
 
-        "SeenHausNFT contract":
-            {
-                address: ContractAddresses.rinkeby.SeenHausNFT,
-                roles: [Role.MARKET_HANDLER]
-            },
+        // MARKET_HANDLER roles can now only be changed by the multisig
+
+        // "MarketDiamond contract": // For Market Handler facets
+        //     {
+        //         address: ContractAddresses.rinkeby.MarketDiamond,
+        //         roles: [Role.MARKET_HANDLER]
+        //     },
+
+        // "ItemsTicketer contract":
+        //     {
+        //         address: ContractAddresses.rinkeby.ItemsTicketer,
+        //         roles: [Role.MARKET_HANDLER]
+        //     },
+
+        // "LotsTicketer contract":
+        //     {
+        //         address: ContractAddresses.rinkeby.LotsTicketer,
+        //         roles: [Role.MARKET_HANDLER]
+        //     },
+
+        // "SeenHausNFT contract":
+        //     {
+        //         address: ContractAddresses.rinkeby.SeenHausNFT,
+        //         roles: [Role.MARKET_HANDLER]
+        //     },
 
     },
 
     "mainnet": {
 
-        "Jay's admin address": // For admin tasks
+        // Deployer address already has ADMIN role
+        // "SEEN's admin address": // For admin tasks
+        //     {
+        //         address: "",
+        //         roles: [Role.ADMIN]
+        //     },
+
+        "SEEN's minter / escrow agent / seller address": // For mint+market of physical NFTs
             {
-                address: "",
-                roles: [Role.ADMIN]
+                address: "0x15884D7a5567725E0306A90262ee120aD8452d58",
+                roles: [Role.ESCROW_AGENT, Role.SELLER, Role.MINTER]
             },
 
-        "Jay's escrow agent / seller address": // For mint+market of physical NFTs
-            {
-                address: "",
-                roles: [Role.ESCROW_AGENT, Role.SELLER]
-            },
+        // MARKET_HANDLER roles can now only be changed by the multisig
 
-        "Jay's minter / seller address": // For mint+market of digital NFTs
-            {
-                address: "",
-                roles: [Role.MINTER, Role.SELLER]
-            },
+        // "MarketDiamond contract": // For Market Handler facets
+        //     {
+        //         address: ContractAddresses.mainnet.MarketDiamond,
+        //         roles: [Role.MARKET_HANDLER]
+        //     },
 
-        "MarketDiamond contract": // For Market Handler facets
-            {
-                address: ContractAddresses.mainnet.MarketDiamond,
-                roles: [Role.MARKET_HANDLER]
-            },
+        // "ItemsTicketer contract":
+        //     {
+        //         address: ContractAddresses.mainnet.ItemsTicketer,
+        //         roles: [Role.MARKET_HANDLER]
+        //     },
 
-        "ItemsTicketer contract":
-            {
-                address: ContractAddresses.mainnet.ItemsTicketer,
-                roles: [Role.MARKET_HANDLER]
-            },
+        // "LotsTicketer contract":
+        //     {
+        //         address: ContractAddresses.mainnet.LotsTicketer,
+        //         roles: [Role.MARKET_HANDLER]
+        //     },
 
-        "LotsTicketer contract":
-            {
-                address: ContractAddresses.mainnet.LotsTicketer,
-                roles: [Role.MARKET_HANDLER]
-            },
-
-        "SeenHausNFT contract":
-            {
-                address: ContractAddresses.mainnet.SeenHausNFT,
-                roles: [Role.MARKET_HANDLER]
-            }
+        // "SeenHausNFT contract":
+        //     {
+        //         address: ContractAddresses.mainnet.SeenHausNFT,
+        //         roles: [Role.MARKET_HANDLER]
+        //     }
     }
 
 };
+
+exports.nftOwner = '0x15884D7a5567725E0306A90262ee120aD8452d58';

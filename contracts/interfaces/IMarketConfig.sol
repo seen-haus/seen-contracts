@@ -9,7 +9,7 @@ import "../domain/SeenTypes.sol";
  * @notice Manages configuration and consignments used by the Seen.Haus contract suite.
  * @dev Contributes its events and functions to the IMarketController interface
  *
- * The ERC-165 identifier for this interface is: 0x4ea5d7dd
+ * The ERC-165 identifier for this interface is: 0x57f9f26d
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
@@ -21,7 +21,8 @@ interface IMarketConfig {
     event StakingAddressChanged(address indexed staking);
     event MultisigAddressChanged(address indexed multisig);
     event VipStakerAmountChanged(uint256 indexed vipStakerAmount);
-    event FeePercentageChanged(uint16 indexed feePercentage);
+    event PrimaryFeePercentageChanged(uint16 indexed feePercentage);
+    event SecondaryFeePercentageChanged(uint16 indexed feePercentage);
     event MaxRoyaltyPercentageChanged(uint16 indexed maxRoyaltyPercentage);
     event OutBidPercentageChanged(uint16 indexed outBidPercentage);
     event DefaultTicketerTypeChanged(SeenTypes.Ticketer indexed ticketerType);
@@ -112,17 +113,30 @@ interface IMarketConfig {
 
     /**
      * @notice Sets the marketplace fee percentage.
+     * Emits a PrimaryFeePercentageChanged event.
      *
-     * Emits a FeePercentageChanged event.
+     * @param _primaryFeePercentage - the percentage that will be taken as a fee from the net of a Seen.Haus primary sale or auction
      *
-     * @param _feePercentage - the percentage that will be taken as a fee from the net of a Seen.Haus sale or auction (after royalties)
+     * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
      */
-    function setFeePercentage(uint16 _feePercentage) external;
+    function setPrimaryFeePercentage(uint16 _primaryFeePercentage) external;
 
     /**
-     * @notice The feePercentage getter
+     * @notice Sets the marketplace fee percentage.
+     * Emits a SecondaryFeePercentageChanged event.
+     *
+     * @param _secondaryFeePercentage - the percentage that will be taken as a fee from the net of a Seen.Haus secondary sale or auction (after royalties)
+     *
+     * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
      */
-    function getFeePercentage() external view returns (uint16);
+    function setSecondaryFeePercentage(uint16 _secondaryFeePercentage) external;
+
+    /**
+     * @notice The primaryFeePercentage and secondaryFeePercentage getter
+     */
+    function getFeePercentage(SeenTypes.Market _market) external view returns (uint16);
 
     /**
      * @notice Sets the external marketplace maximum royalty percentage.
@@ -179,5 +193,4 @@ interface IMarketConfig {
      * @return ticketer = the address of the escrow ticketer to use
      */
     function getEscrowTicketer(uint256 _consignmentId) external view returns (address ticketer);
-
 }

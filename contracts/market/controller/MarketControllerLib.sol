@@ -38,8 +38,11 @@ library MarketControllerLib {
         // the minimum amount of xSEEN ERC-20 a caller must hold to participate in VIP events
         uint256 vipStakerAmount;
 
+        // the percentage that will be taken as a fee from the net of a Seen.Haus sale or auction
+        uint16 primaryFeePercentage;         // 1.75% = 175, 100% = 10000
+
         // the percentage that will be taken as a fee from the net of a Seen.Haus sale or auction (after royalties)
-        uint16 feePercentage;         // 1.75% = 175, 100% = 10000
+        uint16 secondaryFeePercentage;         // 1.75% = 175, 100% = 10000
 
         // the maximum percentage of a Seen.Haus sale or auction that will be paid as a royalty
         uint16 maxRoyaltyPercentage;  // 1.75% = 175, 100% = 10000
@@ -50,6 +53,9 @@ library MarketControllerLib {
         // next consignment id
         uint256 nextConsignment;
 
+        // whether or not external NFTs can be sold via secondary market
+        bool allowExternalTokensOnSecondary;
+
         // consignment id => consignment
         mapping(uint256 => SeenTypes.Consignment) consignments;
 
@@ -59,12 +65,18 @@ library MarketControllerLib {
         // consignment id => ticketer type
         mapping(uint256 => SeenTypes.Ticketer) consignmentTicketers;
 
+        // escrow agent address => feeBasisPoints
+        mapping(address => uint16) escrowAgentToFeeBasisPoints;
+
     }
 
     struct MarketControllerInitializers {
 
         // MarketConfigFacet initialization state
         bool configFacet;
+
+        // MarketConfigFacet initialization state
+        bool configAdditionalFacet;
 
         // MarketClerkFacet initialization state
         bool clerkFacet;

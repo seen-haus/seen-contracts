@@ -20,9 +20,9 @@ describe("ItemsTicketer", function() {
     let accounts, deployer, admin, upgrader, escrowAgent, associate, creator, marketHandler, buyer;
     let accessController, marketController;
     let seenHausNFT, itemsTicketer, itemsTicketerProxy;
-    let staking, multisig, vipStakerAmount, feePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
+    let staking, multisig, vipStakerAmount, primaryFeePercentage, secondaryFeePercentage, maxRoyaltyPercentage, outBidPercentage, defaultTicketerType;
     let ticketId, tokenId, tokenURI, counter, supply, half, balance, royaltyPercentage, consignmentId, support;
-    let ticketURI, ticketURIBase = "https://seen.haus/ticket/metadata/items-ticketer/";
+    let ticketURI, ticketURIBase = "https://api.seen.haus/ticket/metadata/items-ticketer/";
     let replacementAddress = "0x2d36143CC2E0E74E007E7600F341dC9D37D81C07";
 
     beforeEach( async function () {
@@ -43,10 +43,12 @@ describe("ItemsTicketer", function() {
 
         // Market control values
         vipStakerAmount = "500";              // Amount of xSEEN to be VIP
-        feePercentage = "1500";               // 15%   = 1500
+        primaryFeePercentage = "500";         // 5%    = 500
+        secondaryFeePercentage = "250";       // 2.5%  = 250
         maxRoyaltyPercentage = "5000";        // 50%   = 5000
         outBidPercentage = "500";             // 5%    = 500
         defaultTicketerType = Ticketer.LOTS;  // default escrow ticketer type
+        allowExternalTokensOnSecondary = false; // By default, don't allow external tokens to be sold via secondary market
 
         // Deploy the Diamond
         [marketDiamond, diamondLoupe, diamondCut, accessController] = await deployMarketDiamond();
@@ -56,17 +58,21 @@ describe("ItemsTicketer", function() {
             staking.address,
             multisig.address,
             vipStakerAmount,
-            feePercentage,
+            primaryFeePercentage,
+            secondaryFeePercentage,
             maxRoyaltyPercentage,
             outBidPercentage,
-            defaultTicketerType
+            defaultTicketerType,
+        ];
+        const marketConfigAdditional = [
+            allowExternalTokensOnSecondary,
         ];
 
         // Temporarily grant UPGRADER role to deployer account
         await accessController.grantRole(Role.UPGRADER, deployer.address);
 
         // Cut the MarketController facet into the Diamond
-        await deployMarketControllerFacets(marketDiamond, marketConfig);
+        await deployMarketControllerFacets(marketDiamond, marketConfig, marketConfigAdditional);
 
         // Cast Diamond to MarketController
         marketController = await ethers.getContractAt('IMarketController', marketDiamond.address);
@@ -181,7 +187,7 @@ describe("ItemsTicketer", function() {
                     // non-UPGRADER attempt
                     await expect(
                         itemsTicketerProxy.connect(associate).setImplementation(replacementAddress)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role");
 
                     // Get address
                     address = await itemsTicketerProxy.getImplementation();
@@ -211,7 +217,7 @@ describe("ItemsTicketer", function() {
                     // non-UPGRADER attempt
                     await expect(
                         itemsTicketerProxy.connect(associate).setAccessController(replacementAddress)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role");
 
                     // Get address
                     address = await itemsTicketerProxy.getAccessController();
@@ -244,7 +250,7 @@ describe("ItemsTicketer", function() {
                     // non-UPGRADER attempt
                     await expect(
                         itemsTicketerProxy.connect(associate).setMarketController(replacementAddress)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role");
 
                     // Get address
                     address = await itemsTicketerProxy.getMarketController();
@@ -278,7 +284,7 @@ describe("ItemsTicketer", function() {
                     // non-MARKET_HANDLER attempt
                     await expect(
                         itemsTicketer.connect(associate).issueTicket(consignmentId, supply, buyer.address)
-                    ).to.be.revertedWith("Access denied, caller doesn't have role");
+                    ).to.be.revertedWith("Caller doesn't have role");
 
                     // Get counter
                     counter = await itemsTicketer.getNextTicket();

@@ -19,16 +19,16 @@ const { castMarketClientProxies } = require("./cast-market-client-proxies.js");
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-async function deployMarketClients(marketClientArgs, gasLimit) {
+async function deployMarketClients(marketClientArgs, gasLimit, awaitAcceptableGas, maxAcceptableGasPrice) {
 
     // Deploy Market Client implementation contracts
-    const marketClientImpls = await deployMarketClientImpls(gasLimit);
+    const marketClientImpls = await deployMarketClientImpls(gasLimit, awaitAcceptableGas, maxAcceptableGasPrice);
 
     // Deploy Market Client proxy contracts
-    const marketClientProxies = await deployMarketClientProxies(marketClientImpls, marketClientArgs, gasLimit);
+    const marketClientProxies = await deployMarketClientProxies(marketClientImpls, marketClientArgs, gasLimit, awaitAcceptableGas, maxAcceptableGasPrice);
 
     // Cast the proxies to their implementation interfaces
-    const marketClients = await castMarketClientProxies(marketClientProxies, gasLimit);
+    const marketClients = await castMarketClientProxies(marketClientProxies, gasLimit, awaitAcceptableGas, maxAcceptableGasPrice);
 
     return [marketClientImpls, marketClientProxies, marketClients];
 
