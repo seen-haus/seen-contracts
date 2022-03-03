@@ -1,6 +1,6 @@
 # Seen Haus Contracts
 ## Status
-  - Ready for audit
+  - [Audited](https://omniscia.io/seen-haus-nft-auction-sales)
   - Contracts are proxied and upgradable
   - 400+ unit tests with 99% code coverage
   - Deployment scripts with automatic Etherscan verification of each contract
