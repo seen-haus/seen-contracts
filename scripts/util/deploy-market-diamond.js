@@ -13,7 +13,7 @@ const ethers = hre.ethers;
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-async function deployMarketDiamond (multisigAddress, gasLimit, awaitAcceptableGas, maxAcceptableGasPrice) {
+async function deployMarketDiamond (gasLimit, awaitAcceptableGas, maxAcceptableGasPrice) {
 
   // Core interfaces that will be supported at the Diamond address
   const interfaces = [
@@ -25,7 +25,7 @@ async function deployMarketDiamond (multisigAddress, gasLimit, awaitAcceptableGa
   // Deploy the AccessController contract
   const AccessController = await ethers.getContractFactory("AccessController");
   await awaitAcceptableGas(maxAcceptableGasPrice);
-  const accessController = await AccessController.deploy(multisigAddress, {gasLimit});
+  const accessController = await AccessController.deploy({gasLimit});
   await accessController.deployed();
 
   // Diamond Loupe Facet

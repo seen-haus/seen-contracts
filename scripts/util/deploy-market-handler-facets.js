@@ -15,6 +15,8 @@ const ethers = hre.ethers;
  */
 async function deployMarketHandlerFacets(diamond, gasLimit, awaitAcceptableGas, maxAcceptableGasPrice) {
 
+    let tx;
+
     // Deploy the EthCreditRecoveryFacet contract
     const EthCreditRecoveryFacet = await ethers.getContractFactory("EthCreditRecoveryFacet");
     await awaitAcceptableGas(maxAcceptableGasPrice);
@@ -68,37 +70,44 @@ async function deployMarketHandlerFacets(diamond, gasLimit, awaitAcceptableGas, 
     // Cut EthCreditRecovery facet, initializing
     const ethCreditRecoveryCut = getFacetAddCut(ethCreditRecoveryFacet, [initFunction]);
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await cutFacet.diamondCut([ethCreditRecoveryCut], ethCreditRecoveryFacet.address, callData, {gasLimit});
+    tx = await cutFacet.diamondCut([ethCreditRecoveryCut], ethCreditRecoveryFacet.address, callData, {gasLimit});
+    await tx.wait();
 
     // Cut AuctionBuilder facet facet, initializing
     const auctionBuilderCut = getFacetAddCut(auctionBuilderFacet, [initFunction]);
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await cutFacet.diamondCut([auctionBuilderCut], auctionBuilderFacet.address, callData, {gasLimit});
+    tx = await cutFacet.diamondCut([auctionBuilderCut], auctionBuilderFacet.address, callData, {gasLimit});
+    await tx.wait();
 
     // Cut AuctionRunner facet facet, initializing
     const auctionRunnerCut = getFacetAddCut(auctionRunnerFacet, [initFunction]);
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await cutFacet.diamondCut([auctionRunnerCut], auctionRunnerFacet.address, callData, {gasLimit});
+    tx = await cutFacet.diamondCut([auctionRunnerCut], auctionRunnerFacet.address, callData, {gasLimit});
+    await tx.wait();
 
     // Cut AuctionEnder facet facet, initializing
     const auctionEnderCut = getFacetAddCut(auctionEnderFacet, [initFunction]);
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await cutFacet.diamondCut([auctionEnderCut], auctionEnderFacet.address, callData, {gasLimit});
+    tx = await cutFacet.diamondCut([auctionEnderCut], auctionEnderFacet.address, callData, {gasLimit});
+    await tx.wait();
 
     // Cut SaleBuilder facet, initializing
     const saleBuilderCut = getFacetAddCut(saleBuilderFacet, [initFunction]);
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await cutFacet.diamondCut([saleBuilderCut], saleBuilderFacet.address, callData, {gasLimit});
+    tx = await cutFacet.diamondCut([saleBuilderCut], saleBuilderFacet.address, callData, {gasLimit});
+    await tx.wait();
 
     // Cut SaleRunner facet, initializing
     const saleRunnerCut = getFacetAddCut(saleRunnerFacet, [initFunction]);
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await cutFacet.diamondCut([saleRunnerCut], saleRunnerFacet.address, callData, {gasLimit});
+    tx = await cutFacet.diamondCut([saleRunnerCut], saleRunnerFacet.address, callData, {gasLimit});
+    await tx.wait();
 
     // Cut SaleEnder facet, initializing
     const saleEnderCut = getFacetAddCut(saleEnderFacet, [initFunction]);
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await cutFacet.diamondCut([saleEnderCut], saleEnderFacet.address, callData, {gasLimit});
+    tx = await cutFacet.diamondCut([saleEnderCut], saleEnderFacet.address, callData, {gasLimit});
+    await tx.wait();
 
     return [auctionBuilderFacet, auctionRunnerFacet, auctionEnderFacet, saleBuilderFacet, saleRunnerFacet, saleEnderFacet, ethCreditRecoveryFacet];
 

@@ -22,10 +22,18 @@ module.exports = {
       accounts:[`${environments.rinkeby.privateKey}`],
       gas: environments.gasLimit
     },
+    goerli: {
+      url: environments.goerli.txNode,
+      accounts:[`${environments.goerli.privateKey}`],
+      gas: environments.gasLimit,
+      gasPrice: 40000000000
+    },
     mainnet: {
       url: environments.mainnet.txNode,
       accounts: [`${environments.mainnet.privateKey}`],
-      gas: environments.gasLimit
+      gas: environments.gasLimit,
+      gasPrice: 35000000000,
+      timeout: 240000,
     }
   },
   etherscan: {
