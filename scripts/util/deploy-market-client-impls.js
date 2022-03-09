@@ -20,19 +20,23 @@ const { nftOwner } = require('../constants/role-assignments');
  */
 async function deployMarketClientImpls(gasLimit, awaitAcceptableGas, maxAcceptableGasPrice) {
 
+    let tx;
+
     // Deploy the LotsTicketer IEscrowTicketer implementation
     const LotsTicketer = await ethers.getContractFactory("LotsTicketer");
     await awaitAcceptableGas(maxAcceptableGasPrice);
     const lotsTicketer = await LotsTicketer.deploy({gasLimit});
     await lotsTicketer.deployed();
-    await lotsTicketer.initialize();
+    tx = await lotsTicketer.initialize();
+    await tx.wait();
 
     // Deploy the ItemsTicketer IEscrowTicketer implementation
     const ItemsTicketer = await ethers.getContractFactory("ItemsTicketer");
     await awaitAcceptableGas(maxAcceptableGasPrice);
     const itemsTicketer = await ItemsTicketer.deploy({gasLimit});
     await itemsTicketer.deployed();
-    await itemsTicketer.initialize();
+    tx = await itemsTicketer.initialize();
+    await tx.wait();
 
     // Deploy the SeenHausNFT contract
     const SeenHausNFT = await ethers.getContractFactory("SeenHausNFT");
@@ -40,7 +44,8 @@ async function deployMarketClientImpls(gasLimit, awaitAcceptableGas, maxAcceptab
     const seenHausNFT = await SeenHausNFT.deploy({gasLimit});
     await seenHausNFT.deployed();
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await seenHausNFT.initialize(nftOwner);
+    tx = await seenHausNFT.initialize(nftOwner);
+    await tx.wait();
 
     return [lotsTicketer, itemsTicketer, seenHausNFT];
 

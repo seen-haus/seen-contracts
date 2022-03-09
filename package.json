@@ -25,6 +25,7 @@
     "coverage": "npx hardhat coverage",
     "deploy-suite:local": "npx hardhat run --network hardhat scripts/deploy-suite.js",
     "deploy-suite:rinkeby": "npx hardhat run --network rinkeby scripts/deploy-suite.js >> logs/rinkeby.deploy.contracts.txt",
+    "deploy-suite:goerli": "npx hardhat run --network goerli scripts/deploy-suite.js >> logs/goerli.deploy.contracts.txt",
     "deploy-suite:mainnet": "npx hardhat run --network mainnet scripts/deploy-suite.js >> logs/mainnet.deploy.contracts.txt",
     "manage-roles:rinkeby": "npx hardhat --network rinkeby run scripts/manage-roles.js >> logs/rinkeby.manage.roles.txt",
     "manage-roles:mainnet": "npx hardhat --network mainnet run scripts/manage-roles.js >> logs/mainnet.manage.roles.txt"

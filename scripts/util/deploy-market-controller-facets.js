@@ -16,6 +16,8 @@ const ethers = hre.ethers;
  */
 async function deployMarketControllerFacets(diamond, marketConfig, marketConfigAdditional, gasLimit, awaitAcceptableGas, maxAcceptableGasPrice) {
 
+    let tx;
+
     // Deploy the MarketConfig Facet
     const MarketConfigFacet = await ethers.getContractFactory("MarketConfigFacet");
     await awaitAcceptableGas(maxAcceptableGasPrice);
@@ -43,7 +45,8 @@ async function deployMarketControllerFacets(diamond, marketConfig, marketConfigA
     const configCallData = configInterface.encodeFunctionData("initialize", marketConfig);
     const marketConfigCut = getFacetAddCut(marketConfigFacet, [configInitFunction]);
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await cutFacet.diamondCut([marketConfigCut], marketConfigFacet.address, configCallData, {gasLimit});
+    tx = await cutFacet.diamondCut([marketConfigCut], marketConfigFacet.address, configCallData, {gasLimit});
+    await tx.wait();
 
     // Cut MarketConfigAdditional facet, initializing
     let configAdditionalInitFunction = "initialize(bool _allowExternalTokensOnSecondary)";
@@ -51,7 +54,8 @@ async function deployMarketControllerFacets(diamond, marketConfig, marketConfigA
     const configAdditionalCallData = configAdditionalInterface.encodeFunctionData("initialize", marketConfigAdditional);
     const marketConfigAdditionalCut = getFacetAddCut(marketConfigAdditionalFacet, [configAdditionalInitFunction]);
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await cutFacet.diamondCut([marketConfigAdditionalCut], marketConfigAdditionalFacet.address, configAdditionalCallData, {gasLimit});
+    tx = await cutFacet.diamondCut([marketConfigAdditionalCut], marketConfigAdditionalFacet.address, configAdditionalCallData, {gasLimit});
+    await tx.wait();
 
     // Cut MarketClerk facet, initializing
     let clerkInitFunction = "initialize()";
@@ -59,7 +63,8 @@ async function deployMarketControllerFacets(diamond, marketConfig, marketConfigA
     const clerkCallData = clerkInterface.encodeFunctionData("initialize");
     const marketClerkCut = getFacetAddCut(marketClerkFacet, ['supportsInterface(bytes4)', clerkInitFunction]);
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await cutFacet.diamondCut([marketClerkCut], marketClerkFacet.address, clerkCallData, {gasLimit});
+    tx = await cutFacet.diamondCut([marketClerkCut], marketClerkFacet.address, clerkCallData, {gasLimit});
+    await tx.wait();
 
     return [marketConfigFacet, marketConfigAdditionalFacet, marketClerkFacet];
 }

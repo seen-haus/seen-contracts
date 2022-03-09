@@ -37,6 +37,7 @@ function getConfig() {
     const STAKING = {
         'mainnet': '0x1c436a02ea4c17522e656f730537d68f71fab92c',
         'rinkeby': '0xBFC6ab6E8C3C57e57d4D63Efb054E82b0bAFDE39',
+        'goerli': '0xBFC6ab6E8C3C57e57d4D63Efb054E82b0bAFDE39',
         'hardhat': '0x0000000000000000000000000000000000000000'
     }
 
@@ -44,6 +45,7 @@ function getConfig() {
     const MULTISIG = {
         'mainnet': '0x4a25E18076DDcFd646ED14ABC07286c2A4c1256A',
         'rinkeby': '0x61a07a05aade27c162e07400b6c201A9E9627604',
+        'goerli': '0xBFC6ab6E8C3C57e57d4D63Efb054E82b0bAFDE39',
         'hardhat': '0x0000000000000000000000000000000000000000'
     }
 
@@ -62,6 +64,10 @@ function getConfig() {
 
 async function main() {
 
+    const sleep = (ms) => {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     const awaitAcceptableGas = async (maxAcceptableGasPrice, isFirstRun = true) => {
         let pendingBlock = await hre.network.provider.send("eth_getBlockByNumber", ["pending", false]);
         let baseFeePerGasInGwei = pendingBlock.baseFeePerGas
@@ -77,8 +83,10 @@ async function main() {
         }
     }
 
+    let tx;
+
     // Set target max gas price
-    let maxAcceptableGasPrice = 40;
+    let maxAcceptableGasPrice = 35;
 
     // Compile everything (in case run by node)
     await hre.run('compile');
@@ -103,8 +111,8 @@ async function main() {
     console.log(`💎 Deploying AccessController, MarketDiamond, and Diamond utility facets...`);
 
     // Deploy the Diamond
-    [marketDiamond, dlf, dcf, accessController, diamondArgs] = await deployMarketDiamond(config.multisig, gasLimit, awaitAcceptableGas, maxAcceptableGasPrice);
-    deploymentComplete('AccessController', accessController.address, [config.multisig], contracts);
+    [marketDiamond, dlf, dcf, accessController, diamondArgs] = await deployMarketDiamond(gasLimit, awaitAcceptableGas, maxAcceptableGasPrice);
+    deploymentComplete('AccessController', accessController.address, [], contracts);
     deploymentComplete('DiamondLoupeFacet', dlf.address, [], contracts);
     deploymentComplete('DiamondCutFacet', dcf.address, [], contracts);
     deploymentComplete('MarketDiamond', marketDiamond.address, diamondArgs, contracts);
@@ -113,7 +121,8 @@ async function main() {
 
     // Temporarily grant UPGRADER role to deployer account
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await accessController.grantRole(Role.UPGRADER, deployer);
+    tx = await accessController.grantRole(Role.UPGRADER, deployer);
+    await tx.wait();
 
     // Cut the MarketController facet into the Diamond
     const marketConfig = [
@@ -173,64 +182,93 @@ async function main() {
 
     // Add Escrow Ticketer and NFT addresses to MarketController
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await marketController.setNft(seenHausNFT.address);
+    tx = await marketController.setNft(seenHausNFT.address);
+    await tx.wait();
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await marketController.setLotsTicketer(lotsTicketer.address);
+    tx = await marketController.setLotsTicketer(lotsTicketer.address);
+    await tx.wait();
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await marketController.setItemsTicketer(itemsTicketer.address);
+    tx = await marketController.setItemsTicketer(itemsTicketer.address);
+    await tx.wait();
 
     console.log(`✅ MarketController updated with remaining post-initialization config.`);
 
     // Grant ESCROW_AGENT / SELLER / MINTER role to deployer
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await accessController.grantRole(Role.ESCROW_AGENT, deployer);
+    tx = await accessController.grantRole(Role.ESCROW_AGENT, deployer);
+    await tx.wait();
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await accessController.grantRole(Role.SELLER, deployer);
+    tx = await accessController.grantRole(Role.SELLER, deployer);
+    await tx.wait();
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await accessController.grantRole(Role.MINTER, deployer);
+    tx = await accessController.grantRole(Role.MINTER, deployer);
+    await tx.wait();
 
     console.log(`✅ Granted ESCROW_AGENT / SELLER / MINTER role to deployer address.`);
 
     // Grant ADMIN role to multisig
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await accessController.grantRole(Role.ADMIN, config.multisig);
+    tx = await accessController.grantRole(Role.ADMIN, config.multisig);
+    await tx.wait();
 
     console.log(`✅ Granted ADMIN role to multisig address.`);
 
     // Add roles to contracts and addresses that need it
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await accessController.grantRole(Role.MARKET_HANDLER, marketDiamond.address); // Market handlers live behind MarketDiamond now
+    tx = await accessController.grantRole(Role.MARKET_HANDLER, marketDiamond.address); // Market handlers live behind MarketDiamond now
+    await tx.wait();
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await accessController.grantRole(Role.MARKET_HANDLER, itemsTicketer.address);
+    tx = await accessController.grantRole(Role.MARKET_HANDLER, itemsTicketer.address);
+    await tx.wait();
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await accessController.grantRole(Role.MARKET_HANDLER, lotsTicketer.address);
+    tx = await accessController.grantRole(Role.MARKET_HANDLER, lotsTicketer.address);
+    await tx.wait();
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await accessController.grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
+    tx = await accessController.grantRole(Role.MARKET_HANDLER, seenHausNFT.address);
+    await tx.wait();
 
     console.log(`✅ Granted roles to appropriate contract and addresses.`);
 
-    console.log(`\n🌐️Revoking no-longer-needed deployer roles...`);
+    console.log(`\n🌐️Revoking no-longer-needed deployer roles & shifting role admins...`);
 
-    // Transfer admin rights for UPGRADER role to multisig
+    // Transfer admin rights for UPGRADER role to MULTISIG role
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await accessController.shiftRoleAdmin(Role.UPGRADER, Role.MULTISIG);
+    tx = await accessController.shiftRoleAdmin(Role.UPGRADER, Role.MULTISIG);
+    await tx.wait();
 
     // Renounce temporarily granted UPGRADER role for deployer account
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await accessController.renounceRole(Role.UPGRADER, deployer);
+    tx = await accessController.renounceRole(Role.UPGRADER, deployer);
+    await tx.wait();
+
+    // Grant MULTISIG role to multisig address
+    await awaitAcceptableGas(maxAcceptableGasPrice);
+    tx = await accessController.grantRole(Role.MULTISIG, config.multisig);
+    await tx.wait();
+
+    // Transfer admin rights for MULTISIG role to MULTISIG role
+    await awaitAcceptableGas(maxAcceptableGasPrice);
+    tx = await accessController.shiftRoleAdmin(Role.MULTISIG, Role.MULTISIG);
+    await tx.wait();
+
+    // Renounce temporarily granted MULTISIG role for deployer account
+    await awaitAcceptableGas(maxAcceptableGasPrice);
+    tx = await accessController.renounceRole(Role.MULTISIG, deployer);
+    await tx.wait();
 
     // Transfer admin rights for MARKET_HANDLER role to multisig
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await accessController.shiftRoleAdmin(Role.MARKET_HANDLER, Role.MULTISIG);
+    tx = await accessController.shiftRoleAdmin(Role.MARKET_HANDLER, Role.MULTISIG);
+    await tx.wait();
 
-    console.log(`✅ Deployer address renounced UPGRADER role & shifted UPGRADER & MARKET_HANDLER role admin to multisig.`);
+    console.log(`✅ Deployer address renounced MULTISIG & UPGRADER roles & shifted MULTISIG / UPGRADER / MARKET_HANDLER role admin to multisig.`);
 
     // Bail now if deploying locally
     if (hre.network.name === 'hardhat') process.exit();
 
     // Wait a minute after deployment completes and then verify contracts on etherscan
-    console.log('⏲ Pause one minute, allowing deployments to propagate to Etherscan backend...');
-    await delay(60000).then(
+    console.log('⏲ Pause two minutes, allowing deployments to propagate to Etherscan backend...');
+    await delay(120000).then(
         async () => {
             console.log('🔍 Verifying contracts on Etherscan...');
             while(contracts.length) {

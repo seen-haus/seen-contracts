@@ -19,9 +19,9 @@ contract AccessController is AccessControlUpgradeable, SeenConstants  {
      * Grants ADMIN role to deployer.
      * Sets ADMIN as role admin for all other roles.
      */
-    constructor(address multisig) {
-        _setupRole(MULTISIG, multisig);
-        _setRoleAdmin(MULTISIG, MULTISIG);
+    constructor() {
+        _setupRole(MULTISIG, msg.sender); // Renounce role and grant to multisig once initial setup is complete
+        _setRoleAdmin(MULTISIG, ADMIN); // Shift role admin to MULTISIG once initial setup is complete
         _setupRole(ADMIN, msg.sender);
         _setRoleAdmin(ADMIN, ADMIN);
         _setRoleAdmin(SELLER, ADMIN);

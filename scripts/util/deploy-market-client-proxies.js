@@ -24,6 +24,8 @@ const { nftOwner } = require('../constants/role-assignments');
  */
 async function deployMarketClientProxies(marketClients, marketClientArgs, gasLimit, awaitAcceptableGas, maxAcceptableGasPrice) {
 
+    let tx;
+
     // Destructure the market client implementations
     [lotsTicketerImpl, itemsTicketerImpl, seenHausNFTImpl] = marketClients;
 
@@ -36,7 +38,8 @@ async function deployMarketClientProxies(marketClients, marketClientArgs, gasLim
     const LotsTicketerImpl = await ethers.getContractFactory("LotsTicketer");
     await awaitAcceptableGas(maxAcceptableGasPrice);
     const lotsTicketerImplAttached = await LotsTicketerImpl.attach(lotsTicketerProxy.address);
-    await lotsTicketerImplAttached.initialize();
+    tx = await lotsTicketerImplAttached.initialize();
+    await tx.wait();
 
     // Deploy the ItemsTicketer proxy
     const ItemsTicketerProxy = await ethers.getContractFactory("MarketClientProxy");
@@ -47,7 +50,8 @@ async function deployMarketClientProxies(marketClients, marketClientArgs, gasLim
     const ItemsTicketerImpl = await ethers.getContractFactory("ItemsTicketer");
     const ItemsTicketerImplAttached = await ItemsTicketerImpl.attach(itemsTicketerProxy.address);
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await ItemsTicketerImplAttached.initialize();
+    tx = await ItemsTicketerImplAttached.initialize();
+    await tx.wait();
 
     // Deploy the SeenHausNFT proxy
     const SeenHausNFTProxy = await ethers.getContractFactory("MarketClientProxy");
@@ -58,7 +62,8 @@ async function deployMarketClientProxies(marketClients, marketClientArgs, gasLim
     const SeenHausNFTImpl = await ethers.getContractFactory("SeenHausNFT");
     const SeenHausNFTImplAttached = await SeenHausNFTImpl.attach(seenHausNFTProxy.address);
     await awaitAcceptableGas(maxAcceptableGasPrice);
-    await SeenHausNFTImplAttached.initialize(nftOwner);
+    tx = await SeenHausNFTImplAttached.initialize(nftOwner);
+    await tx.wait();
 
     return [lotsTicketerProxy, itemsTicketerProxy, seenHausNFTProxy];
 
